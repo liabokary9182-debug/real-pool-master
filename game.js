@@ -9,7 +9,7 @@
   const PIXEL_RATIO=Math.min(2.4,Math.max(1.75,(window.devicePixelRatio||1)*1.08));
   canvas.width=Math.round(VIEW_W*PIXEL_RATIO);canvas.height=Math.round(VIEW_H*PIXEL_RATIO);
   ctx.setTransform(PIXEL_RATIO,0,0,PIXEL_RATIO,0,0);
-  const W = 100, H = 50, R = 1.125*1.05, DISPLAY_R = R;
+  const W = 100, H = 50, HEAD_LINE = W/4, R = 1.125*1.05, DISPLAY_R = R;
   // The reference is an 82 mm corner mouth. Keep the current playable opening
   // and enlarge all six mouths by the same small amount for this preview.
   const CORNER_MOUTH = 82 * 1.05 * 1.05 * .98 * 1.02 * 1.025 * 1.02 * 1.02 * 1.02 * 1.02 * 1.05 / 25.4, SIDE_MOUTH = CORNER_MOUTH;
@@ -85,30 +85,32 @@
     state.practice=null;state.stroke=null;state.windup=0;
     state.aiTicket++;state.aiThinking=false;state.aiPlan=null;
     state.mode=mode; state.phase='aim'; state.turn=0; state.groups=[null,null]; state.scores=[0,0];
-    state.breaking=true; state.ballInHand=false; state.repositionAllowed=false; state.aim=0; state.power=56; state.spinX=0; state.spinY=0;
+    state.breaking=true; state.ballInHand=false; state.repositionAllowed=true; state.aim=0; state.power=56; state.spinX=0; state.spinY=0;
     state.shot=null; state.stopTime=0; state.shotTime=0; state.winner=null;
     state.balls=[ball(0,25,25)];state.pocketAnimations=[];state.rackSeed=randomSeed();
     const rackRng=seededRandom(state.rackSeed);
     if (mode==='eight') rackEight(rackRng); else rackNine(rackRng);
     $('startOverlay').classList.add('hidden');$('menuOverlay').classList.add('hidden');$('player2Name').textContent=state.opponent==='ai'?'电脑':'玩家 2';
     syncPowerUI(); moveSpinDot();
-    say(mode==='eight'?'八球开球：拖动画面瞄准，调节力度后击球。':'九球开球：先碰 1 号球。');
+    say('开球：可拖动白球在虚线后摆放，瞄准后拉杆出杆。'+(mode==='nine'?'先碰 1 号球。':''));
     updateUI(); render();
   }
   function rackEight(rng) {
+    const rackOffsetX=(rng()-.5)*.035,rackOffsetY=(rng()-.5)*.06;
     const solids=shuffle([1,2,3,4,5,6,7],rng),stripes=shuffle([9,10,11,12,13,14,15],rng);
     const rows=[[null],[null,null],[null,8,null],[null,null,null,null],[solids.pop(),null,null,null,stripes.pop()]];
     const remaining=shuffle([...solids,...stripes],rng);
     for(let row=0;row<5;row++) for(let col=0;col<=row;col++) {
       const n=rows[row][col]??remaining.pop();
-      state.balls.push(ball(n,74+row*(Math.sqrt(3)*R+.01)+(rng()-.5)*.004,25+(col-row/2)*(2*R+.01)+(rng()-.5)*.004));
+      state.balls.push(ball(n,74+rackOffsetX+row*(Math.sqrt(3)*R+.01)+(rng()-.5)*.004,25+rackOffsetY+(col-row/2)*(2*R+.01)+(rng()-.5)*.004));
     }
   }
   function rackNine(rng) {
+    const rackOffsetX=(rng()-.5)*.035,rackOffsetY=(rng()-.5)*.06;
     const others=shuffle([2,3,4,5,6,7,8],rng);
     const rows=[[1],[others.pop(),others.pop()],[others.pop(),9,others.pop()],[others.pop(),others.pop()],[others.pop()]];
     rows.forEach((numbers,row) => numbers.forEach((n,col) => {
-      state.balls.push(ball(n,74+row*(Math.sqrt(3)*R+.01)+(rng()-.5)*.004,25+(col-(numbers.length-1)/2)*(2*R+.01)+(rng()-.5)*.004));
+      state.balls.push(ball(n,74+rackOffsetX+row*(Math.sqrt(3)*R+.01)+(rng()-.5)*.004,25+rackOffsetY+(col-(numbers.length-1)/2)*(2*R+.01)+(rng()-.5)*.004));
     }));
   }
   function updateUI() {
@@ -121,8 +123,8 @@
     }
     $('shootBtn').disabled=state.phase!=='aim'||state.ballInHand||(state.opponent==='ai'&&state.turn===1);
     $('placeCueBtn').hidden=!(state.phase==='aim'&&state.repositionAllowed&&!(state.opponent==='ai'&&state.turn===1));
-    $('placeCueBtn').textContent=state.ballInHand?'确认白球位置':'重新摆放白球';
-    $('tipText').textContent=state.phase==='gameover'?'本局结束，可开启下一场。':state.ballInHand?'自由球：拖动白球，满意后确认位置。':'拖动瞄准，拉动球杆出杆。';
+    $('placeCueBtn').textContent=state.ballInHand?'确认白球位置':state.breaking?'开球摆白球':'重新摆放白球';
+    $('tipText').textContent=state.phase==='gameover'?'本局结束，可开启下一场。':state.breaking?'开球白球可在虚线后的区域摆放；下拉球杆，松手出杆。':state.ballInHand?'自由球：拖动白球，满意后确认位置。':'拖动瞄准，拉动球杆出杆。';
     const adjustable=canAdjustStroke();
     $('power').disabled=!adjustable;$('resetSpin').disabled=!adjustable;
     for(const id of ['spinPad','angleRuler','cueMeter'])$(id).setAttribute('aria-disabled',String(!adjustable));
@@ -151,6 +153,8 @@
   function fire(byAI=false,withWindup=false) {
     if(state.phase!=='aim'||state.ballInHand||(state.opponent==='ai'&&state.turn===1&&!byAI))return;
     const c=cue(); if(!c||c.pocketed)return;
+    // Flush pending aim changes before freezing the exact stroke inputs.
+    updateUI();render();
     // A new stroke must never inherit a lingering flash from the last one.
     state.pocketAnimations=[];
     state.shot={shooter:state.turn,breaking:state.breaking,firstHit:null,pocketed:[],railAfterHit:false,breakRails:new Set(),groupAtStart:currentGroup(),eightReady:!!allGroupGone(currentGroup())};
@@ -361,22 +365,7 @@
       if(dt<1e-8)return;
     }
     state.shotTime+=dt;
-    // During a hard break, reduce travel per collision check so a ball cannot
-    // tunnel through the rack or escape a pocket mouth between two frames.
-    const topSpeed=Math.max(0,...live().map(b=>Math.hypot(b.vx,b.vy)));
-    const subdivisions=clamp(Math.ceil(topSpeed*dt/(R*.45)),1,8),subdt=dt/subdivisions;
-    for(let sub=0;sub<subdivisions;sub++){
-      const moving=live();
-      for(const b of moving){
-        clothStep(b,subdt);
-        advanceBallOrientation(b,subdt);
-        const rollSpeed=Math.hypot(b.rollVx,b.rollVy);
-        if(rollSpeed>.01){b.roll+=rollSpeed*subdt/R;b.rollHeading=Math.atan2(b.rollVy,b.rollVx);}
-        b.x+=b.vx*subdt;b.y+=b.vy*subdt;
-        rails(b);pocketCheck(b);
-      }
-      for(let i=0;i<moving.length;i++)for(let j=i+1;j<moving.length;j++)if(!moving[i].pocketed&&!moving[j].pocketed)ballsCollide(moving[i],moving[j]);
-    }
+    physicsStep(state.balls,dt,true);
     if(live().every(b=>Math.hypot(b.vx,b.vy)<.12&&Math.hypot(b.rollVx,b.rollVy)<.12&&Math.abs(b.spin)<.12))state.stopTime+=dt;else state.stopTime=0;
     if(state.stopTime>.3||state.shotTime>30){for(const b of live()){b.vx=0;b.vy=0;b.rollVx=0;b.rollVy=0;b.spin=0;}endShot();}
   }
@@ -969,21 +958,25 @@
     },2500);
   }
   function validCuePosition(x,y) {
-    return x>=R&&x<=W-R&&y>=R&&y<=H-R&&activeBalls().every(b=>Math.hypot(b.x-x,b.y-y)>=2*R+.06);
+    return x>=R&&x<=(state.breaking?HEAD_LINE:W-R)&&y>=R&&y<=H-R&&activeBalls().every(b=>Math.hypot(b.x-x,b.y-y)>=2*R+.06);
   }
   function placeCue(x,y,commit=true) {
-    x=clamp(x,R,W-R);y=clamp(y,R,H-R);
+    x=clamp(x,R,state.breaking?HEAD_LINE:W-R);y=clamp(y,R,H-R);
     if(!validCuePosition(x,y))return false;
     cue().x=x;cue().y=y;
     if(commit){state.ballInHand=false;say(`白球已摆放。${actor(state.turn)}请瞄准击球。`);updateUI();}
     render();return true;
   }
-  function physicsStep(balls,dt){
+  function physicsStep(balls,dt,animate=false){
     const topSpeed=Math.max(0,...balls.filter(b=>!b.pocketed).map(b=>Math.hypot(b.vx,b.vy)));
     const subdivisions=clamp(Math.ceil(topSpeed*dt/(R*.45)),1,8),subdt=dt/subdivisions;
     for(let sub=0;sub<subdivisions;sub++){
       const moving=balls.filter(b=>!b.pocketed);
-      for(const b of moving){clothStep(b,subdt);b.x+=b.vx*subdt;b.y+=b.vy*subdt;rails(b);pocketCheck(b);}
+      for(const b of moving){
+        clothStep(b,subdt);
+        if(animate){advanceBallOrientation(b,subdt);const speed=Math.hypot(b.rollVx,b.rollVy);if(speed>.01){b.roll+=speed*subdt/R;b.rollHeading=Math.atan2(b.rollVy,b.rollVx);}}
+        b.x+=b.vx*subdt;b.y+=b.vy*subdt;rails(b);pocketCheck(b);
+      }
       for(let i=0;i<moving.length;i++)for(let j=i+1;j<moving.length;j++)if(!moving[i].pocketed&&!moving[j].pocketed)ballsCollide(moving[i],moving[j]);
     }
   }
@@ -1013,14 +1006,14 @@
   }
   function pathLength(points){let length=0;for(let i=1;i<points.length;i++)length+=Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y);return length;}
   function displayGuide(){
-    const key=[state.aim,state.power,state.spinX,state.spinY,state.breaking,...state.balls.flatMap(b=>[b.n,b.x,b.y,b.pocketed?1:0])].join(',');
+    const key=[state.aim,state.power,state.spinX,state.spinY,state.breaking,...state.balls.flatMap(b=>[b.n,b.x,b.y,b.vx,b.vy,b.rollVx,b.rollVy,b.spin,b.pocketed?1:0])].join(',');
     if(key===displayGuideKey)return displayGuideCache;
     displayGuideKey=key;
     const a=cue();if(!a)return displayGuideCache=null;
     const balls=state.balls.map(b=>({...b})),c=balls.find(b=>b.n===0);
     const previous=physicsContext,events={firstHit:null,pocketed:[],railAfterHit:false,breakRails:new Set(),captureContacts:true,contacts:[]};
     const shotPath=[{x:c.x,y:c.y}],cuePath=[],targetPath=[];
-    const append=(path,b)=>{const p=path.at(-1);if(!p||Math.hypot(b.x-p.x,b.y-p.y)>.08)path.push({x:b.x,y:b.y});};
+    const append=(path,b)=>{const p=path.at(-1);if(!p||Math.hypot(b.x-p.x,b.y-p.y)>1e-9)path.push({x:b.x,y:b.y});};
     let target=null,cueDone=false,targetDone=false,firstContacts=0;
     try{
       physicsContext=events;applyCueImpulse(c,state.power,state.aim,state.spinX,state.spinY,state.breaking);
@@ -1068,6 +1061,16 @@
     const felt=ctx.createRadialGradient(l+W*SCALE*.45,t+H*SCALE*.35,10,l+W*SCALE*.5,t+H*SCALE*.5,690);
     felt.addColorStop(0,'#239bbe');felt.addColorStop(.65,'#157e9e');felt.addColorStop(1,'#09617f');
     ctx.fillStyle=felt;ctx.fillRect(l-5,t-5,W*SCALE+10,H*SCALE+10);
+    ctx.save();ctx.strokeStyle='#c9eef060';ctx.lineWidth=1.2;ctx.setLineDash([8,7]);
+    ctx.beginPath();ctx.moveTo(l+HEAD_LINE*SCALE,t+2);ctx.lineTo(l+HEAD_LINE*SCALE,b-2);ctx.stroke();ctx.restore();
+    // Compact cloth-print lettering, beneath the weave rather than floating
+    // over it. System Chinese fonts keep the mark legible on iPhone.
+    const brandX=l+W*SCALE/2,brandY=t+H*SCALE/2;
+    ctx.save();ctx.translate(brandX,brandY);ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.save();ctx.scale(.9,1);ctx.fillStyle='#dcebe052';
+    ctx.font='italic 800 49px Arial, sans-serif';ctx.fillText('S800',0,-14);ctx.restore();
+    ctx.fillStyle='#dcebe060';ctx.font='500 20px "PingFang SC", "Microsoft YaHei", sans-serif';
+    ctx.fillText('利',-29,24);ctx.fillText('百',0,24);ctx.fillText('文',29,24);ctx.restore();
     // Sparse fibres are cached, rather than repainting 56,000 per frame.
     let seed=19327;
     for(let i=0;i<9500;i++){
@@ -1075,16 +1078,6 @@
       seed=(seed*1664525+1013904223)>>>0;const y=t+(seed>>>8)%(b-t);
       ctx.fillStyle=i%4?'#d4f5ff09':'#032d480c';ctx.fillRect(x,y,1.1,.45);
     }
-    // A restrained cloth-print lockup, centred on the playing surface.
-    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
-    const brandX=l+W*SCALE/2,brandY=t+H*SCALE/2;
-    ctx.fillStyle='#e5dbad55';ctx.font='italic 700 56px Georgia, "Times New Roman", serif';
-    ctx.fillText('S800',brandX,brandY-17);
-    ctx.fillStyle='#e5dbad66';ctx.font='600 21px "Songti SC", SimSun, serif';
-    ctx.fillText('利',brandX-34,brandY+29);ctx.fillText('百',brandX,brandY+29);ctx.fillText('文',brandX+34,brandY+29);
-    ctx.strokeStyle='#e5dbad40';ctx.lineWidth=.8;
-    ctx.beginPath();ctx.moveTo(brandX-86,brandY+29);ctx.lineTo(brandX-57,brandY+29);
-    ctx.moveTo(brandX+57,brandY+29);ctx.lineTo(brandX+86,brandY+29);ctx.stroke();ctx.restore();
     const railWidth=27;
     const rubberPaint=(outerX,outerY,noseX,noseY)=>{
       const paint=ctx.createLinearGradient(outerX,outerY,noseX,noseY);
@@ -1133,7 +1126,7 @@
       const offsetX=horizontalFace?(face.ax>p.mx?-17:17):(face.ax<W/2?-railWidth:railWidth);
       const offsetY=horizontalFace?(face.ay<H/2?-railWidth:railWidth):(face.ay>p.my?-17:17);
       ctx.fillStyle=rubberPaint(a.x+offsetX,a.y+offsetY,a.x,a.y);
-      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.lineTo(b.x+offsetX,b.y+offsetY);ctx.lineTo(a.x+offsetX,a.y+offsetY);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.quadraticCurveTo(b.x-p.nx*5,b.y-p.ny*5,b.x-p.nx*10,b.y-p.ny*10);ctx.lineTo(a.x+offsetX,a.y+offsetY);ctx.closePath();ctx.fill();
     }
     // Paint only the true falling cap black, after all blue support/cushion
     // pieces. Nothing can shade or paint a fictitious black shelf outside it.
@@ -1281,7 +1274,7 @@
   }
   function guidePath(points,color,maxLength=Infinity,dashed=false){
     if(points.length<2)return;
-    ctx.strokeStyle=color;ctx.shadowColor=color;ctx.shadowBlur=2;ctx.lineWidth=1.8;ctx.lineCap='round';
+    ctx.strokeStyle=color;ctx.shadowColor=color;ctx.shadowBlur=0;ctx.lineWidth=1.15;ctx.lineCap='round';
     ctx.setLineDash(dashed?[7,6]:[]);ctx.beginPath();
     let length=0,end=points[0];const start=worldToScreen(points[0].x,points[0].y);ctx.moveTo(start.x,start.y);
     for(let i=1;i<points.length;i++){
@@ -1412,6 +1405,7 @@
     canvas.setPointerCapture(e.pointerId);const p=pointerWorld(e);
     if(state.ballInHand){state.drag='place';placeCue(p.x,p.y,false);return;}
     const c=cue(),dx=p.x-c.x,dy=p.y-c.y,ax=Math.cos(state.aim),ay=Math.sin(state.aim);
+    if(state.breaking&&state.repositionAllowed&&Math.hypot(dx,dy)<=R*1.6){state.drag='place-break';return;}
     const behind=-(dx*ax+dy*ay),side=Math.abs(dx*ay-dy*ax);
     if(behind>=2.3&&behind<=27&&side<2.5){state.drag={kind:'power',start:p,pull:0,startingPower:state.power};return;}
     aimAt(p.x,p.y);
@@ -1419,14 +1413,14 @@
   });
   canvas.addEventListener('pointermove',e=>{
     if(!state.drag||state.phase!=='aim')return;const p=pointerWorld(e);
-    if(state.drag==='place')placeCue(p.x,p.y,false);
+    if(state.drag==='place'||state.drag==='place-break')placeCue(p.x,p.y,false);
     else if(state.drag.kind==='aim'){
       const c=cue(),angle=Math.atan2(p.y-c.y,p.x-c.x);
       const delta=Math.atan2(Math.sin(angle-state.drag.startAngle),Math.cos(angle-state.drag.startAngle));
       state.aim=state.drag.startAim+delta*clamp(state.drag.startRadius/70,.06,.24);requestAimFrame();
     }else {const d=state.drag.start;const pull=(d.x-p.x)*Math.cos(state.aim)+(d.y-p.y)*Math.sin(state.aim);state.drag.pull=Math.max(0,pull);state.power=state.drag.pull<.7?state.drag.startingPower:clamp(Math.round(5+(state.drag.pull-.7)*5.7),5,100);syncPowerUI();render();}
   });
-  const pointerUp=e=>{if(state.drag==='place'&&state.phase==='aim'){const p=pointerWorld(e);if(placeCue(p.x,p.y,false))say('白球位置已预览，可继续调整或确认摆放。');}else if(state.drag?.kind==='power'){const p=pointerWorld(e),d=state.drag.start;state.drag.pull=Math.max(0,(d.x-p.x)*Math.cos(state.aim)+(d.y-p.y)*Math.sin(state.aim));if(state.drag.pull>=1.5){state.power=clamp(Math.round(5+(state.drag.pull-.7)*5.7),5,100);syncPowerUI();fire(false,true);}else{state.power=state.drag.startingPower;syncPowerUI();render();}}state.drag=null;};
+  const pointerUp=e=>{if((state.drag==='place'||state.drag==='place-break')&&state.phase==='aim'){const p=pointerWorld(e);if(placeCue(p.x,p.y,false))say('白球位置已预览，可继续调整或确认摆放。');}else if(state.drag?.kind==='power'){const p=pointerWorld(e),d=state.drag.start;state.drag.pull=Math.max(0,(d.x-p.x)*Math.cos(state.aim)+(d.y-p.y)*Math.sin(state.aim));if(state.drag.pull>=1.5){syncPowerUI();fire(false,true);}else{state.power=state.drag.startingPower;syncPowerUI();render();}}state.drag=null;};
   canvas.addEventListener('pointerup',pointerUp);canvas.addEventListener('pointercancel',()=>{if(state.drag?.kind==='power'){state.power=state.drag.startingPower;syncPowerUI();render();}state.drag=null;});
   const spinPad=$('spinPad');
   function moveSpinDot(){const dot=$('spinDot');dot.style.left=`${50+state.spinX*36}%`;dot.style.top=`${50-state.spinY*36}%`;if($('strokeReadout'))$('strokeReadout').textContent=strokeName(state);}
@@ -1462,7 +1456,7 @@
   });
   meter.addEventListener('pointerup',e=>{
     if(!meterDrag||meterDrag.id!==e.pointerId)return;
-    updateMeterDrag(e);
+    // Release commits the last previewed strength; it does not retune the shot.
     const shoot=meterDrag.pull>=14,startingPower=meterDrag.startingPower;
     meterDrag=null;meter.classList.remove('dragging');meter.style.setProperty('--cue-pull','0px');
     if(shoot)fire(false,true);else{state.power=startingPower;syncPowerUI();render();}
@@ -1479,7 +1473,7 @@
   $('placeCueBtn').addEventListener('click',()=>{
     if(state.phase!=='aim'||!state.repositionAllowed||state.opponent==='ai'&&state.turn===1)return;
     if(state.ballInHand){if(!validCuePosition(cue().x,cue().y)){say('白球与目标球重叠，请选择空位。');return;}placeCue(cue().x,cue().y,true);}
-    else{state.ballInHand=true;say('自由球：拖动白球，满意后确认位置。');updateUI();render();}
+    else{state.ballInHand=true;say(state.breaking?'开球摆球：白球须在虚线后，摆好后确认。':'自由球：拖动白球，满意后确认位置。');updateUI();render();}
   });
   const angleRuler=$('angleRuler');let angleDrag=null;
   const rulerAxis=e=>sideways()?e.clientY:e.clientX;

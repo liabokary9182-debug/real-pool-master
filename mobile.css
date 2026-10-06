@@ -1,6 +1,6 @@
 /* Phone controls shared with the reviewed mobile preview. */
 #landscapeBtn{display:none}
-@media(max-width:700px){
+@media(max-width:700px),(max-height:500px) and (pointer:coarse){
 html{overflow:auto!important;height:auto!important}
 #landscapeBtn{display:inline-flex}
 #mobile-pool-preview{position:relative!important;inset:auto!important;transform:none!important;transform-origin:initial!important;width:100%!important;min-height:0!important;overflow:visible!important;background:#050a18;color:#e2f0fb;font-family:system-ui,sans-serif}
@@ -68,45 +68,45 @@ html{overflow:auto!important;height:auto!important}
 #mobile-pool-preview #landscapeBtn{min-height:44px;min-width:64px;background:#efcd79;color:#102127;border:1px solid #ffe3a2;font-weight:700}
 #mobile-pool-preview.is-landscape{height:var(--landscape-width);overflow:hidden!important}
 #mobile-pool-preview.is-landscape .mobile-game-surface{width:var(--landscape-width);height:var(--landscape-height);transform-origin:top left;transform:translateX(var(--landscape-height)) rotate(90deg)}
-#mobile-pool-preview.is-landscape .app{height:100%;min-height:0;overflow:hidden}
-#mobile-pool-preview.is-landscape .topbar{height:54px;min-height:54px;flex-wrap:nowrap;padding:5px 10px;gap:8px;background:#071222}
-#mobile-pool-preview.is-landscape .brand small{display:none}
-#mobile-pool-preview.is-landscape .top-actions{flex-wrap:nowrap}
-#mobile-pool-preview.is-landscape .layout{height:calc(100% - 54px);display:grid;grid-template-columns:minmax(0,1fr) 184px;gap:0}
-#mobile-pool-preview.is-landscape .arena{height:100%;display:flex;flex-direction:column;min-height:0;overflow:hidden}
-#mobile-pool-preview.is-landscape .scorebar{height:40px;flex:0 0 40px}
-#mobile-pool-preview.is-landscape .player{gap:5px}
-#mobile-pool-preview.is-landscape .player small,#mobile-pool-preview.is-landscape .game-label small{font-size:11px}
-#mobile-pool-preview.is-landscape .table-wrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
-#mobile-pool-preview.is-landscape .table-wrap canvas{width:min(100%,var(--landscape-table-width));height:auto!important;flex:none}
-#mobile-pool-preview.is-landscape .status{min-height:44px;height:44px;flex:0 0 44px;font-size:12px;line-height:1.35;padding:4px 8px;overflow:auto}
-#mobile-pool-preview.is-landscape .controls{height:100%;min-height:0;overflow:auto;align-content:start;grid-template-columns:1fr 1fr;gap:6px;padding:8px}
-#mobile-pool-preview.is-landscape .control-head,#mobile-pool-preview.is-landscape .tip,#mobile-pool-preview.is-landscape .spec,#mobile-pool-preview.is-landscape .cue-meter,#mobile-pool-preview.is-landscape .spin-group small,#mobile-pool-preview.is-landscape .power-ends{display:none}
-#mobile-pool-preview.is-landscape .angle-panel{grid-column:1/-1;grid-row:1}
-#mobile-pool-preview.is-landscape .angle-head{margin:0;font-size:12px}
-#mobile-pool-preview.is-landscape .angle-head b{font-size:13px}
-#mobile-pool-preview.is-landscape .angle-ruler{height:44px;margin:4px 0 0}
-#mobile-pool-preview.is-landscape .power-group{grid-column:1/-1;grid-row:2}
-#mobile-pool-preview.is-landscape #power{margin:0;min-height:44px}
-#mobile-pool-preview.is-landscape .spin-group{grid-column:1;grid-row:3;gap:4px}
-#mobile-pool-preview.is-landscape .spin-pad{width:60px;height:60px}
-#mobile-pool-preview.is-landscape .spin-group>div:first-child span{font-size:12px}
-#mobile-pool-preview.is-landscape .small-button{min-width:60px;padding:4px}
-#mobile-pool-preview.is-landscape .shoot{grid-column:2;grid-row:3;align-self:end;min-height:48px;padding:8px;font-size:16px}
-#mobile-pool-preview.is-landscape .place-cue{grid-column:1/-1;grid-row:4;font-size:14px}
-#mobile-pool-preview.is-landscape .overlay{height:100%;padding:60px 12px 8px;overflow:auto}
-#mobile-pool-preview.is-landscape .menu-card{padding:12px 16px;max-width:520px}
-#mobile-pool-preview.is-landscape .menu-card h1{font-size:24px;margin:8px 0}
-#mobile-pool-preview.is-landscape .menu-card h2{font-size:20px;margin:4px 0 8px}
-#mobile-pool-preview.is-landscape .menu-card p{font-size:13px;margin:6px 0;line-height:1.4}
-#mobile-pool-preview.is-landscape .ai-test-card{display:grid;grid-template-columns:1fr 1fr;column-gap:12px;row-gap:4px}
-#mobile-pool-preview.is-landscape .ai-test-card .eyebrow,#mobile-pool-preview.is-landscape .ai-test-card h2,#mobile-pool-preview.is-landscape #aiTestExpectation,#mobile-pool-preview.is-landscape #runAITest{grid-column:1/-1}
-#mobile-pool-preview.is-landscape .ai-test-card label{font-size:13px;margin:0}
-#mobile-pool-preview.is-landscape .ai-test-card label[for="aiTestScene"]{grid-column:1;grid-row:3}
-#mobile-pool-preview.is-landscape #aiTestScene{grid-column:1;grid-row:4}
-#mobile-pool-preview.is-landscape .ai-test-card label[for="aiTestDifficulty"]{grid-column:2;grid-row:3}
-#mobile-pool-preview.is-landscape #aiTestDifficulty{grid-column:2;grid-row:4}
-#mobile-pool-preview.is-landscape .ai-test-card select{margin:0;min-height:44px;font-size:14px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .app{height:100%;min-height:0;overflow:hidden}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .topbar{height:54px;min-height:54px;flex-wrap:nowrap;padding:5px 10px;gap:8px;background:#071222}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .brand small{display:none}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .top-actions{flex-wrap:nowrap}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .layout{height:calc(100% - 54px);display:grid;grid-template-columns:minmax(0,1fr) 184px;gap:0}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .arena{height:100%;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .scorebar{height:40px;flex:0 0 40px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .player{gap:5px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .player small,#mobile-pool-preview:is(.is-landscape,.is-compact) .game-label small{font-size:11px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .table-wrap{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .table-wrap canvas{width:min(100%,var(--landscape-table-width));height:auto!important;flex:none}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .status{min-height:44px;height:44px;flex:0 0 44px;font-size:12px;line-height:1.35;padding:4px 8px;overflow:auto}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .controls{height:100%;min-height:0;overflow:auto;align-content:start;grid-template-columns:1fr 1fr;gap:6px;padding:8px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .control-head,#mobile-pool-preview:is(.is-landscape,.is-compact) .tip,#mobile-pool-preview:is(.is-landscape,.is-compact) .spec,#mobile-pool-preview:is(.is-landscape,.is-compact) .cue-meter,#mobile-pool-preview:is(.is-landscape,.is-compact) .spin-group small,#mobile-pool-preview:is(.is-landscape,.is-compact) .power-ends{display:none}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .angle-panel{grid-column:1/-1;grid-row:1}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .angle-head{margin:0;font-size:12px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .angle-head b{font-size:13px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .angle-ruler{height:44px;margin:4px 0 0}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .power-group{grid-column:1/-1;grid-row:2}
+#mobile-pool-preview:is(.is-landscape,.is-compact) #power{margin:0;min-height:44px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .spin-group{grid-column:1;grid-row:3;gap:4px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .spin-pad{width:60px;height:60px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .spin-group>div:first-child span{font-size:12px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .small-button{min-width:60px;padding:4px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .shoot{grid-column:2;grid-row:3;align-self:end;min-height:48px;padding:8px;font-size:16px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .place-cue{grid-column:1/-1;grid-row:4;font-size:14px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .overlay{height:100%;padding:60px 12px 8px;overflow:auto}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .menu-card{padding:12px 16px;max-width:520px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .menu-card h1{font-size:24px;margin:8px 0}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .menu-card h2{font-size:20px;margin:4px 0 8px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .menu-card p{font-size:13px;margin:6px 0;line-height:1.4}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .ai-test-card{display:grid;grid-template-columns:1fr 1fr;column-gap:12px;row-gap:4px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .ai-test-card .eyebrow,#mobile-pool-preview:is(.is-landscape,.is-compact) .ai-test-card h2,#mobile-pool-preview:is(.is-landscape,.is-compact) #aiTestExpectation,#mobile-pool-preview:is(.is-landscape,.is-compact) #runAITest{grid-column:1/-1}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .ai-test-card label{font-size:13px;margin:0}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .ai-test-card label[for="aiTestScene"]{grid-column:1;grid-row:3}
+#mobile-pool-preview:is(.is-landscape,.is-compact) #aiTestScene{grid-column:1;grid-row:4}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .ai-test-card label[for="aiTestDifficulty"]{grid-column:2;grid-row:3}
+#mobile-pool-preview:is(.is-landscape,.is-compact) #aiTestDifficulty{grid-column:2;grid-row:4}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .ai-test-card select{margin:0;min-height:44px;font-size:14px}
 
 #mobile-pool-preview #fullBtn{display:inline-flex!important;align-items:center;justify-content:center;min-width:68px;min-height:44px;color:#eef4fc;background:#193348;border:1px solid #7bc7db}
 #mobile-pool-preview #fullBtn[aria-pressed="true"]{color:#102127;background:#efcd79}
@@ -116,9 +116,9 @@ html{overflow:auto!important;height:auto!important}
 #mobile-pool-preview.is-fullscreen .topbar{position:sticky;top:0}
 #mobile-pool-preview.is-fullscreen.is-landscape{overflow:hidden!important}
 #mobile-pool-preview #fullscreenFeedback{position:absolute;z-index:200;top:100%;left:8px;right:8px;padding:10px 12px;color:#eef4fc;background:#193348;border-radius:8px;line-height:1.5;font-size:14px}
-#mobile-pool-preview.is-landscape .topbar{gap:6px}
-#mobile-pool-preview.is-landscape .top-actions{gap:5px}
-#mobile-pool-preview.is-landscape .top-actions button{padding:8px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .topbar{gap:6px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .top-actions{gap:5px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .top-actions button{padding:8px}
 
 #mobile-pool-preview #musicBtn{display:inline-flex!important;min-height:44px;align-items:center;justify-content:center}
 
@@ -129,4 +129,54 @@ html{overflow:auto!important;height:auto!important}
 #mobile-pool-preview .start-wordmark{font-size:32px}
 #mobile-pool-preview .start-title{font-size:24px!important}
 #mobile-pool-preview .start-foot{font-size:12px}
+}
+
+@media(max-width:700px),(max-height:500px) and (pointer:coarse){
+#mobile-pool-preview.is-compact{height:var(--visible-height);overflow:hidden!important}
+#mobile-pool-preview.is-compact .mobile-game-surface{height:100%;width:100%}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .topbar{height:auto;min-height:44px;padding:2px 6px;flex:0 0 auto}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .brand{display:none}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .top-actions{width:100%;justify-content:space-between;gap:2px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .top-actions button{min-width:0;font-size:12px;padding:5px;white-space:nowrap}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .app{display:flex;flex-direction:column}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .layout{height:auto;flex:1;min-height:0;grid-template-columns:minmax(0,1fr) 164px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .controls{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .overlay{max-height:100%;box-sizing:border-box;overflow:auto;overscroll-behavior:contain}
+#mobile-pool-preview.is-fitted{max-height:var(--visible-height);}
+}
+
+/* Keep the pull-to-shoot control beside the other controls on phones. */
+@media(max-width:700px),(max-height:500px) and (pointer:coarse){
+#mobile-pool-preview:is(.is-landscape,.is-compact) .layout{grid-template-columns:minmax(0,1fr) 214px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .controls{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px;column-gap:5px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .angle-panel,
+#mobile-pool-preview:is(.is-landscape,.is-compact) .power-group,
+#mobile-pool-preview:is(.is-landscape,.is-compact) .place-cue,
+#mobile-pool-preview:is(.is-landscape,.is-compact) .practice-actions{grid-column:1/3}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .cue-meter{display:flex!important;grid-column:3;grid-row:1/6;align-self:stretch;width:44px;height:100%;min-height:150px;margin:0;padding:0;touch-action:none}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .cue-track{width:40px;height:100%;min-height:150px;max-height:320px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .cue-bottom{display:block!important;font-size:10px;width:12px;height:104px;bottom:8px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .cue-stick-vertical{width:14px}
+#mobile-pool-preview .cue-meter[aria-disabled="true"]{opacity:.45}
+}
+
+#mobile-pool-preview .stroke-controls{display:contents}
+@media(max-width:700px),(max-height:500px) and (pointer:coarse){
+#mobile-pool-preview:is(.is-landscape,.is-compact,.is-fullscreen) .controls{display:grid;grid-template-columns:minmax(0,1fr) 44px;grid-template-rows:minmax(0,1fr);overflow:hidden;align-content:stretch}
+#mobile-pool-preview:is(.is-landscape,.is-compact,.is-fullscreen) .stroke-controls{display:grid;grid-column:1;grid-row:1;height:100%;min-height:0;min-width:0;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-content:start;gap:6px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-right:2px}
+#mobile-pool-preview:is(.is-landscape,.is-compact,.is-fullscreen) .cue-meter{grid-column:2;grid-row:1;height:100%;min-height:0;max-height:none;overflow:hidden}
+#mobile-pool-preview:is(.is-landscape,.is-compact,.is-fullscreen) .cue-track{height:100%;min-height:0;max-height:none}
+}
+
+@media(max-width:700px){
+#mobile-pool-preview.is-fullscreen:not(.is-landscape):not(.is-compact){height:var(--visible-height)!important;overflow:hidden!important}
+#mobile-pool-preview.is-fullscreen:not(.is-landscape):not(.is-compact) .mobile-game-surface{height:100%}
+#mobile-pool-preview.is-fullscreen:not(.is-landscape):not(.is-compact) .app{height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+#mobile-pool-preview.is-fullscreen:not(.is-landscape):not(.is-compact) .layout{flex:1;min-height:0;overflow:hidden}
+#mobile-pool-preview.is-fullscreen:not(.is-landscape):not(.is-compact) .arena{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+#mobile-pool-preview.is-fullscreen:not(.is-landscape):not(.is-compact) .scorebar{height:40px;flex:0 0 40px}
+#mobile-pool-preview.is-fullscreen:not(.is-landscape):not(.is-compact) .table-wrap{flex:1;min-height:0;display:flex;justify-content:center;align-items:center;overflow:hidden}
+#mobile-pool-preview.is-fullscreen:not(.is-landscape):not(.is-compact) canvas{max-height:100%;width:auto;max-width:100%;object-fit:contain}
+#mobile-pool-preview.is-fullscreen:not(.is-landscape):not(.is-compact) .status{min-height:32px;max-height:40px;overflow:auto;font-size:12px;padding:4px}
+#mobile-pool-preview.is-fullscreen:not(.is-landscape):not(.is-compact) .controls{flex:0 0 180px;height:180px;padding:6px}
 }

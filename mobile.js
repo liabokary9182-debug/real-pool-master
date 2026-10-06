@@ -4,13 +4,19 @@
   // CSS rotation works in mobile browsers without requiring orientation-lock.
   let landscape = (root.clientWidth || root.getBoundingClientRect().width) <= 700;
   function syncLayout() {
-    const height = Math.max(1, root.clientWidth || root.getBoundingClientRect().width);
-    if(height>700)landscape=false;
-    const width = Math.max(640, Math.min(960, height * 1.85));
+    const viewport=window.visualViewport;
+    const availableWidth=Math.max(1,Math.min(root.clientWidth||Infinity,viewport?.width||window.innerWidth||root.clientWidth||360));
+    const availableHeight=Math.max(1,viewport?.height||window.innerHeight||availableWidth*1.85);
+    const compact=availableWidth>availableHeight&&availableHeight<=500;
+    if(availableWidth>700)landscape=false;
+    const height=landscape?availableWidth:availableHeight;
+    const width=landscape?availableHeight:availableWidth;
     root.style.setProperty('--landscape-height', `${height}px`);
     root.style.setProperty('--landscape-width', `${width}px`);
     root.style.setProperty('--landscape-table-width', `${Math.max(1, height - 138) * 1400 / 790}px`);
+    root.style.setProperty('--visible-height', `${availableHeight}px`);
     root.classList.toggle('is-landscape', landscape);
+    root.classList.toggle('is-compact',compact&&!landscape);
     root.style.setProperty('--preview-header-height', `${document.getElementById('previewTopbar').offsetHeight || 124}px`);
     button.textContent = landscape ? '竖屏 ↶' : '横屏 ↷';
     button.setAttribute('aria-pressed', String(landscape));
@@ -18,6 +24,8 @@
   }
   button.addEventListener('click', () => { landscape = !landscape; syncLayout(); });
   window.addEventListener('resize', syncLayout);
+  window.visualViewport?.addEventListener('resize',syncLayout);
+  window.visualViewport?.addEventListener('scroll',syncLayout);
   if (typeof ResizeObserver !== 'undefined') {
     let lastWidth = -1;
     new ResizeObserver(() => {
@@ -34,12 +42,12 @@
   const feedback = document.getElementById('fullscreenFeedback');
   let busy = false;
   function active() {
-    return document.fullscreenElement === root || document.webkitFullscreenElement === root;
+    return document.fullscreenElement === root || document.webkitFullscreenElement === root || root.classList.contains('is-fitted');
   }
   function sync() {
     const entered = active();
     root.classList.toggle('is-fullscreen', entered);
-    button.textContent = entered ? '退出全屏' : '全屏 ⛶';
+    button.textContent = entered ? '退出适屏' : '全屏 ⛶';
     button.setAttribute('aria-pressed', String(entered));
     button.setAttribute('aria-label', entered ? '退出全屏预览' : '全屏预览游戏');
     if (entered) { feedback.hidden = true; feedback.textContent = ''; }
@@ -52,6 +60,7 @@
     feedback.hidden = true;
     try {
       if (active()) {
+        if(root.classList.contains('is-fitted')){root.classList.remove('is-fitted');sync();return;}
         const exit = document.exitFullscreen || document.webkitExitFullscreen;
         if (!exit) throw new Error('Fullscreen unavailable');
         await exit.call(document);
@@ -62,7 +71,8 @@
       }
       sync();
     } catch {
-      feedback.textContent = '当前预览环境不允许系统全屏，可使用预览的展开功能。';
+      root.classList.add('is-fitted');sync();
+      feedback.textContent = '已适配当前可见区域；微信顶部栏由微信控制。';
       feedback.hidden = false;
     } finally {
       busy = false;

@@ -6,8 +6,9 @@
   const musicPanel=document.getElementById('musicPanel'),musicStatus=document.getElementById('musicStatus');
   const AudioEngine=window.AudioContext||window.webkitAudioContext;
   let context=null,effects=null,limiter=null,meter=null,recordings=[],loading=null;
-  let music=null,musicUrl=null,enabled=false,lastBall=0;
+  let music=null,musicUrl=null,enabled=false,lastBall=0,noiseBuffer=null,duckTimer=null;
   const effectStats={cue:0,ball:0,rail:0,pocket:0},lastEffect={cue:-1,ball:-1,rail:-1,pocket:-1};
+  const lastWeight={cue:0,ball:0,rail:0,pocket:0};
 
   function ensureContext(){
     if(!AudioEngine)return false;
@@ -16,7 +17,7 @@
       limiter=context.createDynamicsCompressor();limiter.threshold.value=-15;limiter.knee.value=10;
       limiter.ratio.value=4;limiter.attack.value=.005;limiter.release.value=.12;
       meter=context.createAnalyser();meter.fftSize=1024;limiter.connect(meter);meter.connect(context.destination);
-      effects=context.createGain();effects.gain.value=1.05;effects.connect(limiter);
+      effects=context.createGain();effects.gain.value=.85;effects.connect(limiter);
       loading=Promise.all([1,2,3].map(async i=>{
         const response=await fetch(`./sounds/ball-clack-${i}.wav`);
         if(!response.ok)throw Error(`Pool sound ${i}: HTTP ${response.status}`);
@@ -32,42 +33,60 @@
     oscillator.frequency.exponentialRampToValueAtTime(Math.max(30,f1),at+length);
     gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),at+.003);
     gain.gain.exponentialRampToValueAtTime(.0001,at+length);
-    oscillator.connect(gain);gain.connect(effects);oscillator.start(at);oscillator.stop(at+length+.01);
+    oscillator.connect(gain);gain.connect(effects);oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};oscillator.start(at);oscillator.stop(at+length+.01);
+  }
+  function softImpact(at,weight,length,cutoff,volume){
+    if(!noiseBuffer){
+      noiseBuffer=context.createBuffer(1,Math.ceil(context.sampleRate*.25),context.sampleRate);
+      const data=noiseBuffer.getChannelData(0);let seed=8317;
+      for(let i=0;i<data.length;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;data[i]=seed/2147483648-1;}
+    }
+    const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
+    source.buffer=noiseBuffer;filter.type='lowpass';filter.frequency.value=cutoff;filter.Q.value=.5;
+    gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(Math.max(.0002,volume*weight),at+.002);
+    gain.gain.exponentialRampToValueAtTime(.0001,at+length);
+    source.connect(filter);filter.connect(gain);gain.connect(effects);
+    source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect();};source.start(at);source.stop(at+length+.005);
   }
   function recordedClack(at,weight,kind){
     if(!recordings.length)return false;
     const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
     source.buffer=recordings[lastBall++%recordings.length];
-    const rate={cue:.92,ball:.98,rail:.72,pocket:.62}[kind];
-    source.playbackRate.value=rate*(1+(Math.random()-.5)*.045);
-    filter.type='lowpass';filter.frequency.value={cue:1350,ball:1500,rail:850,pocket:550}[kind];
-    gain.gain.value={cue:.37,ball:.34,rail:.22,pocket:.16}[kind]*(.5+.5*weight);
-    source.connect(filter);filter.connect(gain);gain.connect(effects);source.start(at);
+    const length=kind==='cue'?.065:.09;
+    source.playbackRate.value=(kind==='cue'?.96:1.02)*(1+(lastBall%3-1)*.012);
+    filter.type='lowpass';filter.frequency.value=kind==='cue'?3200:6200;
+    gain.gain.setValueAtTime((kind==='cue'?.38:.42)*weight,at);
+    gain.gain.exponentialRampToValueAtTime(.0001,at+length);
+    source.connect(filter);filter.connect(gain);gain.connect(effects);
+    source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect();};source.start(at);source.stop(at+length+.005);
     return true;
   }
   function play(kind,impact=20){
     if(!(kind in effectStats))return;
     effectStats[kind]++;
     if(!ensureContext())return;
+    const weight=Math.pow(Math.max(0,Math.min(1,impact/90)),.65);
+    if(weight<.025)return;
     const at=context.currentTime,gap=kind==='ball'?.012:kind==='rail'?.025:.02;
-    if(at-lastEffect[kind]<gap)return;
-    lastEffect[kind]=at;
-    const weight=Math.max(.2,Math.min(1,impact/55));
+    // A soft contact must not suppress a much harder rack collision.
+    if(at-lastEffect[kind]<gap&&weight<=lastWeight[kind]*1.4)return;
+    lastEffect[kind]=at;lastWeight[kind]=weight;
     if(kind==='cue'){
-      if(!recordedClack(at,weight,kind))tone(at,570,270,.067,.04+.04*weight);
-      tone(at,145,90,.06,.011+.008*weight);
+      if(!recordedClack(at,weight,kind)){softImpact(at,weight,.035,3000,.11);tone(at,620,310,.04,.06*weight);}
+      tone(at,150,85,.05,.018*weight);
+      if(enabled){music.volume=.11;clearTimeout(duckTimer);duckTimer=setTimeout(()=>{music.volume=.20;},260);}
     }else if(kind==='ball'){
       if(!recordedClack(at,weight,kind)){
-        tone(at,690,430,.065,.035+.045*weight);
-        tone(at,360,210,.085,.015+.015*weight);
+        softImpact(at,weight,.025,6500,.12);
+        tone(at,1150,650,.038,.07*weight);tone(at,410,270,.045,.025*weight);
       }
     }else if(kind==='rail'){
-      if(!recordedClack(at,weight,kind))tone(at,270,115,.09,.025+.025*weight,'triangle');
-      tone(at,110,70,.09,.008+.012*weight);
+      softImpact(at,weight,.055,850,.075);
+      tone(at,170,75,.065,.055*weight);
     }else{
-      recordedClack(at,weight,kind);
-      tone(at,135,65,.2,.022+.025*weight);
-      tone(at+.018,78,44,.16,.009+.012*weight);
+      softImpact(at,weight,.11,520,.085);
+      tone(at,125,58,.14,.048*weight);
+      tone(at+.04,210,115,.06,.015*weight);
     }
   }
   function updateMusicButton(){
@@ -77,7 +96,7 @@
   }
   let musicTicket=0,wanted=false,musicState='idle';
   let musicTitle='Gymnopedie No. 1',musicArtist='Kevin MacLeod';
-  music=new Audio('./sounds/table-piano.mp3');music.loop=true;music.volume=.24;music.preload='auto';
+  music=new Audio('./sounds/table-piano.mp3');music.loop=true;music.volume=.20;music.preload='auto';
   function message(text){if(musicStatus)musicStatus.textContent=text;updateMusicButton();}
   async function setMusic(on){
     const ticket=++musicTicket;wanted=on;
