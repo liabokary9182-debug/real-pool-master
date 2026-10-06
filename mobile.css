@@ -180,3 +180,25 @@ html{overflow:auto!important;height:auto!important}
 #mobile-pool-preview.is-fullscreen:not(.is-landscape):not(.is-compact) .status{min-height:32px;max-height:40px;overflow:auto;font-size:12px;padding:4px}
 #mobile-pool-preview.is-fullscreen:not(.is-landscape):not(.is-compact) .controls{flex:0 0 180px;height:180px;padding:6px}
 }
+
+/* Narrow phone console: one scrolling control column plus the fixed pull cue. */
+@media(max-width:700px),(max-height:500px) and (pointer:coarse){
+#mobile-pool-preview:is(.is-landscape,.is-compact) .layout{grid-template-columns:minmax(0,1fr) 128px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .controls{padding:5px 4px;column-gap:4px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .stroke-controls{grid-template-columns:minmax(0,1fr);gap:5px;padding:0}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .stroke-controls>*{grid-column:1!important;grid-row:auto!important;min-width:0;max-width:100%}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .angle-head{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .angle-ruler{margin-top:2px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .power-group .control-line{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .power-fine{flex-direction:column;gap:3px;margin-top:3px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .power-fine button{width:100%;padding:3px;min-height:44px;min-width:0}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .spin-group{flex-direction:column;align-items:center;gap:4px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .spin-pad{flex-shrink:0;width:56px;height:56px;margin:0}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .small-button{min-width:0;width:100%;min-height:44px;padding:3px;font-size:12px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .shoot{font-size:14px;min-height:44px;padding:4px;align-self:stretch}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .shoot span{display:none}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .place-cue{font-size:12px;white-space:normal;min-height:44px;padding:3px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .practice-actions{flex-direction:column;gap:4px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .practice-actions button{min-width:0;min-height:44px;padding:3px;font-size:12px;white-space:normal}
+#mobile-pool-preview:is(.is-landscape,.is-compact) #strokeReadout{max-width:100%;font-size:11px;text-align:center}
+}
