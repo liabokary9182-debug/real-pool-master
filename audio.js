@@ -22,10 +22,26 @@
         const response=await fetch(`./sounds/ball-clack-${i}.wav`);
         if(!response.ok)throw Error(`Pool sound ${i}: HTTP ${response.status}`);
         return context.decodeAudioData(await response.arrayBuffer());
-      })).then(values=>{recordings=values;}).catch(error=>console.warn('台球录音未加载，使用柔和的合成回退音效。',error));
+      })).then(values=>{recordings=values.map(prepareClack);}).catch(error=>console.warn('台球录音未加载，使用柔和的合成回退音效。',error));
     }
     if(context.state==='suspended')context.resume().catch(()=>{});
     return true;
+  }
+  function prepareClack(buffer){
+    const mono=new Float32Array(buffer.length);
+    for(let channel=0;channel<buffer.numberOfChannels;channel++){
+      const input=buffer.getChannelData(channel);
+      for(let i=0;i<mono.length;i++)mono[i]+=input[i]/buffer.numberOfChannels;
+    }
+    let peak=0;for(const sample of mono)peak=Math.max(peak,Math.abs(sample));
+    if(peak<.0001)return buffer;
+    let onset=0;while(onset<mono.length&&Math.abs(mono[onset])<peak*.12)onset++;
+    const start=Math.max(0,onset-Math.round(buffer.sampleRate*.0005));
+    const length=Math.min(mono.length-start,Math.round(buffer.sampleRate*.10));
+    const prepared=context.createBuffer(1,length,buffer.sampleRate),out=prepared.getChannelData(0);
+    const fade=Math.max(1,Math.round(buffer.sampleRate*.004));
+    for(let i=0;i<length;i++)out[i]=mono[start+i]*(.55/peak)*Math.min(1,(i+1)/(buffer.sampleRate*.0003),(length-i)/fade);
+    return prepared;
   }
   function tone(at,f0,f1,length,volume,type='sine'){
     const oscillator=context.createOscillator(),gain=context.createGain();
@@ -52,10 +68,11 @@
     if(!recordings.length)return false;
     const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
     source.buffer=recordings[lastBall++%recordings.length];
-    const length=kind==='cue'?.065:.09;
-    source.playbackRate.value=(kind==='cue'?.96:1.02)*(1+(lastBall%3-1)*.012);
-    filter.type='lowpass';filter.frequency.value=kind==='cue'?3200:6200;
-    gain.gain.setValueAtTime((kind==='cue'?.38:.42)*weight,at);
+    const length=kind==='cue'?.065:.06+.02*weight;
+    source.playbackRate.value=kind==='cue'?.96:1;
+    filter.type='lowpass';filter.frequency.value=kind==='cue'?3200:3500+3500*weight;
+    gain.gain.setValueAtTime(.0001,at);
+    gain.gain.exponentialRampToValueAtTime((kind==='cue'?.38:.42)*weight,at+.001);
     gain.gain.exponentialRampToValueAtTime(.0001,at+length);
     source.connect(filter);filter.connect(gain);gain.connect(effects);
     source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect();};source.start(at);source.stop(at+length+.005);
@@ -77,8 +94,8 @@
       if(enabled){music.volume=.11;clearTimeout(duckTimer);duckTimer=setTimeout(()=>{music.volume=.20;},260);}
     }else if(kind==='ball'){
       if(!recordedClack(at,weight,kind)){
-        softImpact(at,weight,.025,6500,.12);
-        tone(at,1150,650,.038,.07*weight);tone(at,410,270,.045,.025*weight);
+        softImpact(at,weight,.018,3500+3500*weight,.14);
+        tone(at,1250,950,.022,.025*weight);
       }
     }else if(kind==='rail'){
       softImpact(at,weight,.055,850,.075);

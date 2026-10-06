@@ -13,10 +13,11 @@
     const width=landscape?availableHeight:availableWidth;
     root.style.setProperty('--landscape-height', `${height}px`);
     root.style.setProperty('--landscape-width', `${width}px`);
-    root.style.setProperty('--landscape-table-width', `${Math.max(1, height - 138) * 1400 / 790}px`);
     root.style.setProperty('--visible-height', `${availableHeight}px`);
     root.classList.toggle('is-landscape', landscape);
     root.classList.toggle('is-compact',compact&&!landscape);
+    const chromeHeight=(root.querySelector('.topbar')?.offsetHeight||48)+(root.querySelector('.scorebar')?.offsetHeight||28)+(root.querySelector('.status')?.offsetHeight||22);
+    root.style.setProperty('--landscape-table-width', `${Math.max(1, height - chromeHeight) * 1400 / 790}px`);
     root.style.setProperty('--preview-header-height', `${document.getElementById('previewTopbar').offsetHeight || 124}px`);
     button.textContent = landscape ? '竖屏 ↶' : '横屏 ↷';
     button.setAttribute('aria-pressed', String(landscape));

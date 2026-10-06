@@ -202,3 +202,37 @@ html{overflow:auto!important;height:auto!important}
 #mobile-pool-preview:is(.is-landscape,.is-compact) .practice-actions button{min-width:0;min-height:44px;padding:3px;font-size:12px;white-space:normal}
 #mobile-pool-preview:is(.is-landscape,.is-compact) #strokeReadout{max-width:100%;font-size:11px;text-align:center}
 }
+
+/* Reclaim the table margins and give the pull cue a wider touch lane. */
+@media(max-width:700px),(max-height:500px) and (pointer:coarse){
+#mobile-pool-preview:is(.is-landscape,.is-compact) .layout{grid-template-columns:minmax(0,1fr) 128px}
+#mobile-pool-preview:is(.is-landscape,.is-compact,.is-fullscreen) .controls{grid-template-columns:minmax(0,1fr) 60px;padding:3px;column-gap:3px}
+#mobile-pool-preview:is(.is-landscape,.is-compact,.is-fullscreen) .cue-meter{width:60px;min-height:0;padding:0}
+#mobile-pool-preview:is(.is-landscape,.is-compact,.is-fullscreen) .cue-track{width:52px;height:100%;min-height:0}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .spin-pad{width:52px;height:52px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .scorebar{height:28px;flex:0 0 28px;padding:0 3px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .status{height:22px;min-height:22px;flex:0 0 22px;padding:2px 4px;font-size:11px;white-space:nowrap;overflow:auto}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .table-wrap{padding:0}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .player b{font-size:12px}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .player small{display:none}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .shoot{order:-1;position:sticky;top:0;z-index:2}
+#mobile-pool-preview .power-fine{display:none!important}
+}
+
+/* A separate left pull lane, table in the middle, compact controls on the right. */
+#mobile-pool-preview .layout{grid-template-columns:60px minmax(0,1fr) 76px}
+#mobile-pool-preview .layout>.cue-meter{display:flex!important;grid-column:1;grid-row:1;align-self:stretch;width:60px;height:100%;min-height:0;max-height:none;margin:0;padding:4px;overflow:hidden;background:#071320;touch-action:none}
+#mobile-pool-preview .layout>.cue-meter .cue-track{width:52px;height:100%;min-height:0;max-height:none}
+#mobile-pool-preview .layout>.arena{grid-column:2;grid-row:1}
+#mobile-pool-preview .layout>.controls{grid-column:3;grid-row:1;grid-template-columns:minmax(0,1fr);min-width:0;overflow-y:auto}
+@media(max-width:700px),(max-height:500px) and (pointer:coarse){
+#mobile-pool-preview .layout{display:grid;grid-template-columns:60px minmax(0,1fr);grid-template-rows:auto auto}
+#mobile-pool-preview .layout>.cue-meter{grid-column:1;grid-row:1/3}
+#mobile-pool-preview .layout>.controls{grid-column:2;grid-row:2}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .layout{grid-template-columns:60px minmax(0,1fr) 68px;grid-template-rows:minmax(0,1fr)}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .layout>.cue-meter{grid-row:1}
+#mobile-pool-preview:is(.is-landscape,.is-compact) .layout>.controls{grid-column:3;grid-row:1}
+#mobile-pool-preview:is(.is-landscape,.is-compact,.is-fullscreen) .controls{grid-template-columns:minmax(0,1fr);overflow:hidden}
+#mobile-pool-preview .layout>.controls .stroke-controls{grid-column:1;grid-template-columns:minmax(0,1fr)}
+#mobile-pool-preview.is-fullscreen:not(.is-landscape):not(.is-compact) .layout{grid-template-rows:minmax(0,1fr) 180px}
+}

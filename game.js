@@ -9,12 +9,12 @@
   const PIXEL_RATIO=Math.min(2.4,Math.max(1.75,(window.devicePixelRatio||1)*1.08));
   canvas.width=Math.round(VIEW_W*PIXEL_RATIO);canvas.height=Math.round(VIEW_H*PIXEL_RATIO);
   ctx.setTransform(PIXEL_RATIO,0,0,PIXEL_RATIO,0,0);
-  const W = 100, H = 50, HEAD_LINE = W/4, R = 1.125*1.05, DISPLAY_R = R;
+  const W = 100, H = 50, HEAD_LINE = W/4, R = 1.125*1.05*1.05, DISPLAY_R = R;
   // The reference is an 82 mm corner mouth. Keep the current playable opening
   // and enlarge all six mouths by the same small amount for this preview.
-  const CORNER_MOUTH = 82 * 1.05 * 1.05 * .98 * 1.02 * 1.025 * 1.02 * 1.02 * 1.02 * 1.02 * 1.05 / 25.4, SIDE_MOUTH = CORNER_MOUTH;
+  const CORNER_MOUTH = 82 * 1.05 * 1.05 * .98 * 1.02 * 1.025 * 1.02 * 1.02 * 1.02 * 1.02 * 1.05 * 1.05 / 25.4, SIDE_MOUTH = CORNER_MOUTH;
   const CUT = CORNER_MOUTH / Math.SQRT2, SIDE_L = W / 2 - SIDE_MOUTH / 2, SIDE_R = W / 2 + SIDE_MOUTH / 2;
-  const SCALE = 11.2, OX = 140, OY = 115;
+  const SCALE = 12.8, OX = 60, OY = 75;
   const STEP = 1 / 180, COLORS = ['#f7f1e5','#f5b928','#1556ae','#c91f37','#623282','#dd742a','#086e5c','#70331e','#11131a'];
   // World distances are inches.  A solid sphere has I = 2/5 mr², so cloth
   // friction changes contact slip 3.5 times as fast as centre velocity.
@@ -128,7 +128,6 @@
     const adjustable=canAdjustStroke();
     $('power').disabled=!adjustable;$('resetSpin').disabled=!adjustable;
     for(const id of ['spinPad','angleRuler','cueMeter'])$(id).setAttribute('aria-disabled',String(!adjustable));
-    for(const id of ['powerDown','powerUp'])if($(id))$(id).disabled=!adjustable;
     if($('repeatPractice'))$('repeatPractice').hidden=!state.practice;
     if(state.practice){
       $('modeLabel').textContent='练球';$('turnLabel').textContent=state.phase==='moving'?'观察球路':state.phase==='practice-done'?'本杆结束':'自由击球';
@@ -587,10 +586,15 @@
     return `${plan.spinY<-.1?'低杆拉回':plan.spinY>.1?'高杆跟进':'中杆'}${Math.abs(plan.spinX||0)>.1?` · ${plan.spinX<0?'左':'右'}${Math.abs(plan.spinX)>.6?'强':'轻'}塞`:''}${plan.power>=42?' · 击打':' · 轻推'}`;
   }
   function masterStrokeCost(plan,result){
-    return masterPositionScore(result)+Math.max(0,42-plan.power)*.45+(Math.hypot(plan.spinX||0,plan.spinY||0)<.25?3:0);
+    // Prefer simpler, controllable strokes when the resulting leave is similar.
+    // Strong spin is selected for position, not rewarded for its own sake.
+    const spin=Math.hypot(plan.spinX||0,plan.spinY||0);
+    return masterPositionScore(result)+spin*spin*2.5+plan.power*.025+Math.max(0,plan.power-75)*.12;
   }
   async function refineMasterPosition(plans,isCurrent){
-    const candidates=plans.slice(0,4),refined=[];let count=0;
+    const seen=new Set(),candidates=[];
+    for(const plan of plans){const key=plan.target+':'+plan.pocket;if(seen.has(key))continue;seen.add(key);candidates.push(plan);if(candidates.length===4)break;}
+    const refined=[];let count=0;
     for(const base of candidates)for(const [spinX,spinY] of MASTER_SPINS){
       if(!isCurrent())return null;
       const plan=spinVariant(base,spinX,spinY,spinY<-.7?1.06:spinY>.7?.94:1);
@@ -872,7 +876,7 @@
     if(successful.length){
       // Test small input variations before ranking finalists. Difficulty
       // changes choice among validated shots, never the launch physics.
-      let finalists=successful.slice(0,state.aiDifficulty==='easy'?3:6);
+      let finalists=successful.slice(0,state.aiDifficulty==='easy'?3:state.aiDifficulty==='hard'?18:6);
       if(state.aiDifficulty==='hard'){const refined=await refineMasterPosition(finalists,isCurrent);if(!refined)return null;if(refined.length)finalists=refined.slice(0,6);}
       for(const plan of finalists){
         let robust=0;
@@ -1308,7 +1312,7 @@
   }
   function drawCue(c,angle,power,tipGap=null,opacity=1){
     const p=worldToScreen(c.x,c.y);ctx.save();ctx.globalAlpha=opacity;
-    const gap=tipGap??R*SCALE+14+power*.4,back=gap+230,butt=back-82;
+    const gap=tipGap??R*SCALE+14+power*.4,back=gap+310,butt=back-110;
     ctx.translate(p.x,p.y);ctx.rotate(angle+Math.PI);
     ctx.shadowColor='#00100d99';ctx.shadowBlur=9;ctx.shadowOffsetY=5;
     let g=ctx.createLinearGradient(0,-8,0,8);g.addColorStop(0,'#341c17');g.addColorStop(.28,'#87502d');g.addColorStop(.55,'#b67e43');g.addColorStop(.8,'#633620');g.addColorStop(1,'#241514');
@@ -1361,7 +1365,7 @@
       tableSurface=document.createElement('canvas');tableSurface.width=canvas.width;tableSurface.height=canvas.height;
       tableSurface.getContext('2d').drawImage(canvas,0,0);
     }else ctx.drawImage(tableSurface,0,0,VIEW_W,VIEW_H);
-    drawPocketBanks();drawAim();for(const b of live())drawBall(b);drawStroke();
+    drawAim();for(const b of live())drawBall(b);drawStroke();
     for(const a of state.pocketAnimations){
       drawPocketEffect(a);
       if(a.age<.18){
@@ -1429,7 +1433,6 @@
   spinPad.addEventListener('pointermove',e=>{if(spinPad.hasPointerCapture(e.pointerId))setSpin(e);});
   $('resetSpin').addEventListener('click',()=>{if(!canAdjustStroke())return;state.spinX=0;state.spinY=0;moveSpinDot();requestAimFrame();});
   $('power').addEventListener('input',e=>{if(!canAdjustStroke())return;state.power=Number(e.target.value);syncPowerUI();render();});
-  for(const [id,delta] of [['powerDown',-1],['powerUp',1]])$(id)?.addEventListener('click',()=>{if(!canAdjustStroke())return;state.power=clamp(state.power+delta,5,100);syncPowerUI();requestAimFrame();});
   $('practiceBtn')?.addEventListener('click',()=>$('practiceOverlay').classList.remove('hidden'));
   $('closePractice')?.addEventListener('click',()=>$('practiceOverlay').classList.add('hidden'));
   $('repeatPractice')?.addEventListener('click',()=>startPractice(state.practice));
