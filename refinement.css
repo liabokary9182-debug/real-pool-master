@@ -1,0 +1,20 @@
+#mobile-pool-preview .power-fine{display:flex;gap:8px;margin-top:8px}
+#mobile-pool-preview .power-fine button{flex:1;min-height:44px;font-size:14px}
+#mobile-pool-preview .practice-actions{display:flex;flex-wrap:wrap;gap:8px;grid-column:1/-1;margin-top:12px}
+#mobile-pool-preview .practice-actions button{flex:1;min-height:44px;font-size:14px}
+#mobile-pool-preview .practice-actions [hidden]{display:none}
+#mobile-pool-preview .practice-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+#mobile-pool-preview .practice-grid button{display:flex;flex-direction:column;gap:7px;min-height:80px;text-align:left;white-space:normal}
+#mobile-pool-preview .practice-grid b{font-size:16px;color:#efcd79}
+#mobile-pool-preview .practice-grid small{font-size:12px;line-height:1.5;color:#b6ccc9}
+#mobile-pool-preview .practice-card{max-height:100%;overflow:auto}
+#mobile-pool-preview [aria-disabled="true"]{opacity:.5}
+#mobile-pool-preview #strokeReadout{display:block;font-size:12px;line-height:1.4;max-width:140px;white-space:normal}
+#mobile-pool-preview.is-landscape .practice-actions{grid-column:1/-1;margin-top:0}
+#mobile-pool-preview.is-landscape #strokeReadout{display:block!important}
+#mobile-pool-preview.is-landscape .practice-card{padding:14px 18px}
+#mobile-pool-preview.is-landscape .practice-card h2{font-size:21px;margin:0}
+#mobile-pool-preview.is-landscape .practice-card p{margin:8px 0}
+#mobile-pool-preview.is-landscape .practice-grid{margin-top:10px}
+#mobile-pool-preview.is-landscape .practice-grid button{min-height:65px;padding:8px}
+@media(max-width:370px){#mobile-pool-preview .practice-grid{grid-template-columns:1fr}#mobile-pool-preview .practice-grid button{min-height:64px}}

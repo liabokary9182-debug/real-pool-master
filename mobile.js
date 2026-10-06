@@ -1,7 +1,8 @@
 (() => {
   const root = document.getElementById('mobile-pool-preview');
   const button = document.getElementById('landscapeBtn');
-  let landscape = false;
+  // CSS rotation works in mobile browsers without requiring orientation-lock.
+  let landscape = (root.clientWidth || root.getBoundingClientRect().width) <= 700;
   function syncLayout() {
     const height = Math.max(1, root.clientWidth || root.getBoundingClientRect().width);
     if(height>700)landscape=false;

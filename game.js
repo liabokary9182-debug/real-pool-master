@@ -9,10 +9,10 @@
   const PIXEL_RATIO=Math.min(2.4,Math.max(1.75,(window.devicePixelRatio||1)*1.08));
   canvas.width=Math.round(VIEW_W*PIXEL_RATIO);canvas.height=Math.round(VIEW_H*PIXEL_RATIO);
   ctx.setTransform(PIXEL_RATIO,0,0,PIXEL_RATIO,0,0);
-  const W = 100, H = 50, R = 1.125, DISPLAY_R = R;
+  const W = 100, H = 50, R = 1.125*1.05, DISPLAY_R = R;
   // The reference is an 82 mm corner mouth. Keep the current playable opening
   // and enlarge all six mouths by the same small amount for this preview.
-  const CORNER_MOUTH = 82 * 1.05 * 1.05 * .98 * 1.02 * 1.025 * 1.02 * 1.02 * 1.02 * 1.02 / 25.4, SIDE_MOUTH = CORNER_MOUTH;
+  const CORNER_MOUTH = 82 * 1.05 * 1.05 * .98 * 1.02 * 1.025 * 1.02 * 1.02 * 1.02 * 1.02 * 1.05 / 25.4, SIDE_MOUTH = CORNER_MOUTH;
   const CUT = CORNER_MOUTH / Math.SQRT2, SIDE_L = W / 2 - SIDE_MOUTH / 2, SIDE_R = W / 2 + SIDE_MOUTH / 2;
   const SCALE = 11.2, OX = 140, OY = 115;
   const STEP = 1 / 180, COLORS = ['#f7f1e5','#f5b928','#1556ae','#c91f37','#623282','#dd742a','#086e5c','#70331e','#11131a'];
@@ -33,7 +33,7 @@
       ax:mx+tx*radius*sign,ay:my+ty*radius*sign,
       bx:mx+nx*.9+tx*(radius-.18)*sign,by:my+ny*.9+ty*(radius-.18)*sign
     }));
-    return {index,mx,my,nx,ny,tx,ty,radius,jawRadius,well,faces,fallRadius:radius-R*.55,fallFront:-R*.35};
+    return {index,mx,my,nx,ny,tx,ty,radius,jawRadius,well,faces,fallRadius:radius-R*.45,fallFront:-R*.35};
   });
   const state = {mode:null,opponent:'ai',aiDifficulty:'normal',aiTicket:0,aiThinking:false,phase:'menu',balls:[],pocketAnimations:[],turn:0,groups:[null,null],scores:[0,0],breaking:true,rackSeed:0,ballInHand:false,repositionAllowed:false,aim:-0.02,power:56,spinX:0,spinY:0,shot:null,stopTime:0,shotTime:0,status:'启动球场，选择对局',winner:null,drag:null};
   // Trial shots use the live collision/cloth functions, with isolated events.
@@ -56,6 +56,24 @@
   const allGroupGone = g => g && !activeBalls().some(b => group(b.n) === g);
   const lowestNine = () => Math.min(...activeBalls().map(b => b.n));
   const say = text => {state.status=text; $('statusText').textContent=text;};
+  const canAdjustStroke=()=>state.phase==='aim'&&!state.ballInHand&&!(state.opponent==='ai'&&state.turn===1);
+  const PRACTICE_LAYOUTS={
+    pocket:{label:'慢球进中袋',hint:'先试 18% 轻推，再调力度观察袋口；打偏会碰胶边。',balls:[[0,50,12],[1,50,5]],aim:-Math.PI/2,power:18,spinX:0,spinY:0},
+    draw:{label:'低杆拉回',hint:'白球正碰目标球后拉回；与高杆使用同一球位和力度。',balls:[[0,40,25],[1,55,25]],aim:0,power:70,spinX:0,spinY:-.85},
+    follow:{label:'高杆跟进',hint:'白球正碰后继续向前；可切换低杆对比白球落点。',balls:[[0,40,25],[1,55,25]],aim:0,power:70,spinX:0,spinY:.85},
+    english:{label:'加塞碰库',hint:'先试右塞，再把击球点移到左侧，对比碰上库后的方向。',balls:[[0,30,25],[1,80,42]],aim:-Math.PI/3,power:48,spinX:.65,spinY:0}
+  };
+  function startPractice(key){
+    const layout=PRACTICE_LAYOUTS[key];if(!layout)return;
+    if(!state.practice)state.practiceOpponent=state.opponent;
+    state.aiTicket++;state.aiThinking=false;state.aiPlan=null;state.practice=key;
+    state.mode='nine';state.opponent='local';state.phase='aim';state.turn=0;state.groups=[null,null];state.scores=[0,0];
+    state.breaking=false;state.ballInHand=false;state.repositionAllowed=false;state.shot=null;state.stopTime=0;state.shotTime=0;state.winner=null;
+    state.balls=layout.balls.map(([n,x,y])=>ball(n,x,y));state.pocketAnimations=[];state.stroke=null;state.windup=0;
+    state.aim=layout.aim;state.power=layout.power;state.spinX=layout.spinX;state.spinY=layout.spinY;
+    for(const id of ['startOverlay','menuOverlay','practiceOverlay'])$(id)?.classList.add('hidden');
+    $('player2Name').textContent='练习目标';syncPowerUI();moveSpinDot();updateUI();say(`${layout.label}：${layout.hint}`);render();
+  }
   function syncPowerUI() {
     $('power').value=String(state.power);
     $('powerReadout').textContent=Number(state.power.toFixed(1))+'%';
@@ -63,6 +81,8 @@
     $('cueMeter').style.setProperty('--power-height',`${Math.round(state.power*.65)}%`);
   }
   function init(mode) {
+    if(state.practice)state.opponent=state.practiceOpponent||'ai';
+    state.practice=null;state.stroke=null;state.windup=0;
     state.aiTicket++;state.aiThinking=false;state.aiPlan=null;
     state.mode=mode; state.phase='aim'; state.turn=0; state.groups=[null,null]; state.scores=[0,0];
     state.breaking=true; state.ballInHand=false; state.repositionAllowed=false; state.aim=0; state.power=56; state.spinX=0; state.spinY=0;
@@ -103,6 +123,16 @@
     $('placeCueBtn').hidden=!(state.phase==='aim'&&state.repositionAllowed&&!(state.opponent==='ai'&&state.turn===1));
     $('placeCueBtn').textContent=state.ballInHand?'确认白球位置':'重新摆放白球';
     $('tipText').textContent=state.phase==='gameover'?'本局结束，可开启下一场。':state.ballInHand?'自由球：拖动白球，满意后确认位置。':'拖动瞄准，拉动球杆出杆。';
+    const adjustable=canAdjustStroke();
+    $('power').disabled=!adjustable;$('resetSpin').disabled=!adjustable;
+    for(const id of ['spinPad','angleRuler','cueMeter'])$(id).setAttribute('aria-disabled',String(!adjustable));
+    for(const id of ['powerDown','powerUp'])if($(id))$(id).disabled=!adjustable;
+    if($('repeatPractice'))$('repeatPractice').hidden=!state.practice;
+    if(state.practice){
+      $('modeLabel').textContent='练球';$('turnLabel').textContent=state.phase==='moving'?'观察球路':state.phase==='practice-done'?'本杆结束':'自由击球';
+      $('group0').textContent=PRACTICE_LAYOUTS[state.practice].label;$('group1').textContent='随时重摆';
+      $('tipText').textContent='调整力度和击球点，击球后点“重摆本球”反复练习。';
+    }
     syncAngleUI();
   }
   function syncAngleUI(){
@@ -118,24 +148,28 @@
     if(Math.hypot(dx,dy)<2)return;
     state.aim=Math.atan2(dy,dx); updateUI(); render();
   }
-  function fire(byAI=false) {
+  function fire(byAI=false,withWindup=false) {
     if(state.phase!=='aim'||state.ballInHand||(state.opponent==='ai'&&state.turn===1&&!byAI))return;
     const c=cue(); if(!c||c.pocketed)return;
     // A new stroke must never inherit a lingering flash from the last one.
     state.pocketAnimations=[];
     state.shot={shooter:state.turn,breaking:state.breaking,firstHit:null,pocketed:[],railAfterHit:false,breakRails:new Set(),groupAtStart:currentGroup(),eightReady:!!allGroupGone(currentGroup())};
-    const breakForce=state.breaking?.99+Math.random()*.02:1;
+    const breakForce=1;
+    // Whole fixed ticks keep animation delay from changing collision timing.
+    state.windup=withWindup?(state.power>=42?14*STEP:18*STEP):0;
+    state.stroke={x:c.x,y:c.y,aim:state.aim,power:state.power,windup:state.windup,duration:state.power>=42?.18:.22,age:-state.windup};
     launchCue(c,breakForce);
     state.spinX=0;state.spinY=0;moveSpinDot();
     state.phase='moving';state.repositionAllowed=false;state.stopTime=0;state.shotTime=0;
-    window.PoolAudio?.play('cue',Math.hypot(c.vx,c.vy));
+    if(!withWindup)window.PoolAudio?.play('cue',Math.hypot(c.vx,c.vy));
     say(byAI&&state.aiPlan?`电脑：${state.aiPlan.description}`:`${actor(state.turn)}击球中…`);updateUI();render();
   }
   function cueLaunchSpeed(power,breaking=false,force=1){
     // Preserve the original ordinary stroke curve. Only soften the top of
     // the original break curve; cloth, impulses and collision order stay old.
     const boost=1+.4*(Math.max(0,(power-60)/40))**2;
-    const speed=(17+power*.78)*boost*(breaking?2.5+1.65*power/100:1);
+    const light=clamp(power/25,0,1),touch=breaking?1:light*light*(3-2*light);
+    const speed=(17+power*.78)*boost*touch*(breaking?2.5+1.65*power/100:1);
     return (breaking?speed/Math.pow(1+Math.pow(speed/260,4),.25):speed)*force;
   }
   function launchCue(c,breakForce=1){
@@ -144,7 +178,8 @@
   function applyCueImpulse(c,power,aim,spinX=0,spinY=0,breaking=false,force=1){
     const spinScale=Math.max(1,Math.hypot(spinX,spinY));spinX/=spinScale;spinY/=spinScale;
     const speed=cueLaunchSpeed(power,breaking,force),shotAngle=aim-spinX*.018;
-    const spinGain=1+.55*(power/100)**2;
+    const strongSpin=clamp((Math.hypot(spinX,spinY)-.55)/.45,0,1);
+    const spinGain=Math.min(1.75,1+.55*(power/100)**2+(breaking?0:.3*strongSpin*power/100));
     c.vx=Math.cos(shotAngle)*speed;c.vy=Math.sin(shotAngle)*speed;
     c.rollVx=Math.cos(shotAngle)*speed*spinY*1.05*spinGain;
     c.rollVy=Math.sin(shotAngle)*speed*spinY*1.05*spinGain;
@@ -167,6 +202,13 @@
     const events=physicsContext||state.shot;
     if(events)events.pocketed.push({n:b.n,pocket:index});
   }
+  function pocketFallProfile(p){
+    const centerDepth=(p.well.x-p.mx)*p.nx+(p.well.y-p.my)*p.ny;
+    return {x:p.well.x,y:p.well.y,radius:p.fallRadius,angle:Math.atan2(p.ny,p.nx),halfAngle:Math.acos(clamp((p.fallFront-centerDepth)/p.fallRadius,-1,1))};
+  }
+  function pocketFallContains(p,x,y){
+    return (x-p.mx)*p.nx+(y-p.my)*p.ny>=p.fallFront&&(x-p.well.x)**2+(y-p.well.y)**2<=p.fallRadius*p.fallRadius;
+  }
   function pocketCheck(b) {
     b.pocketCandidate=null;
     for(const p of POCKET_GEOMETRY){
@@ -176,7 +218,7 @@
       // Once the centre passes the shelf edge and most of the footprint is
       // unsupported inside the visible well, gravity takes over. No minimum
       // speed and no invisible extra throat travel or attraction force.
-      if(depth>=p.fallFront&&distance2<=p.fallRadius*p.fallRadius){
+      if(pocketFallContains(p,b.x,b.y)){
         b.pocketCandidate=p.index;return markPocket(b,p.index);
       }
     }
@@ -195,8 +237,8 @@
       const tangentBefore=b.vx*tangentX+b.vy*tangentY;
       const spinBefore=b.spin;
       const sideEnglish=Math.abs(spinBefore)>.5;
-      const restitution=jaw?.69:.79;
-      let tangentAfter=tangentBefore*(jaw?.94:.985);
+      const restitution=jaw?.52:.79;
+      let tangentAfter=tangentBefore*(jaw?.88:.985);
       let spinAfter=spinBefore;
       if(sideEnglish){
         // Solid-sphere rim inertia gives a 3.5 effective tangential mass.
@@ -265,6 +307,7 @@
     b.vx+=tangentImpulse*tx;b.vy+=tangentImpulse*ty;
     a.spin-=2.5*tangentImpulse;b.spin-=2.5*tangentImpulse;
     const events=physicsContext||state.shot;
+    if(events?.captureContacts)(events.contacts??=[]).push({a:a.n,b:b.n});
     if(events && events.firstHit===null && (a.n===0||b.n===0)){
       events.firstHit=a.n===0?b.n:a.n;
     }
@@ -309,8 +352,14 @@
     if(b.spriteAngle>=.08){b.spriteDirty=true;b.spriteAngle=0;}
   }
   function update(dt) {
-    state.pocketAnimations=state.pocketAnimations.filter(a=>(a.age+=dt)<.58);
+    if(state.stroke&&(state.stroke.age+=dt)>state.stroke.duration)state.stroke=null;
+    state.pocketAnimations=state.pocketAnimations.filter(a=>(a.age+=dt)<.32);
     if(state.phase!=='moving')return;
+    if(state.windup>0){
+      const wait=Math.min(dt,state.windup);state.windup-=wait;dt-=wait;
+      if(state.windup<1e-8){state.windup=0;window.PoolAudio?.play('cue',Math.hypot(cue().vx,cue().vy));}
+      if(dt<1e-8)return;
+    }
     state.shotTime+=dt;
     // During a hard break, reduce travel per collision check so a ball cannot
     // tunnel through the rack or escape a pocket mouth between two frames.
@@ -349,6 +398,11 @@
     const s=state.shot; if(!s)return;
     state.shot=null;state.phase='aim';state.breaking=false;
     const nums=s.pocketed.map(p=>p.n),objectPots=nums.filter(n=>n!==0),scratch=nums.includes(0);
+    if(state.practice){
+      state.phase='practice-done';state.turn=0;state.scores[0]=objectPots.length;
+      const c=cue(),landing=scratch?'白球落袋':`白球落点 (${c.x.toFixed(1)}, ${c.y.toFixed(1)})`;
+      say(`${objectPots.length?`进球 ${objectPots.join('、')} 号 · `:''}${landing} · 点“重摆本球”再试`);updateUI();render();return;
+    }
     const wrongFirst=s.firstHit===null || (state.mode==='nine'?s.firstHit!==Math.min(...state.balls.filter(b=>b.n>0&&(!b.pocketed||nums.includes(b.n))).map(b=>b.n)):s.groupAtStart?(s.eightReady?s.firstHit!==8:group(s.firstHit)!==s.groupAtStart):s.firstHit===8);
     const noRail=s.firstHit!==null&&!s.railAfterHit&&objectPots.length===0;
     const foul=scratch||wrongFirst||noRail;
@@ -398,9 +452,9 @@
     });
   }
   const AI_LEVELS={
-    easy:{options:4,angleError:2.6,powerError:.14,escapeAngles:24,maxBanks:1},
-    normal:{options:7,angleError:.55,powerError:.065,escapeAngles:48,maxBanks:2},
-    hard:{options:10,angleError:.12,powerError:.015,escapeAngles:72,maxBanks:3}
+    easy:{options:4,potRate:.4,angleError:2.6,powerError:.14,escapeAngles:24,maxBanks:1},
+    normal:{options:7,potRate:.6,angleError:.55,powerError:.065,escapeAngles:48,maxBanks:2},
+    hard:{options:10,potRate:.95,angleError:.12,powerError:.015,escapeAngles:72,maxBanks:3}
   };
   function aiLevel(){return AI_LEVELS[state.aiDifficulty]||AI_LEVELS.normal;}
   function executeAIPlan(plan){
@@ -411,7 +465,38 @@
     const precision=state.aiDifficulty==='hard'&&(plan.type==='bank'||plan.type==='kick'||plan.type==='snooker')?.25:1;
     const aimError=sign*(.55+Math.random()*.45)*level.angleError*precision*Math.PI/180;
     const powerFactor=1+(Math.random()*2-1)*level.powerError;
-    return {...plan,aim:Math.round((plan.aim+aimError)*180/Math.PI*100)/100*Math.PI/180,power:Math.round(clamp(plan.power*powerFactor,5,100)),executionError:{angleDegrees:aimError*180/Math.PI,powerPercent:(powerFactor-1)*100},difficulty:state.aiDifficulty};
+    const rounded=(offset=0,factor=1)=>({...plan,aim:Math.round((plan.aim+offset)*180/Math.PI*100)/100*Math.PI/180,power:Math.round(clamp(plan.power*factor,5,100))});
+    let actual=rounded(aimError,powerFactor),result=simulateAIShot(actual);
+    const attack=['attack','bank','kick'].includes(plan.type);
+    const pots=r=>r.safe&&(r.potted||r.winning);
+    // Independent execution draws target the long-run rate. There is no
+    // per-turn counter, miss quota or forced failure after a pot streak.
+    const wantedPot=attack&&Math.random()<level.potRate;
+    if(attack){
+      if(wantedPot){
+        if(!pots(result)||!validTacticalRoute(actual,result)){
+          for(const offset of [0,aimError*.25,-aimError*.25]){
+            const candidate=rounded(offset),trial=simulateAIShot(candidate);
+            if(pots(trial)&&validTacticalRoute(candidate,trial)){actual=candidate;result=trial;break;}
+          }
+        }
+      }else{
+        // A miss is an actual changed stroke, never a rejected legal pot.
+        // Prefer a legal contact and safe cue ball so lower tiers still play.
+        for(const degrees of [.2,.4,.8,1.5,2.5,4,6]){
+          let found=false;
+          for(const direction of [sign,-sign]){
+            const candidate=rounded(direction*degrees*Math.PI/180),trial=simulateAIShot(candidate);
+            if(trial.safe&&!trial.potted&&!trial.winning){actual=candidate;result=trial;found=true;break;}
+          }
+          if(found)break;
+        }
+      }
+    }else if(!result.safe){
+      const candidate=rounded(),trial=simulateAIShot(candidate);
+      if(trial.safe){actual=candidate;result=trial;}
+    }
+    return {...actual,executionError:{angleDegrees:(actual.aim-plan.aim)*180/Math.PI,powerPercent:(actual.power/plan.power-1)*100},difficulty:state.aiDifficulty,accuracyTarget:level.potRate,expectedPot:!!(result.potted||result.winning),executionVerified:result.safe};
   }
   function aiTargets(){
     return state.mode==='nine'?activeBalls().filter(b=>b.n===lowestNine()):activeBalls().filter(b=>currentGroup()?(allGroupGone(currentGroup())?b.n===8:group(b.n)===currentGroup()):b.n!==8);
@@ -502,7 +587,7 @@
     return aiPositionScore(result)*1.6+Math.max(0,6-pocketDistance)*5+Math.max(0,4-railDistance)*2;
   }
   const MASTER_SPINS=[
-    [0,0],[0,.45],[0,.85],[0,-.45],[0,-.85],
+    [0,0],[0,.45],[0,.95],[0,-.45],[0,-.95],
     [-.3,0],[.3,0],[-.65,0],[.65,0],[-.9,0],[.9,0],
     [-.55,.55],[.55,.55],[-.55,-.55],[.55,-.55],[-.75,.3],[.75,.3],[-.75,-.3],[.75,-.3]
   ];
@@ -510,7 +595,10 @@
     return {...base,aim:base.aim+(spinX-(base.spinX||0))*.018,spinX,spinY,power:clamp(Math.round(base.power*factor),8,100)};
   }
   function strokeName(plan){
-    return `${plan.spinY<-.1?'低杆拉回':plan.spinY>.1?'高杆跟进':'中杆'}${Math.abs(plan.spinX||0)>.1?` · ${plan.spinX<0?'左':'右'}${Math.abs(plan.spinX)>.6?'强':'轻'}塞`:''}`;
+    return `${plan.spinY<-.1?'低杆拉回':plan.spinY>.1?'高杆跟进':'中杆'}${Math.abs(plan.spinX||0)>.1?` · ${plan.spinX<0?'左':'右'}${Math.abs(plan.spinX)>.6?'强':'轻'}塞`:''}${plan.power>=42?' · 击打':' · 轻推'}`;
+  }
+  function masterStrokeCost(plan,result){
+    return masterPositionScore(result)+Math.max(0,42-plan.power)*.45+(Math.hypot(plan.spinX||0,plan.spinY||0)<.25?3:0);
   }
   async function refineMasterPosition(plans,isCurrent){
     const candidates=plans.slice(0,4),refined=[];let count=0;
@@ -518,7 +606,31 @@
       if(!isCurrent())return null;
       const plan=spinVariant(base,spinX,spinY,spinY<-.7?1.06:spinY>.7?.94:1);
       const result=simulateAIShot(plan);
-      if(result.safe&&(result.potted||result.winning)&&validTacticalRoute(plan,result))refined.push({...plan,score:base.score-(base.positionCost||0)+masterPositionScore(result),positionCost:masterPositionScore(result),positionPlanned:true});
+      if(result.safe&&(result.potted||result.winning)&&validTacticalRoute(plan,result)){
+        const cost=masterStrokeCost(plan,result);refined.push({...plan,score:base.score-(base.positionCost||0)+cost,positionCost:cost,positionPlanned:true});
+      }
+      if(++count%4===0)await new Promise(resolve=>setTimeout(resolve,0));
+    }
+    // Fine-tune the best strokes at nearby strengths. Keep the same physics
+    // and require a real legal pot before accepting a better cue-ball leave.
+    const seeds=refined.slice().sort((a,b)=>a.score-b.score).slice(0,3);
+    for(const base of seeds)for(const delta of [-4,-2,2,4]){
+      if(!isCurrent())return null;
+      const plan={...base,power:clamp(base.power+delta,8,100)},result=simulateAIShot(plan);
+      if(result.safe&&(result.potted||result.winning)&&validTacticalRoute(plan,result)){
+        const cost=masterStrokeCost(plan,result);
+        refined.push({...plan,score:base.score-base.positionCost+cost,positionCost:cost});
+      }
+      if(++count%4===0)await new Promise(resolve=>setTimeout(resolve,0));
+    }
+    // Search firmer real strokes with strong English/draw/follow. The extra
+    // speed comes from the displayed power, shared with human shots.
+    for(const base of candidates.slice(0,2))for(const power of [...new Set([Math.max(42,Math.round(base.power*1.28)),Math.max(52,Math.round(base.power*1.55))].map(p=>clamp(p,8,85)))])for(const [spinX,spinY] of MASTER_SPINS){
+      if(!isCurrent())return null;
+      const plan={...spinVariant(base,spinX,spinY),power},result=simulateAIShot(plan);
+      if(result.safe&&(result.potted||result.winning)&&validTacticalRoute(plan,result)){
+        const cost=masterStrokeCost(plan,result);refined.push({...plan,score:base.score-(base.positionCost||0)+cost,positionCost:cost,positionPlanned:true});
+      }
       if(++count%4===0)await new Promise(resolve=>setTimeout(resolve,0));
     }
     return refined.sort((a,b)=>a.score-b.score);
@@ -853,7 +965,7 @@
     setTimeout(()=>{
       if(!isCurrent())return;
       state.aiThinking=false;state.ballInHand=false;state.aim=plan.aim;state.power=plan.power;
-      state.spinX=plan.spinX||0;state.spinY=plan.spinY||0;moveSpinDot();syncPowerUI();updateUI();fire(true);
+      state.spinX=plan.spinX||0;state.spinY=plan.spinY||0;moveSpinDot();syncPowerUI();updateUI();fire(true,true);
     },2500);
   }
   function validCuePosition(x,y) {
@@ -899,46 +1011,38 @@
     }
     return Number.isFinite(distance)?distance:0;
   }
+  function pathLength(points){let length=0;for(let i=1;i<points.length;i++)length+=Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y);return length;}
   function displayGuide(){
-    const key=[state.aim,state.spinX,state.spinY,...state.balls.flatMap(b=>[b.n,b.x,b.y,b.pocketed?1:0])].join(',');
+    const key=[state.aim,state.power,state.spinX,state.spinY,state.breaking,...state.balls.flatMap(b=>[b.n,b.x,b.y,b.pocketed?1:0])].join(',');
     if(key===displayGuideKey)return displayGuideCache;
     displayGuideKey=key;
     const a=cue();if(!a)return displayGuideCache=null;
-    const angle=state.aim-state.spinX*.018,dx=Math.cos(angle),dy=Math.sin(angle);
-    const boundary=firstBoundaryOnRay(a.x,a.y,dx,dy);
-    const first=firstBallOnRay(a.x,a.y,dx,dy,[0]);
-    const target=first.distance<boundary?first.ball:null;
-    const distance=target?first.distance:boundary;
-    const impact={x:a.x+dx*distance,y:a.y+dy*distance};
-    const shotPath=[{x:a.x,y:a.y},impact],cuePath=[],targetPath=[];
-    if(target){
-      const nx=(target.x-impact.x)/(2*R),ny=(target.y-impact.y)/(2*R);
-      const normalLength=Math.hypot(nx,ny)||1,unitX=nx/normalLength,unitY=ny/normalLength;
-      const transfer=.97*Math.max(0,dx*unitX+dy*unitY);
-      const tangentX=-unitY,tangentY=unitX;
-      let cueVx=dx-transfer*unitX,cueVy=dy-transfer*unitY;
-      let objectVx=transfer*unitX,objectVy=transfer*unitY;
-      const normalizedSpin=state.spinX*.42*1.4;
-      const tangentSlip=(objectVx-cueVx)*tangentX+(objectVy-cueVy)*tangentY-normalizedSpin;
-      const tangentImpulse=clamp(-tangentSlip/7,-transfer*.055,transfer*.055);
-      cueVx-=tangentImpulse*tangentX;cueVy-=tangentImpulse*tangentY;
-      objectVx+=tangentImpulse*tangentX;objectVy+=tangentImpulse*tangentY;
-      const objectSpeed=Math.hypot(objectVx,objectVy)||1;
-      const objectDirX=objectVx/objectSpeed,objectDirY=objectVy/objectSpeed;
-      const targetLimit=Math.min(11,firstBoundaryOnRay(target.x,target.y,objectDirX,objectDirY));
-      const obstacle=firstBallOnRay(target.x,target.y,objectDirX,objectDirY,[0,target.n]);
-      const objectLength=Math.max(0,Math.min(targetLimit,obstacle.distance));
-      targetPath.push({x:target.x,y:target.y},{x:target.x+objectDirX*objectLength,y:target.y+objectDirY*objectLength});
-      let outX=cueVx+state.spinY*.42*unitX,outY=cueVy+state.spinY*.42*unitY;
-      const outSpeed=Math.hypot(outX,outY);
-      if(outSpeed>.001){
-        outX/=outSpeed;outY/=outSpeed;
-        const cueLimit=firstBoundaryOnRay(impact.x,impact.y,outX,outY);
-        const length=Math.max(0,Math.min(8,Math.max(2,outSpeed*10),cueLimit));
-        cuePath.push(impact,{x:impact.x+outX*length,y:impact.y+outY*length});
+    const balls=state.balls.map(b=>({...b})),c=balls.find(b=>b.n===0);
+    const previous=physicsContext,events={firstHit:null,pocketed:[],railAfterHit:false,breakRails:new Set(),captureContacts:true,contacts:[]};
+    const shotPath=[{x:c.x,y:c.y}],cuePath=[],targetPath=[];
+    const append=(path,b)=>{const p=path.at(-1);if(!p||Math.hypot(b.x-p.x,b.y-p.y)>.08)path.push({x:b.x,y:b.y});};
+    let target=null,cueDone=false,targetDone=false,firstContacts=0;
+    try{
+      physicsContext=events;applyCueImpulse(c,state.power,state.aim,state.spinX,state.spinY,state.breaking);
+      for(let i=0;i<5400;i++){
+        const contacts=events.contacts.length,hits=events.cushionHits?.length||0;
+        physicsStep(balls,STEP);
+        if(!target){
+          append(shotPath,c);
+          if(events.firstHit!==null){
+            target=balls.find(b=>b.n===events.firstHit);firstContacts=events.contacts.length;
+            shotPath.push({x:c.x,y:c.y});cuePath.push({x:c.x,y:c.y});targetPath.push({x:target.x,y:target.y});
+          }else if(c.pocketed||(events.cushionHits?.length||0)>hits||ballsSettled(balls))break;
+        }else{
+          const newHits=(events.cushionHits||[]).slice(hits),newContacts=events.contacts.slice(Math.max(contacts,firstContacts));
+          const blocked=n=>newHits.some(h=>h.n===n)||newContacts.some(h=>h.a===n||h.b===n);
+          if(!cueDone){append(cuePath,c);cueDone=c.pocketed||blocked(0)||pathLength(cuePath)>=8||Math.hypot(c.vx,c.vy)<.01&&Math.hypot(c.rollVx,c.rollVy)<.01;}
+          if(!targetDone){append(targetPath,target);targetDone=target.pocketed||blocked(target.n)||pathLength(targetPath)>=11||Math.hypot(target.vx,target.vy)<.01;}
+          if(cueDone&&targetDone||ballsSettled(balls))break;
+        }
       }
-    }
-    return displayGuideCache={shotPath,cuePath,targetPath,targetNumber:target?.n??null,shotBlocked:!target};
+    }finally{physicsContext=previous;}
+    return displayGuideCache={shotPath,cuePath,targetPath,targetNumber:target?.n??null,shotBlocked:!target,physicsBased:true};
   }
   function roundedRect(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);}
   function fillRect(x,y,w,h,r,color){ctx.fillStyle=color;roundedRect(x,y,w,h,r);ctx.fill();}
@@ -971,11 +1075,25 @@
       seed=(seed*1664525+1013904223)>>>0;const y=t+(seed>>>8)%(b-t);
       ctx.fillStyle=i%4?'#d4f5ff09':'#032d480c';ctx.fillRect(x,y,1.1,.45);
     }
+    // A restrained cloth-print lockup, centred on the playing surface.
+    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
+    const brandX=l+W*SCALE/2,brandY=t+H*SCALE/2;
+    ctx.fillStyle='#e5dbad55';ctx.font='italic 700 56px Georgia, "Times New Roman", serif';
+    ctx.fillText('S800',brandX,brandY-17);
+    ctx.fillStyle='#e5dbad66';ctx.font='600 21px "Songti SC", SimSun, serif';
+    ctx.fillText('利',brandX-34,brandY+29);ctx.fillText('百',brandX,brandY+29);ctx.fillText('文',brandX+34,brandY+29);
+    ctx.strokeStyle='#e5dbad40';ctx.lineWidth=.8;
+    ctx.beginPath();ctx.moveTo(brandX-86,brandY+29);ctx.lineTo(brandX-57,brandY+29);
+    ctx.moveTo(brandX+57,brandY+29);ctx.lineTo(brandX+86,brandY+29);ctx.stroke();ctx.restore();
     const railWidth=27;
+    const rubberPaint=(outerX,outerY,noseX,noseY)=>{
+      const paint=ctx.createLinearGradient(outerX,outerY,noseX,noseY);
+      paint.addColorStop(0,'#10516c');paint.addColorStop(.30,'#1e8da9');paint.addColorStop(.76,'#14718c');paint.addColorStop(1,'#084456');
+      return paint;
+    };
     function horizontal(a,z,y,sign){
       const x1=l+a*SCALE,x2=l+z*SCALE,outer=y-sign*railWidth;
-      const rubber=ctx.createLinearGradient(0,outer,0,y);
-      rubber.addColorStop(0,'#10516c');rubber.addColorStop(.30,'#1e8da9');rubber.addColorStop(.76,'#14718c');rubber.addColorStop(1,'#084456');
+      const rubber=rubberPaint(0,outer,0,y);
       ctx.beginPath();ctx.moveTo(x1,y);ctx.lineTo(x2,y);ctx.lineTo(x2+17,outer);ctx.lineTo(x1-17,outer);ctx.closePath();ctx.fillStyle=rubber;ctx.fill();
       ctx.beginPath();ctx.moveTo(x1,y-sign);ctx.lineTo(x2,y-sign);ctx.strokeStyle='#58bcd055';ctx.lineWidth=2;ctx.stroke();
     }
@@ -984,8 +1102,7 @@
     }
     for(const x of [l,r]){
       const sign=x===l?-1:1,upper=t+CUT*SCALE,lower=b-CUT*SCALE;
-      const rubber=ctx.createLinearGradient(x,0,x+sign*railWidth,0);
-      rubber.addColorStop(0,'#084456');rubber.addColorStop(.24,'#14718c');rubber.addColorStop(.72,'#1e8da9');rubber.addColorStop(1,'#10516c');
+      const rubber=rubberPaint(x+sign*railWidth,0,x,0);
       ctx.beginPath();ctx.moveTo(x,upper);ctx.lineTo(x,lower);ctx.lineTo(x+sign*railWidth,lower+17);ctx.lineTo(x+sign*railWidth,upper-17);ctx.closePath();ctx.fillStyle=rubber;ctx.fill();
       ctx.beginPath();ctx.moveTo(x+sign,upper);ctx.lineTo(x+sign,lower);ctx.strokeStyle='#58bcd055';ctx.lineWidth=2;ctx.stroke();
     }
@@ -1005,29 +1122,41 @@
     }
     for(let index=0;index<6;index++){
       const geometry=POCKET_GEOMETRY[index],center=geometry.well,q=worldToScreen(center.x,center.y),radius=geometry.radius*SCALE;
-      ctx.beginPath();ctx.arc(q.x,q.y,radius+3.5,0,Math.PI*2);ctx.fillStyle='#091118';ctx.fill();
-      ctx.strokeStyle='#b9c7cc';ctx.lineWidth=1.8;ctx.stroke();
-      const well=ctx.createRadialGradient(q.x-4,q.y-5,2,q.x,q.y,radius);
-      well.addColorStop(0,'#010307');well.addColorStop(.77,'#010408');well.addColorStop(.96,'#0e1920');well.addColorStop(1,'#26373f');
-      ctx.beginPath();ctx.arc(q.x,q.y,radius,0,Math.PI*2);ctx.fillStyle=well;ctx.fill();
-      // Recessed liner, inner rubber lip and a dim rear-wall reflection.
-      // These marks stay within the existing mouth; collision size is unchanged.
-      ctx.save();ctx.beginPath();ctx.arc(q.x,q.y,radius,0,Math.PI*2);ctx.clip();
-      ctx.strokeStyle='#17232c';ctx.lineWidth=3.2;ctx.beginPath();ctx.arc(q.x,q.y+2,radius-2,0,Math.PI*2);ctx.stroke();
-      ctx.strokeStyle='#4b5960';ctx.lineWidth=.8;ctx.beginPath();ctx.ellipse(q.x,q.y+4,radius-4,radius-6,.0,.15,Math.PI-.15);ctx.stroke();
-      ctx.strokeStyle='#81909655';ctx.lineWidth=.7;ctx.beginPath();ctx.arc(q.x-1,q.y-1,radius-1,Math.PI*1.12,Math.PI*1.67);ctx.stroke();
-      ctx.restore();
+      // Supported shelf remains the same cloth, including at the mouth.
+      ctx.beginPath();ctx.arc(q.x,q.y,radius+3.5,0,Math.PI*2);ctx.fillStyle=felt;ctx.fill();
     }
+    // Mouth facings are filled continuations of the cushion bevel, with
+    // the identical material and width. No separate dark line or capsule.
     for(const p of POCKET_GEOMETRY)for(const face of p.faces){
       const a=worldToScreen(face.ax,face.ay),b=worldToScreen(face.bx,face.by);
-      ctx.strokeStyle='#124d62';ctx.lineWidth=p.jawRadius*2*SCALE;ctx.lineCap='round';
-      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
-      ctx.strokeStyle='#58bcd077';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+      const horizontalFace=Math.abs(face.ay)<1e-6||Math.abs(face.ay-H)<1e-6;
+      const offsetX=horizontalFace?(face.ax>p.mx?-17:17):(face.ax<W/2?-railWidth:railWidth);
+      const offsetY=horizontalFace?(face.ay<H/2?-railWidth:railWidth):(face.ay>p.my?-17:17);
+      ctx.fillStyle=rubberPaint(a.x+offsetX,a.y+offsetY,a.x,a.y);
+      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.lineTo(b.x+offsetX,b.y+offsetY);ctx.lineTo(a.x+offsetX,a.y+offsetY);ctx.closePath();ctx.fill();
+    }
+    // Paint only the true falling cap black, after all blue support/cushion
+    // pieces. Nothing can shade or paint a fictitious black shelf outside it.
+    for(const p of POCKET_GEOMETRY){
+      const q=worldToScreen(p.well.x,p.well.y),depth=ctx.createRadialGradient(q.x-2,q.y-3,1,q.x,q.y,p.fallRadius*SCALE);
+      depth.addColorStop(0,'#010204');depth.addColorStop(.8,'#020508');depth.addColorStop(1,'#0a1014');
+      drawPocketFallPath(p);ctx.fillStyle=depth;ctx.fill();
     }
     ctx.lineCap='butt';
     ctx.fillStyle='#c8d2d2';
     for(let x=12.5;x<=87.5;x+=12.5){if(x===50)continue;for(const y of [t-40,b+40]){ctx.beginPath();ctx.arc(l+x*SCALE,y,1.9,0,Math.PI*2);ctx.fill();}}
     for(let y=12.5;y<=37.5;y+=12.5)for(const x of [l-40,r+40]){ctx.beginPath();ctx.arc(x,t+y*SCALE,1.9,0,Math.PI*2);ctx.fill();}
+    // Inset rail nameplate between sight markers, outside the playing cloth.
+    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
+    const nameplateX=l+W*SCALE*.3125,nameplateY=b+40;
+    ctx.fillStyle='#d8ca91';ctx.font='italic 700 18px Georgia, "Times New Roman", serif';
+    ctx.fillText('S800',nameplateX-27,nameplateY+.5);
+    ctx.font='600 12px "Songti SC", SimSun, serif';ctx.fillStyle='#c9bd91';
+    ctx.fillText('利百文',nameplateX+27,nameplateY+.5);ctx.restore();
+  }
+  function drawPocketFallPath(p){
+    const profile=pocketFallProfile(p),q=worldToScreen(profile.x,profile.y);
+    ctx.beginPath();ctx.arc(q.x,q.y,profile.radius*SCALE,profile.angle-profile.halfAngle,profile.angle+profile.halfAngle);ctx.closePath();
   }
   function rotated(q,x,y,z){
     const tx=2*(q[1]*z-q[2]*y),ty=2*(q[2]*x-q[0]*z),tz=2*(q[0]*y-q[1]*x);
@@ -1166,14 +1295,13 @@
 
     ctx.stroke();ctx.setLineDash([]);ctx.shadowBlur=0;
   }
-  function pathLength(points){let length=0;for(let i=1;i<points.length;i++)length+=Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y);return length;}
   function drawAim() {
-    if(state.phase!=='aim'||state.ballInHand||(state.opponent==='ai'&&state.turn===1))return;
+    if(state.phase!=='aim'||state.ballInHand||(state.opponent==='ai'&&state.turn===1&&!state.aiPlan))return;
     const c=cue(),cueX=Math.cos(state.aim),cueY=Math.sin(state.aim),p=worldToScreen(c.x,c.y);
     const prediction=displayGuide(),color=prediction.targetNumber!==null&&!legalTarget(prediction.targetNumber)?'#ff627a':'#e5fff7';
     ctx.save();
-    // The geometric first-contact line is stable while power changes and is
-    // always drawn, including for low-power aiming at a distant ball.
+    // Draw only the reachable, physically simulated portion of the stroke.
+    // Short draw/follow/English paths share the live collision and cloth code.
     ctx.globalAlpha=.65;guidePath(prediction.shotPath,color);
     ctx.globalAlpha=1;guidePath(prediction.shotPath,color,Math.min(18,pathLength(prediction.shotPath)));
     if(prediction.targetNumber!==null){
@@ -1183,8 +1311,12 @@
       guidePath(prediction.cuePath,'#a0e6ff',8);
       guidePath(prediction.targetPath,color,11);
     }
-    const gap=R*SCALE+14+state.power*.4,back=gap+230,butt=back-82;
-    ctx.translate(p.x,p.y);ctx.rotate(state.aim+Math.PI);
+    ctx.restore();drawCue(c,state.aim,state.power);
+  }
+  function drawCue(c,angle,power,tipGap=null,opacity=1){
+    const p=worldToScreen(c.x,c.y);ctx.save();ctx.globalAlpha=opacity;
+    const gap=tipGap??R*SCALE+14+power*.4,back=gap+230,butt=back-82;
+    ctx.translate(p.x,p.y);ctx.rotate(angle+Math.PI);
     ctx.shadowColor='#00100d99';ctx.shadowBlur=9;ctx.shadowOffsetY=5;
     let g=ctx.createLinearGradient(0,-8,0,8);g.addColorStop(0,'#341c17');g.addColorStop(.28,'#87502d');g.addColorStop(.55,'#b67e43');g.addColorStop(.8,'#633620');g.addColorStop(1,'#241514');
     ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(butt,-5.4);ctx.lineTo(back-3,-8.6);ctx.quadraticCurveTo(back+2,-8.4,back+2,-4);ctx.lineTo(back+2,4);ctx.quadraticCurveTo(back+2,8.4,back-3,8.6);ctx.lineTo(butt,5.4);ctx.closePath();ctx.fill();
@@ -1198,8 +1330,15 @@
     ctx.fillStyle='#54a9b2';ctx.beginPath();ctx.roundRect(gap-3,-3.4,3.3,6.8,1.5);ctx.fill();
     ctx.restore();
   }
+  function drawStroke(){
+    const s=state.stroke;if(!s)return;
+    let gap,opacity=1;
+    if(s.age<0){const t=clamp((s.age+s.windup)/s.windup,0,1);gap=R*SCALE+(14+s.power*.4)*(1-t*t*t*t);}
+    else{const t=clamp(s.age/s.duration,0,1);gap=R*SCALE-(s.power>=42?22:14)*Math.sin(Math.PI*Math.min(1,t*2));opacity=1-t;}
+    drawCue(s,s.aim,s.power,gap,opacity);
+  }
   function drawPocketEffect(animation){
-    const age=animation.age,life=clamp(1-age/.58,0,1);
+    const age=animation.age,life=clamp(1-age/.32,0,1);
     if(life<=0)return;
     const center=worldToScreen(animation.effectX,animation.effectY),power=clamp(animation.impact/28,.55,1.25);
     ctx.save();ctx.globalCompositeOperation='screen';
@@ -1229,24 +1368,24 @@
       tableSurface=document.createElement('canvas');tableSurface.width=canvas.width;tableSurface.height=canvas.height;
       tableSurface.getContext('2d').drawImage(canvas,0,0);
     }else ctx.drawImage(tableSurface,0,0,VIEW_W,VIEW_H);
-    drawPocketBanks();drawAim();for(const b of live())drawBall(b);
+    drawPocketBanks();drawAim();for(const b of live())drawBall(b);drawStroke();
     for(const a of state.pocketAnimations){
       drawPocketEffect(a);
-      if(a.age<.30){
-        const t=clamp(a.age/.30,0,1),ease=1-(1-t)*(1-t);
+      if(a.age<.18){
+        const t=clamp(a.age/.18,0,1),ease=1-(1-t)*(1-t);
         const directions=[[-Math.SQRT1_2,-Math.SQRT1_2],[0,-1],[Math.SQRT1_2,-Math.SQRT1_2],[-Math.SQRT1_2,Math.SQRT1_2],[0,1],[Math.SQRT1_2,Math.SQRT1_2]];
         const [dx,dy]=directions[a.pocket];
         // Keep the sinking ball and its flash at the *same* pocket. Using its
         // last simulation position can visually pair a corner pot with an
         // unrelated middle-pocket flash during a fast, crowded shot.
         const mouth=worldToScreen(a.effectX,a.effectY),radius=POCKET_GEOMETRY[a.pocket].radius*SCALE;
-        ctx.save();ctx.beginPath();ctx.arc(mouth.x,mouth.y,radius-2,0,Math.PI*2);ctx.clip();
+        ctx.save();drawPocketFallPath(POCKET_GEOMETRY[a.pocket]);ctx.clip();
         const sinkX=a.entryX+(a.effectX+dx*.65-a.entryX)*ease,sinkY=a.entryY+(a.effectY+dy*.65-a.entryY)*ease;
         drawBall(a.visual,1-.78*ease,sinkX,sinkY,1-t);ctx.restore();
       }
     }
     if(state.ballInHand){const c=cue(),p=worldToScreen(c.x,c.y);ctx.strokeStyle='#fff4a3';ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.beginPath();ctx.arc(p.x,p.y,24,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);}
-    if(state.aiThinking&&state.phase==='aim'){
+    if(state.aiThinking&&state.phase==='aim'&&!state.aiPlan){
       ctx.save();ctx.fillStyle='rgba(5,20,30,.85)';ctx.strokeStyle='rgba(130,234,255,.62)';ctx.lineWidth=1.5;
       ctx.beginPath();ctx.roundRect(460,332,480,125,18);ctx.fill();ctx.stroke();
       ctx.fillStyle='#e4faff';ctx.textAlign='center';ctx.font='bold 24px sans-serif';ctx.fillText(state.aiPlan?`电脑 · ${state.aiPlan.type==='bank'?'翻袋进攻':state.aiPlan.type==='kick'?'勾球进攻':state.aiPlan.type==='snooker'?'斯诺克防守':state.aiPlan.type==='attack'?'选择进攻':'选择解球'}`:'电脑正在判断球路',700,373);
@@ -1287,15 +1426,20 @@
       state.aim=state.drag.startAim+delta*clamp(state.drag.startRadius/70,.06,.24);requestAimFrame();
     }else {const d=state.drag.start;const pull=(d.x-p.x)*Math.cos(state.aim)+(d.y-p.y)*Math.sin(state.aim);state.drag.pull=Math.max(0,pull);state.power=state.drag.pull<.7?state.drag.startingPower:clamp(Math.round(5+(state.drag.pull-.7)*5.7),5,100);syncPowerUI();render();}
   });
-  const pointerUp=e=>{if(state.drag==='place'&&state.phase==='aim'){const p=pointerWorld(e);if(placeCue(p.x,p.y,false))say('白球位置已预览，可继续调整或确认摆放。');}else if(state.drag?.kind==='power'){const p=pointerWorld(e),d=state.drag.start;state.drag.pull=Math.max(0,(d.x-p.x)*Math.cos(state.aim)+(d.y-p.y)*Math.sin(state.aim));if(state.drag.pull>=1.5){state.power=clamp(Math.round(5+(state.drag.pull-.7)*5.7),5,100);syncPowerUI();fire();}else{state.power=state.drag.startingPower;syncPowerUI();render();}}state.drag=null;};
+  const pointerUp=e=>{if(state.drag==='place'&&state.phase==='aim'){const p=pointerWorld(e);if(placeCue(p.x,p.y,false))say('白球位置已预览，可继续调整或确认摆放。');}else if(state.drag?.kind==='power'){const p=pointerWorld(e),d=state.drag.start;state.drag.pull=Math.max(0,(d.x-p.x)*Math.cos(state.aim)+(d.y-p.y)*Math.sin(state.aim));if(state.drag.pull>=1.5){state.power=clamp(Math.round(5+(state.drag.pull-.7)*5.7),5,100);syncPowerUI();fire(false,true);}else{state.power=state.drag.startingPower;syncPowerUI();render();}}state.drag=null;};
   canvas.addEventListener('pointerup',pointerUp);canvas.addEventListener('pointercancel',()=>{if(state.drag?.kind==='power'){state.power=state.drag.startingPower;syncPowerUI();render();}state.drag=null;});
   const spinPad=$('spinPad');
-  function moveSpinDot(){const dot=$('spinDot');dot.style.left=`${50+state.spinX*36}%`;dot.style.top=`${50-state.spinY*36}%`;}
-  function setSpin(e){const rect=spinPad.getBoundingClientRect();const x=sideways()?(e.clientY-rect.top)/rect.height*2-1:(e.clientX-rect.left)/rect.width*2-1,y=sideways()?1-(rect.right-e.clientX)/rect.width*2:1-(e.clientY-rect.top)/rect.height*2;const k=Math.max(1,Math.hypot(x,y));state.spinX=clamp(x/k,-1,1);state.spinY=clamp(y/k,-1,1);moveSpinDot();requestAimFrame();}
-  spinPad.addEventListener('pointerdown',e=>{spinPad.setPointerCapture(e.pointerId);setSpin(e);});
+  function moveSpinDot(){const dot=$('spinDot');dot.style.left=`${50+state.spinX*36}%`;dot.style.top=`${50-state.spinY*36}%`;if($('strokeReadout'))$('strokeReadout').textContent=strokeName(state);}
+  function setSpin(e){if(!canAdjustStroke())return;const rect=spinPad.getBoundingClientRect();const x=sideways()?(e.clientY-rect.top)/rect.height*2-1:(e.clientX-rect.left)/rect.width*2-1,y=sideways()?1-(rect.right-e.clientX)/rect.width*2:1-(e.clientY-rect.top)/rect.height*2;const k=Math.max(1,Math.hypot(x,y));state.spinX=clamp(x/k,-1,1);state.spinY=clamp(y/k,-1,1);moveSpinDot();requestAimFrame();}
+  spinPad.addEventListener('pointerdown',e=>{if(!canAdjustStroke())return;spinPad.setPointerCapture(e.pointerId);setSpin(e);});
   spinPad.addEventListener('pointermove',e=>{if(spinPad.hasPointerCapture(e.pointerId))setSpin(e);});
-  $('resetSpin').addEventListener('click',()=>{state.spinX=0;state.spinY=0;moveSpinDot();requestAimFrame();});
-  $('power').addEventListener('input',e=>{state.power=Number(e.target.value);syncPowerUI();render();});
+  $('resetSpin').addEventListener('click',()=>{if(!canAdjustStroke())return;state.spinX=0;state.spinY=0;moveSpinDot();requestAimFrame();});
+  $('power').addEventListener('input',e=>{if(!canAdjustStroke())return;state.power=Number(e.target.value);syncPowerUI();render();});
+  for(const [id,delta] of [['powerDown',-1],['powerUp',1]])$(id)?.addEventListener('click',()=>{if(!canAdjustStroke())return;state.power=clamp(state.power+delta,5,100);syncPowerUI();requestAimFrame();});
+  $('practiceBtn')?.addEventListener('click',()=>$('practiceOverlay').classList.remove('hidden'));
+  $('closePractice')?.addEventListener('click',()=>$('practiceOverlay').classList.add('hidden'));
+  $('repeatPractice')?.addEventListener('click',()=>startPractice(state.practice));
+  document.querySelectorAll('[data-practice]').forEach(btn=>btn.addEventListener('click',()=>startPractice(btn.dataset.practice)));
   const meter=$('cueMeter');let meterDrag=null;
   const meterAxis=e=>sideways()?-e.clientX:e.clientY;
   function updateMeterDrag(e){
@@ -1321,16 +1465,17 @@
     updateMeterDrag(e);
     const shoot=meterDrag.pull>=14,startingPower=meterDrag.startingPower;
     meterDrag=null;meter.classList.remove('dragging');meter.style.setProperty('--cue-pull','0px');
-    if(shoot)fire();else{state.power=startingPower;syncPowerUI();render();}
+    if(shoot)fire(false,true);else{state.power=startingPower;syncPowerUI();render();}
   });
   meter.addEventListener('pointercancel',()=>{if(meterDrag){state.power=meterDrag.startingPower;syncPowerUI();render();}meterDrag=null;meter.classList.remove('dragging');meter.style.setProperty('--cue-pull','0px');});
   meter.addEventListener('keydown',e=>{
+    if(!canAdjustStroke())return;
     if(e.key==='ArrowDown'||e.key==='ArrowUp'){
       e.preventDefault();state.power=clamp(state.power+(e.key==='ArrowDown'?5:-5),5,100);syncPowerUI();render();
     }
-    if(e.key==='Enter'){e.preventDefault();fire();}
+    if(e.key==='Enter'){e.preventDefault();fire(false,true);}
   });
-  $('shootBtn').addEventListener('click',()=>fire());
+  $('shootBtn').addEventListener('click',()=>fire(false,true));
   $('placeCueBtn').addEventListener('click',()=>{
     if(state.phase!=='aim'||!state.repositionAllowed||state.opponent==='ai'&&state.turn===1)return;
     if(state.ballInHand){if(!validCuePosition(cue().x,cue().y)){say('白球与目标球重叠，请选择空位。');return;}placeCue(cue().x,cue().y,true);}
@@ -1361,7 +1506,7 @@
   }));
   document.querySelectorAll('[data-mode]').forEach(btn=>btn.addEventListener('click',()=>init(btn.dataset.mode)));
   $('startBtn').addEventListener('click',()=>{$('startOverlay').classList.add('hidden');$('menuOverlay').classList.remove('hidden');});
-  $('newBtn').addEventListener('click',()=>{state.aiTicket++;state.aiThinking=false;state.aiPlan=null;$('menuOverlay').classList.remove('hidden');state.phase='menu';updateUI();});
+  $('newBtn').addEventListener('click',()=>{state.aiTicket++;state.aiThinking=false;state.aiPlan=null;if(state.practice)state.opponent=state.practiceOpponent||'ai';state.practice=null;$('practiceOverlay')?.classList.add('hidden');$('menuOverlay').classList.remove('hidden');state.phase='menu';updateUI();});
   $('rulesBtn').addEventListener('click',()=>$('rulesOverlay').classList.remove('hidden'));
   $('closeRules').addEventListener('click',()=>$('rulesOverlay').classList.add('hidden'));
   $('rulesOverlay').addEventListener('click',e=>{if(e.target.id==='rulesOverlay')$('rulesOverlay').classList.add('hidden');});
@@ -1373,12 +1518,12 @@
     if(e.key==='Escape'){$('rulesOverlay').classList.add('hidden');return;}
     if(state.phase!=='aim')return;
     if(e.key==='ArrowLeft'||e.key==='ArrowRight'){if(e.target===angleRuler)return;e.preventDefault();if(state.opponent==='ai'&&state.turn===1)return;state.aim+=(e.key==='ArrowLeft'?-1:1)*Math.PI/18000;updateUI();render();}
-    if(e.key===' '){e.preventDefault();fire();}
+    if(e.key===' '){e.preventDefault();fire(false,true);}
   });
   let last=performance.now(),acc=0,manualTime=false;
   function frame(now){const elapsed=Math.min(.05,(now-last)/1000);last=now;const active=state.phase==='moving'||state.pocketAnimations.length>0;if(!manualTime){acc+=elapsed;while(acc>=STEP){update(STEP);acc-=STEP;}}if(active||state.phase==='moving'||state.pocketAnimations.length>0)render();requestAnimationFrame(frame);}
   window.advanceTime=ms=>{manualTime=true;acc=0;const steps=Math.ceil(ms/1000/STEP);for(let i=0;i<steps;i++)update(STEP);render();};
-  window.render_game_to_text=()=>JSON.stringify({coordinates:`world inches, origin at top-left cushion nose; +x right, +y down; table 100x50; ball diameter 2.25; corner mouth ${CORNER_MOUTH}; side mouth ${SIDE_MOUTH}`,mode:state.mode,opponent:state.opponent,aiDifficulty:state.aiDifficulty,aiThinking:state.aiThinking,aiPlan:state.aiPlan?{target:state.aiPlan.target,pocket:state.aiPlan.pocket,type:state.aiPlan.type,spinX:state.aiPlan.spinX||0,spinY:state.aiPlan.spinY||0,snookerPlanned:!!state.aiPlan.snookerPlanned,power:+state.aiPlan.power.toFixed(1),description:state.aiPlan.description}:null,phase:state.phase,turn:state.turn+1,groups:state.groups,scores:state.scores,breaking:state.breaking,rackSeed:state.rackSeed,ballInHand:state.ballInHand,repositionAllowed:state.repositionAllowed,aimDegrees:+(state.aim*180/Math.PI).toFixed(2),power:state.power,spin:[+state.spinX.toFixed(2),+state.spinY.toFixed(2)],balls:state.balls.map(b=>({n:b.n,x:+b.x.toFixed(2),y:+b.y.toFixed(2),vx:+b.vx.toFixed(2),vy:+b.vy.toFixed(2),rollVx:+b.rollVx.toFixed(2),rollVy:+b.rollVy.toFixed(2),sideSpin:+b.spin.toFixed(2),roll:+b.roll.toFixed(2),pocketed:b.pocketed})),status:state.status,winner:state.winner});
+  window.render_game_to_text=()=>JSON.stringify({coordinates:`world inches, origin at top-left cushion nose; +x right, +y down; table 100x50; ball diameter ${(2*R).toFixed(4)}; corner mouth ${CORNER_MOUTH}; side mouth ${SIDE_MOUTH}`,mode:state.mode,opponent:state.opponent,aiDifficulty:state.aiDifficulty,aiThinking:state.aiThinking,aiPlan:state.aiPlan?{target:state.aiPlan.target,pocket:state.aiPlan.pocket,type:state.aiPlan.type,spinX:state.aiPlan.spinX||0,spinY:state.aiPlan.spinY||0,snookerPlanned:!!state.aiPlan.snookerPlanned,power:+state.aiPlan.power.toFixed(1),description:state.aiPlan.description}:null,phase:state.phase,turn:state.turn+1,groups:state.groups,scores:state.scores,breaking:state.breaking,rackSeed:state.rackSeed,ballInHand:state.ballInHand,repositionAllowed:state.repositionAllowed,aimDegrees:+(state.aim*180/Math.PI).toFixed(2),power:state.power,spin:[+state.spinX.toFixed(2),+state.spinY.toFixed(2)],balls:state.balls.map(b=>({n:b.n,x:+b.x.toFixed(2),y:+b.y.toFixed(2),vx:+b.vx.toFixed(2),vy:+b.vy.toFixed(2),rollVx:+b.rollVx.toFixed(2),rollVy:+b.rollVy.toFixed(2),sideSpin:+b.spin.toFixed(2),roll:+b.roll.toFixed(2),pocketed:b.pocketed})),status:state.status,winner:state.winner});
   if(new URLSearchParams(location.search).has('test')){
     $('startOverlay').classList.add('hidden');$('menuOverlay').classList.remove('hidden');
     window.__poolTest={pocketRollingTest(index=1,angleDegrees=0,speed=6,offMouth=false){
@@ -1390,7 +1535,7 @@
     },openTestMatch(mode='eight'){init(mode);},async planAI(entries,mode='nine',ownGroup=null,hand=false,difficulty='hard',technique=null){
     const ticket=++state.aiTicket;state.aiThinking=true;state.aiPlan=null;state.mode=mode;state.opponent='ai';state.phase='aim';state.turn=1;state.breaking=false;state.ballInHand=hand;state.groups=[ownGroup==='solid'?'stripe':ownGroup==='stripe'?'solid':null,ownGroup];state.aiDifficulty=difficulty;state.balls=entries.map(q=>ball(q.n,q.x,q.y));state.shot=null;state.pocketAnimations=[];state.winner=null;state.scores=[0,0];
     $('menuOverlay').classList.add('hidden');$('player2Name').textContent='电脑';say('电脑正在判断球路…');updateUI();render();const started=performance.now();const plan=technique?await chooseAITechnique(technique,()=>ticket===state.aiTicket):await chooseAIPlan(()=>ticket===state.aiTicket);if(ticket!==state.aiTicket)return {plan:null,result:null,ms:performance.now()-started};state.aiPlan=plan;state.aiThinking=false;showAIStroke(plan);say(plan?`电脑计划：${plan.description}`:'没有可击打的目标');render();return {plan,options:aiOptions(aiTargets()),result:plan?simulateAIShot(plan):null,ms:performance.now()-started};
-  },fireAIPlanTest(){if(!state.aiPlan||state.phase!=='aim')return false;manualTime=false;state.ballInHand=false;state.aim=state.aiPlan.aim;state.power=state.aiPlan.power;state.spinX=state.aiPlan.spinX||0;state.spinY=state.aiPlan.spinY||0;fire(true);},getAIPottedTest(){return state.balls.filter(b=>b.pocketed).map(b=>({n:b.n,pocket:b.pocketCandidate}));},queueAITest(){queueAI();},getLaunchSpeed(power,breaking=false){return cueLaunchSpeed(power,breaking);},getPocketEvents(){return {effects:state.pocketAnimations.map(a=>({n:a.visual.n,pocket:a.pocket,x:a.effectX,y:a.effectY,ballX:a.entryX,ballY:a.entryY})),shot:state.shot?.pocketed||[]};},setMovingBalls(entries){
+  },fireAIPlanTest(){if(!state.aiPlan||state.phase!=='aim')return false;manualTime=false;state.ballInHand=false;state.aim=state.aiPlan.aim;state.power=state.aiPlan.power;state.spinX=state.aiPlan.spinX||0;state.spinY=state.aiPlan.spinY||0;fire(true,true);},getAIPottedTest(){return state.balls.filter(b=>b.pocketed).map(b=>({n:b.n,pocket:b.pocketCandidate}));},queueAITest(){queueAI();},getLaunchSpeed(power,breaking=false){return cueLaunchSpeed(power,breaking);},getPocketEvents(){return {effects:state.pocketAnimations.map(a=>({n:a.visual.n,pocket:a.pocket,x:a.effectX,y:a.effectY,ballX:a.entryX,ballY:a.entryY})),shot:state.shot?.pocketed||[]};},setMovingBalls(entries){
     manualTime=true;acc=0;
     state.aiTicket++;state.aiThinking=false;state.mode='nine';state.opponent='local';state.phase='moving';state.turn=0;state.breaking=false;state.ballInHand=false;state.pocketAnimations=[];state.balls=entries.map(q=>Object.assign(ball(q.n,q.x,q.y),{vx:q.vx||0,vy:q.vy||0,rollVx:q.rollVx||0,rollVy:q.rollVy||0,spin:q.spin||0,pocketCandidate:q.pocketCandidate??null}));
     state.shot={shooter:0,breaking:false,firstHit:1,pocketed:[],railAfterHit:false,breakRails:new Set(),groupAtStart:null,eightReady:false};state.stopTime=0;state.shotTime=0;$('menuOverlay').classList.add('hidden');updateUI();render();
