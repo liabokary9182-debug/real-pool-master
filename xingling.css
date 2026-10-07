@@ -1,0 +1,11 @@
+/* Full-length pull lane and the same photographic small-tip cue as the table. */
+#mobile-pool-preview .layout>.cue-meter{background:#080d13;border-radius:12px}
+#mobile-pool-preview .layout>.cue-meter .cue-track{border-radius:9px;border:1px solid #75858b55;background:linear-gradient(90deg,#050709,#192027 48%,#080b10);box-shadow:inset 0 0 9px #000,0 0 0 1px #ffffff07}
+#mobile-pool-preview .cue-track::before{left:10px;top:12px;bottom:40px;width:7px;transform:none;background:repeating-linear-gradient(to bottom,#9aadb65c 0 1px,transparent 1px 10%)}
+#mobile-pool-preview .cue-track::after{content:"";position:absolute;top:12px;bottom:40px;right:5px;width:5px;border-radius:3px;background:#05090e;box-shadow:inset 0 0 0 1px #ffffff0c;pointer-events:none}
+#mobile-pool-preview .cue-power{z-index:1;bottom:40px;left:auto;right:5px;width:5px;height:calc((100% - 52px)*var(--power-fraction,.56));max-height:calc(100% - 52px);border-radius:3px;background:linear-gradient(to top,#22b3ba 0%,#79ded7 62%,#e8c67d 86%,#d17448 100%);filter:none;opacity:1;transition:height .06s linear}
+#mobile-pool-preview .cue-stick-vertical{z-index:2;left:50%;top:4%;width:24px;height:72%;border-radius:0;clip-path:none;background-color:transparent;background-size:100% 100%;background-repeat:no-repeat;box-shadow:none;filter:drop-shadow(2px 2px 2px #000a)}
+#mobile-pool-preview .cue-stick-vertical::after,#mobile-pool-preview .cue-tip,#mobile-pool-preview .cue-inlay{display:none}
+#mobile-pool-preview .cue-bottom{display:block!important;bottom:7px;left:0;right:0;width:auto!important;height:auto!important;writing-mode:horizontal-tb;transform:none;font-size:10px;line-height:1.45;color:#aebfc6;white-space:nowrap;text-align:center}
+#mobile-pool-preview .cue-meter.dragging .cue-stick-vertical{filter:drop-shadow(2px 2px 2px #000a) brightness(1.09)}
+#mobile-pool-preview .cue-meter:focus-visible .cue-track{outline:2px solid #76ded8;outline-offset:1px}

@@ -101,9 +101,10 @@
       softImpact(at,weight,.055,850,.075);
       tone(at,170,75,.065,.055*weight);
     }else{
-      softImpact(at,weight,.11,520,.085);
-      tone(at,125,58,.14,.048*weight);
-      tone(at+.04,210,115,.06,.015*weight);
+      // The ball rolls over the shelf, then meets the pocket lining below it.
+      softImpact(at+.12,weight,.085,390,.065);
+      tone(at+.12,96,72,.085,.026*weight);
+      softImpact(at+.22,weight*.38,.05,700,.025);
     }
   }
   function updateMusicButton(){

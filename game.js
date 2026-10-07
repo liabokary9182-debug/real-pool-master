@@ -78,7 +78,8 @@
     $('power').value=String(state.power);
     $('powerReadout').textContent=Number(state.power.toFixed(1))+'%';
     $('cueMeter').setAttribute('aria-valuenow',String(state.power));
-    $('cueMeter').style.setProperty('--power-height',`${Math.round(state.power*.65)}%`);
+    $('cueMeter').style.setProperty('--power-height',`${state.power}%`);
+    $('cueMeter').style.setProperty('--power-fraction',String(state.power/100));
   }
   function init(mode) {
     if(state.practice)state.opponent=state.practiceOpponent||'ai';
@@ -197,8 +198,8 @@
     if(b.pocketed)return;
     if(!physicsContext&&state.phase==='moving'&&state.balls.includes(b)){
       const impact=Math.hypot(b.vx,b.vy);
-      const pocket=pocketVisualCenter(index);
-      state.pocketAnimations.push({visual:{...b,q:[...b.q]},entryX:b.x,entryY:b.y,effectX:pocket.x,effectY:pocket.y,pocket:index,age:0,impact});
+      const pocket=pocketVisualCenter(index),duration=clamp(.52-impact*.0012,.36,.52);
+      state.pocketAnimations.push({visual:{...b,q:[...b.q]},entryX:b.x,entryY:b.y,effectX:pocket.x,effectY:pocket.y,pocket:index,age:0,impact,duration});
       window.PoolAudio?.play('pocket',impact);
     }
     b.pocketed=true;b.vx=0;b.vy=0;b.rollVx=0;b.rollVy=0;b.spin=0;
@@ -310,7 +311,7 @@
     b.vx+=tangentImpulse*tx;b.vy+=tangentImpulse*ty;
     a.spin-=2.5*tangentImpulse;b.spin-=2.5*tangentImpulse;
     const events=physicsContext||state.shot;
-    if(events?.captureContacts)(events.contacts??=[]).push({a:a.n,b:b.n});
+    if(events?.captureContacts)(events.contacts??=[]).push({a:a.n,b:b.n,afterA:{x:a.x,y:a.y,vx:a.vx,vy:a.vy},afterB:{x:b.x,y:b.y,vx:b.vx,vy:b.vy}});
     if(events && events.firstHit===null && (a.n===0||b.n===0)){
       events.firstHit=a.n===0?b.n:a.n;
     }
@@ -356,7 +357,13 @@
   }
   function update(dt) {
     if(state.stroke&&(state.stroke.age+=dt)>state.stroke.duration)state.stroke=null;
-    state.pocketAnimations=state.pocketAnimations.filter(a=>(a.age+=dt)<.32);
+    state.pocketAnimations=state.pocketAnimations.filter(a=>{
+      a.age+=dt;
+      const decay=Math.exp(-dt*7);
+      a.visual.rollVx*=decay;a.visual.rollVy*=decay;a.visual.spin*=decay;
+      advanceBallOrientation(a.visual,dt);
+      return a.age<a.duration;
+    });
     if(state.phase!=='moving')return;
     if(state.windup>0){
       const wait=Math.min(dt,state.windup);state.windup-=wait;dt-=wait;
@@ -366,7 +373,7 @@
     state.shotTime+=dt;
     physicsStep(state.balls,dt,true);
     if(live().every(b=>Math.hypot(b.vx,b.vy)<.12&&Math.hypot(b.rollVx,b.rollVy)<.12&&Math.abs(b.spin)<.12))state.stopTime+=dt;else state.stopTime=0;
-    if(state.stopTime>.3||state.shotTime>30){for(const b of live()){b.vx=0;b.vy=0;b.rollVx=0;b.rollVy=0;b.spin=0;}endShot();}
+    if(state.stopTime>.3&&state.pocketAnimations.length===0||state.shotTime>30){for(const b of live()){b.vx=0;b.vy=0;b.rollVx=0;b.rollVy=0;b.spin=0;}endShot();}
   }
   function spotBall(n) {
     const b=state.balls.find(q=>q.n===n);if(!b)return;
@@ -1018,7 +1025,7 @@
     const previous=physicsContext,events={firstHit:null,pocketed:[],railAfterHit:false,breakRails:new Set(),captureContacts:true,contacts:[]};
     const shotPath=[{x:c.x,y:c.y}],cuePath=[],targetPath=[];
     const append=(path,b)=>{const p=path.at(-1);if(!p||Math.hypot(b.x-p.x,b.y-p.y)>1e-9)path.push({x:b.x,y:b.y});};
-    let target=null,cueDone=false,targetDone=false,firstContacts=0;
+    let target=null,contact=null,cueDone=false,targetDone=false,firstContacts=0;
     try{
       physicsContext=events;applyCueImpulse(c,state.power,state.aim,state.spinX,state.spinY,state.breaking);
       for(let i=0;i<5400;i++){
@@ -1027,7 +1034,7 @@
         if(!target){
           append(shotPath,c);
           if(events.firstHit!==null){
-            target=balls.find(b=>b.n===events.firstHit);firstContacts=events.contacts.length;
+            target=balls.find(b=>b.n===events.firstHit);firstContacts=events.contacts.length;contact=events.contacts.find(e=>e.a===0||e.b===0);
             shotPath.push({x:c.x,y:c.y});cuePath.push({x:c.x,y:c.y});targetPath.push({x:target.x,y:target.y});
           }else if(c.pocketed||(events.cushionHits?.length||0)>hits||ballsSettled(balls))break;
         }else{
@@ -1039,7 +1046,37 @@
         }
       }
     }finally{physicsContext=previous;}
-    return displayGuideCache={shotPath,cuePath,targetPath,targetNumber:target?.n??null,shotBlocked:!target,physicsBased:true};
+    // The live trial determines reachability and the outgoing impulse. Render
+    // straight rays only, stopping before a second event or a spin-induced bend.
+    const launchAngle=state.aim-state.spinX/Math.max(1,Math.hypot(state.spinX,state.spinY))*.018;
+    const dx=Math.cos(launchAngle),dy=Math.sin(launchAngle),origin={x:a.x,y:a.y};
+    let end=shotPath.at(-1),objectOrigin=target?state.balls.find(b=>b.n===target.n):null;
+    if(objectOrigin){
+      const along=(objectOrigin.x-a.x)*dx+(objectOrigin.y-a.y)*dy;
+      const lateral=(objectOrigin.x-a.x)*dy-(objectOrigin.y-a.y)*dx;
+      const distance=along-Math.sqrt(Math.max(0,(2*R)**2-lateral*lateral));
+      end={x:a.x+dx*distance,y:a.y+dy*distance};
+    }else{
+      const distance=Math.max(0,(end.x-a.x)*dx+(end.y-a.y)*dy);
+      end={x:a.x+dx*distance,y:a.y+dy*distance};
+    }
+    const outgoing=(path,start,velocity,limit)=>{
+      if(!start||!velocity)return [];
+      const speed=Math.hypot(velocity.vx,velocity.vy);
+      if(speed<.12)return [];
+      const ux=velocity.vx/speed,uy=velocity.vy/speed;
+      let length=0;
+      for(let i=1;i<path.length;i++){
+        const px=path[i].x-path[0].x,py=path[i].y-path[0].y;
+        const forward=px*ux+py*uy,side=Math.abs(px*uy-py*ux);
+        if(forward<length-1e-5||side>Math.max(.025,forward*.025))break;
+        length=Math.min(limit,forward);if(length>=limit)break;
+      }
+      return length>.025?[{x:start.x,y:start.y},{x:start.x+ux*length,y:start.y+uy*length}]:[];
+    };
+    const cueVelocity=contact?(contact.a===0?contact.afterA:contact.afterB):null;
+    const objectVelocity=contact?(contact.a===0?contact.afterB:contact.afterA):null;
+    return displayGuideCache={shotPath:[origin,end],cuePath:outgoing(cuePath,end,cueVelocity,8),targetPath:outgoing(targetPath,objectOrigin,objectVelocity,11),objectCenter:objectOrigin?{x:objectOrigin.x,y:objectOrigin.y}:null,targetNumber:target?.n??null,shotBlocked:!target,physicsBased:true,straight:true};
   }
   function roundedRect(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);}
   function fillRect(x,y,w,h,r,color){ctx.fillStyle=color;roundedRect(x,y,w,h,r);ctx.fill();}
@@ -1234,7 +1271,7 @@
     sc.putImageData(pixels,0,0);
     b.sprite=sprite;b.spritePixels=pixels;b.spriteDirty=false;
   }
-  function drawBall(b,scale=1,worldX=b.x,worldY=b.y,alpha=1){
+  function drawBall(b,scale=1,worldX=b.x,worldY=b.y,alpha=1,shadow=true){
     if(!b.sprite||b.spriteDirty)renderBallSprite(b);
     const {x,y}=worldToScreen(worldX,worldY),rr=DISPLAY_R*SCALE*scale;
     ctx.save();ctx.globalAlpha=alpha;
@@ -1243,7 +1280,7 @@
       const trail=Math.min(7,speed*.048),weight=Math.min(.16,speed/900);
       ctx.save();ctx.globalAlpha=alpha*weight;ctx.drawImage(b.sprite,x-rr-b.vx/speed*trail,y-rr-b.vy/speed*trail,rr*2,rr*2);ctx.restore();
     }
-    ctx.shadowColor='#00111f9e';ctx.shadowBlur=5;ctx.fillStyle='#021b2b8a';ctx.beginPath();ctx.ellipse(x+2.3,y+rr*.69,rr*.9,rr*.35,0,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+    if(shadow){ctx.shadowColor='#00111f9e';ctx.shadowBlur=5;ctx.fillStyle='#021b2b8a';ctx.beginPath();ctx.ellipse(x+2.3,y+rr*.69,rr*.9,rr*.35,0,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
     ctx.drawImage(b.sprite,x-rr,y-rr,rr*2,rr*2);
     ctx.restore();
   }
@@ -1302,7 +1339,7 @@
     ctx.globalAlpha=.65;guidePath(prediction.shotPath,color);
     ctx.globalAlpha=1;guidePath(prediction.shotPath,color,Math.min(18,pathLength(prediction.shotPath)));
     if(prediction.targetNumber!==null){
-      const hit=prediction.shotPath.at(-1),object=prediction.targetPath[0],end=worldToScreen(hit.x,hit.y),objectCenter=worldToScreen(object.x,object.y);
+      const hit=prediction.shotPath.at(-1),object=prediction.objectCenter,end=worldToScreen(hit.x,hit.y),objectCenter=worldToScreen(object.x,object.y);
       ctx.strokeStyle=color;ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(end.x,end.y,R*SCALE,0,Math.PI*2);ctx.stroke();
       ctx.globalAlpha=.45;ctx.beginPath();ctx.moveTo(end.x,end.y);ctx.lineTo(objectCenter.x,objectCenter.y);ctx.stroke();ctx.globalAlpha=1;
       guidePath(prediction.cuePath,'#a0e6ff',8);
@@ -1310,10 +1347,48 @@
     }
     ctx.restore();drawCue(c,state.aim,state.power);
   }
+  let cueTexture=null;
+  function buildCueTexture(){
+    const length=1400,texture=document.createElement('canvas');texture.width=length;texture.height=56;
+    const g=texture.getContext('2d'),mid=28;
+    const body=()=>{g.beginPath();g.moveTo(7,mid-3.2);g.lineTo(950,mid-9.5);g.lineTo(1390,mid-16);g.quadraticCurveTo(1399,mid-16,1399,mid);g.quadraticCurveTo(1399,mid+16,1390,mid+16);g.lineTo(950,mid+9.5);g.lineTo(7,mid+3.2);g.closePath();};
+    body();g.save();g.clip();
+    let wood=g.createLinearGradient(0,mid-14,0,mid+14);
+    for(const [at,color] of [[0,'#875a26'],[.23,'#d19a46'],[.46,'#ffe0a0'],[.62,'#e9b959'],[1,'#8d591e']])wood.addColorStop(at,color);
+    g.fillStyle=wood;g.fillRect(0,0,length,56);
+    // Lengthwise ash grain follows the tapered shaft, with no bulky joint.
+    for(let i=0;i<14;i++){
+      g.strokeStyle=i%3===0?'#69401899':'#fff0bd99';g.lineWidth=i%3===0?1.25:.7;g.beginPath();
+      const y=mid+(i-6.5)*1.5;g.moveTo(15,mid+(y-mid)*.15);
+      g.bezierCurveTo(360,y-2.2,620,y+2.4,980,y);g.stroke();
+    }
+    const black=g.createLinearGradient(0,mid-18,0,mid+18);
+    for(const [at,color] of [[0,'#080a0e'],[.18,'#393d44'],[.34,'#0a0b10'],[.65,'#17191f'],[1,'#020308']])black.addColorStop(at,color);
+    g.fillStyle=black;g.fillRect(985,0,415,56);
+    for(const side of [-1,1]){
+      g.beginPath();g.moveTo(810,mid+side*9);g.lineTo(1030,mid+side*7);g.lineTo(985,mid+side*2);g.closePath();g.fill();
+      g.strokeStyle='#c08c3d';g.lineWidth=.65;g.stroke();
+    }
+    const diamond=(x,y,rx,ry,color)=>{g.fillStyle=color;g.beginPath();g.moveTo(x-rx,y);g.lineTo(x,y-ry);g.lineTo(x+rx,y);g.lineTo(x,y+ry);g.closePath();g.fill();};
+    for(const x of [1100,1242]){
+      diamond(x,mid,53,7.2,'#65d7dd');diamond(x,mid,32,4.8,'#080c12');diamond(x,mid,14,5,'#f3e8d1');
+      for(const side of [-1,1]){g.fillStyle='#54ced8';g.beginPath();g.moveTo(x+side*22,mid);g.lineTo(x+side*61,mid+side*6);g.lineTo(x+side*43,mid);g.lineTo(x+side*61,mid-side*6);g.closePath();g.fill();}
+    }
+    g.fillStyle='#f0e5cf';g.beginPath();for(let i=0;i<8;i++){const a=i*Math.PI/4,r=i%2?2.6:7;const x=1173+Math.cos(a)*r,y=mid+Math.sin(a)*r;if(i===0)g.moveTo(x,y);else g.lineTo(x,y);}g.closePath();g.fill();
+    g.strokeStyle='#d6c794';g.lineWidth=1.7;g.beginPath();g.arc(1336,mid,8,0,Math.PI*2);g.stroke();
+    g.fillStyle='#1231ac';g.fillRect(1365,0,9,56);g.fillStyle='#5783f5';g.fillRect(1366,0,2,56);g.fillStyle='#06070a';g.fillRect(1376,0,24,56);
+    const gloss=g.createLinearGradient(0,0,0,56);gloss.addColorStop(0,'#ffffff00');gloss.addColorStop(.28,'#ffffff18');gloss.addColorStop(.45,'#ffffff00');gloss.addColorStop(1,'#00000020');g.fillStyle=gloss;g.fillRect(0,0,length,56);g.restore();
+    g.fillStyle='#e8e6de';g.fillRect(4,mid-3.3,11,6.6);g.fillStyle='#487380';g.beginPath();g.roundRect(0,mid-3.4,5,6.8,1.7);g.fill();
+    const vertical=document.createElement('canvas');vertical.width=56;vertical.height=length;
+    const v=vertical.getContext('2d');v.translate(56,0);v.rotate(Math.PI/2);v.drawImage(texture,0,0);
+    $('cueStick').style.backgroundImage=`url(${vertical.toDataURL()})`;
+    return texture;
+  }
   function drawCue(c,angle,power,tipGap=null,opacity=1){
     const p=worldToScreen(c.x,c.y);ctx.save();ctx.globalAlpha=opacity;
-    const gap=tipGap??R*SCALE+14+power*.4,back=gap+310,butt=back-110;
+    const gap=tipGap??R*SCALE+14+power*.4,back=gap+350,butt=back-110;
     ctx.translate(p.x,p.y);ctx.rotate(angle+Math.PI);
+    if(cueTexture){ctx.shadowColor='#0009';ctx.shadowBlur=5;ctx.shadowOffsetY=3;ctx.drawImage(cueTexture,gap,-12,350,24);ctx.restore();return;}
     ctx.shadowColor='#00100d99';ctx.shadowBlur=9;ctx.shadowOffsetY=5;
     let g=ctx.createLinearGradient(0,-8,0,8);g.addColorStop(0,'#341c17');g.addColorStop(.28,'#87502d');g.addColorStop(.55,'#b67e43');g.addColorStop(.8,'#633620');g.addColorStop(1,'#241514');
     ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(butt,-5.4);ctx.lineTo(back-3,-8.6);ctx.quadraticCurveTo(back+2,-8.4,back+2,-4);ctx.lineTo(back+2,4);ctx.quadraticCurveTo(back+2,8.4,back-3,8.6);ctx.lineTo(butt,5.4);ctx.closePath();ctx.fill();
@@ -1334,28 +1409,33 @@
     else{const t=clamp(s.age/s.duration,0,1);gap=R*SCALE-(s.power>=42?22:14)*Math.sin(Math.PI*Math.min(1,t*2));opacity=1-t;}
     drawCue(s,s.aim,s.power,gap,opacity);
   }
-  function drawPocketEffect(animation){
-    const age=animation.age,life=clamp(1-age/.32,0,1);
-    if(life<=0)return;
-    const center=worldToScreen(animation.effectX,animation.effectY),power=clamp(animation.impact/28,.55,1.25);
-    ctx.save();ctx.globalCompositeOperation='screen';
-    const glow=ctx.createRadialGradient(center.x,center.y,2,center.x,center.y,47+age*25);
-    glow.addColorStop(0,`rgba(170,244,255,${.35*life*power})`);
-    glow.addColorStop(1,'rgba(69,180,255,0)');
-    ctx.fillStyle=glow;ctx.beginPath();ctx.arc(center.x,center.y,47+age*25,0,Math.PI*2);ctx.fill();
-    for(const offset of [0,.13]){
-      const phase=clamp((age-offset)/.45,0,1);if(age<offset||phase>=1)continue;
-      ctx.strokeStyle=`rgba(204,249,255,${(.84-offset)*Math.pow(1-phase,1.5)*power})`;
-      ctx.lineWidth=2.4*(1-phase)+.5;
-      ctx.beginPath();ctx.arc(center.x,center.y,7+phase*37,0,Math.PI*2);ctx.stroke();
+  function drawPocketEffect(a){
+    const t=clamp(a.age/a.duration,0,1),pocket=POCKET_GEOMETRY[a.pocket];
+    // Preserve the entry velocity while gravity accelerates the vertical fall.
+    // The pocket lip occludes the sphere; it does not explode into particles.
+    const travel=1-Math.exp(-t*5),fall=clamp((t-.12)/.88,0,1)**2;
+    const x=a.entryX+(a.effectX+pocket.nx*.3-a.entryX)*travel;
+    const y=a.entryY+(a.effectY+pocket.ny*.3-a.entryY)*travel;
+    const center=worldToScreen(x,y),well=worldToScreen(a.effectX,a.effectY);
+    const scale=1-.38*fall,rr=DISPLAY_R*SCALE*scale,drop=fall*DISPLAY_R*SCALE*2.3;
+    const alpha=1-clamp((t-.86)/.14,0,1);
+    ctx.save();
+    if(t>.08){
+      ctx.beginPath();ctx.arc(well.x,well.y,(pocket.radius+.12)*SCALE,0,Math.PI*2);ctx.clip();
+      const front=pocket.fallFront-R*(1-fall),width=pocket.radius+R;
+      ctx.beginPath();
+      for(const [i,[lateral,depth]] of [[-width,front],[width,front],[width,6],[-width,6]].entries()){
+        const edge=worldToScreen(pocket.mx+pocket.tx*lateral+pocket.nx*depth,pocket.my+pocket.ty*lateral+pocket.ny*depth);
+        if(i===0)ctx.moveTo(edge.x,edge.y);else ctx.lineTo(edge.x,edge.y);
+      }
+      ctx.closePath();ctx.clip();
     }
-    for(let i=0;i<8;i++){
-      const theta=i*Math.PI/4+animation.visual.n*.41,distance=11+age*(35+i%3*4),x=center.x+Math.cos(theta)*distance,y=center.y+Math.sin(theta)*distance;
-      ctx.strokeStyle=`rgba(218,251,255,${.8*life*life*power})`;
-      ctx.lineWidth=Math.max(.5,1.4*life);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(theta)*(4+7*life),y+Math.sin(theta)*(4+7*life));ctx.stroke();
-      ctx.fillStyle=`rgba(240,254,255,${.95*life*life*power})`;
-      ctx.beginPath();ctx.arc(x,y,Math.max(.4,2.1*life),0,Math.PI*2);ctx.fill();
-    }
+    drawBall(a.visual,scale,x,y+drop/SCALE,alpha,false);
+    ctx.globalAlpha=alpha;
+    const shade=ctx.createLinearGradient(0,center.y-rr,0,center.y+rr+drop);
+    shade.addColorStop(0,`rgba(0,0,0,${fall*.65})`);
+    shade.addColorStop(1,`rgba(0,0,0,${Math.min(.96,.16+fall*.9)})`);
+    ctx.fillStyle=shade;ctx.beginPath();ctx.arc(center.x,center.y+drop,rr,0,Math.PI*2);ctx.fill();
     ctx.restore();
   }
   let tableSurface=null;
@@ -1368,18 +1448,6 @@
     drawAim();for(const b of live())drawBall(b);drawStroke();
     for(const a of state.pocketAnimations){
       drawPocketEffect(a);
-      if(a.age<.18){
-        const t=clamp(a.age/.18,0,1),ease=1-(1-t)*(1-t);
-        const directions=[[-Math.SQRT1_2,-Math.SQRT1_2],[0,-1],[Math.SQRT1_2,-Math.SQRT1_2],[-Math.SQRT1_2,Math.SQRT1_2],[0,1],[Math.SQRT1_2,Math.SQRT1_2]];
-        const [dx,dy]=directions[a.pocket];
-        // Keep the sinking ball and its flash at the *same* pocket. Using its
-        // last simulation position can visually pair a corner pot with an
-        // unrelated middle-pocket flash during a fast, crowded shot.
-        const mouth=worldToScreen(a.effectX,a.effectY),radius=POCKET_GEOMETRY[a.pocket].radius*SCALE;
-        ctx.save();drawPocketFallPath(POCKET_GEOMETRY[a.pocket]);ctx.clip();
-        const sinkX=a.entryX+(a.effectX+dx*.65-a.entryX)*ease,sinkY=a.entryY+(a.effectY+dy*.65-a.entryY)*ease;
-        drawBall(a.visual,1-.78*ease,sinkX,sinkY,1-t);ctx.restore();
-      }
     }
     if(state.ballInHand){const c=cue(),p=worldToScreen(c.x,c.y);ctx.strokeStyle='#fff4a3';ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.beginPath();ctx.arc(p.x,p.y,24,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);}
     if(state.aiThinking&&state.phase==='aim'&&!state.aiPlan){
@@ -1523,7 +1591,7 @@
   window.render_game_to_text=()=>JSON.stringify({coordinates:`world inches, origin at top-left cushion nose; +x right, +y down; table 100x50; ball diameter ${(2*R).toFixed(4)}; corner mouth ${CORNER_MOUTH}; side mouth ${SIDE_MOUTH}`,mode:state.mode,opponent:state.opponent,aiDifficulty:state.aiDifficulty,aiThinking:state.aiThinking,aiPlan:state.aiPlan?{target:state.aiPlan.target,pocket:state.aiPlan.pocket,type:state.aiPlan.type,spinX:state.aiPlan.spinX||0,spinY:state.aiPlan.spinY||0,snookerPlanned:!!state.aiPlan.snookerPlanned,power:+state.aiPlan.power.toFixed(1),description:state.aiPlan.description}:null,phase:state.phase,turn:state.turn+1,groups:state.groups,scores:state.scores,breaking:state.breaking,rackSeed:state.rackSeed,ballInHand:state.ballInHand,repositionAllowed:state.repositionAllowed,aimDegrees:+(state.aim*180/Math.PI).toFixed(2),power:state.power,spin:[+state.spinX.toFixed(2),+state.spinY.toFixed(2)],balls:state.balls.map(b=>({n:b.n,x:+b.x.toFixed(2),y:+b.y.toFixed(2),vx:+b.vx.toFixed(2),vy:+b.vy.toFixed(2),rollVx:+b.rollVx.toFixed(2),rollVy:+b.rollVy.toFixed(2),sideSpin:+b.spin.toFixed(2),roll:+b.roll.toFixed(2),pocketed:b.pocketed})),status:state.status,winner:state.winner});
   if(new URLSearchParams(location.search).has('test')){
     $('startOverlay').classList.add('hidden');$('menuOverlay').classList.remove('hidden');
-    window.__poolTest={pocketRollingTest(index=1,angleDegrees=0,speed=6,offMouth=false){
+    window.__poolTest={getShotSummary(){return {firstHit:state.shot?.firstHit??null,pocketed:state.shot?.pocketed||[]};},getFallAnimations(){return state.pocketAnimations.map(a=>({n:a.visual.n,pocket:a.pocket,age:a.age,duration:a.duration,q:[...a.visual.q]}));},pocketRollingTest(index=1,angleDegrees=0,speed=6,offMouth=false){
       const p=POCKET_GEOMETRY[index],angle=angleDegrees*Math.PI/180;
       const dx=p.nx*Math.cos(angle)+p.tx*Math.sin(angle),dy=p.ny*Math.cos(angle)+p.ty*Math.sin(angle);
       const distance=Math.min(8,speed*speed/(2*ROLL_DECEL)*.7),offset=offMouth?p.radius+1.4:0;
@@ -1546,7 +1614,7 @@
   },setGuideBalls(entries,aim=0,power=70,spinY=0,spinX=0){
     state.pocketAnimations=[];
     state.aiTicket++;state.aiThinking=false;state.aiPlan=null;state.mode='nine';state.opponent='local';state.phase='aim';state.turn=0;state.breaking=false;state.ballInHand=false;
-    state.groups=[null,null];state.scores=[0,0];say('拖动瞄准，拉动右侧球杆出杆。');state.balls=entries.map(q=>ball(q.n,q.x,q.y));state.aim=aim;state.power=power;state.spinY=spinY;state.spinX=spinX;
+    state.groups=[null,null];state.scores=[0,0];say('拖动瞄准，拉动左侧球杆出杆。');state.balls=entries.map(q=>ball(q.n,q.x,q.y));state.aim=aim;state.power=power;state.spinY=spinY;state.spinX=spinX;
     state.shot=null;$('menuOverlay').classList.add('hidden');syncPowerUI();moveSpinDot();updateUI();render();
   },fireTest(){fire();
   },setSpinShot(vertical=0,horizontal=0,power=70){
@@ -1580,5 +1648,6 @@
     $('bootProgress').style.width=`${Math.round(pct*100)}%`;$('bootPercent').textContent=`${Math.round(pct*100)}%`;
     if(pct>=1)dismissBoot();else requestAnimationFrame(animateBoot);
   }
+  cueTexture=buildCueTexture();
   syncPowerUI();render();requestAnimationFrame(frame);requestAnimationFrame(animateBoot);
 })();
