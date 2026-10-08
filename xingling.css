@@ -9,3 +9,91 @@
 #mobile-pool-preview .cue-bottom{display:block!important;bottom:7px;left:0;right:0;width:auto!important;height:auto!important;writing-mode:horizontal-tb;transform:none;font-size:10px;line-height:1.45;color:#aebfc6;white-space:nowrap;text-align:center}
 #mobile-pool-preview .cue-meter.dragging .cue-stick-vertical{filter:drop-shadow(2px 2px 2px #000a) brightness(1.09)}
 #mobile-pool-preview .cue-meter:focus-visible .cue-track{outline:2px solid #76ded8;outline-offset:1px}
+
+/* S800 identity: black lacquer, pale gold and restrained table-blue. */
+#mobile-pool-preview .boot{background:radial-gradient(circle at 50% 36%,#143b4a 0,#07141d 38%,#020407 82%)}
+#mobile-pool-preview .boot::before,#mobile-pool-preview .start-overlay::before{background:linear-gradient(120deg,transparent 0 42%,#d6b76c0b 42% 43%,transparent 43% 100%),radial-gradient(circle at 72% 21%,#3ab3c31a,transparent 32%);background-size:74px 74px,100% 100%;mask-image:none}
+#mobile-pool-preview .boot-system{color:#b8c7ca;letter-spacing:3px}#mobile-pool-preview .boot-system span{color:#d9c37d}
+#mobile-pool-preview .boot-title{display:flex;align-items:baseline;gap:18px;color:#f2f4ef;letter-spacing:5px;text-shadow:0 10px 30px #000}
+#mobile-pool-preview .boot-title span{font-size:.46em;font-weight:650;letter-spacing:8px;color:#d6d9d3}
+#mobile-pool-preview .boot-title em{color:#d9bd70;font-family:Georgia,"Times New Roman",serif;font-style:italic;letter-spacing:1px}
+#mobile-pool-preview .boot-sub{color:#9aaeb2;letter-spacing:2px}#mobile-pool-preview .boot-track{height:4px;border-color:#a991506b;background:#151a1d}#mobile-pool-preview .boot-track span{background:linear-gradient(90deg,#648e99,#e1c87e);box-shadow:0 0 16px #d4b75f88}
+#mobile-pool-preview .boot-percent{color:#d8c47f}#mobile-pool-preview .boot button{border-color:#a68c4f66;background:#0b1013;color:#c8b978}
+
+#mobile-pool-preview .start-overlay{background:radial-gradient(circle at 78% 28%,#10445a8c 0,transparent 31%),linear-gradient(132deg,#020507f7,#07131bf7 55%,#020406f9);backdrop-filter:blur(10px)}
+#mobile-pool-preview .start-card{grid-template-columns:1fr .92fr;width:min(94vw,960px);min-height:500px;padding:54px 58px;border:1px solid #b9a05f7a;border-radius:16px;background:radial-gradient(circle at 83% 19%,#16455a99 0,transparent 29%),linear-gradient(145deg,#12191e 0,#070b0e 62%,#030506 100%);box-shadow:0 35px 110px #000f,0 0 0 1px #ffffff0a,inset 0 1px #f1dfaa22;overflow:hidden}
+#mobile-pool-preview .start-card::before{height:1px;background:linear-gradient(90deg,transparent,#dbc47c 22%,#f5e5ad 50%,#8fc8d2 78%,transparent)}
+#mobile-pool-preview .start-card::after{content:"S800";position:absolute;right:-24px;bottom:-66px;color:#ffffff05;font:italic 950 210px/1 Arial,sans-serif;letter-spacing:-14px;pointer-events:none}
+#mobile-pool-preview .start-signal{border-color:#a9915657;border-radius:20px;background:#15191b;color:#d8ca99;letter-spacing:2px}#mobile-pool-preview .start-signal b{color:#769eaa}.signal-dot{background:#d8bc68;box-shadow:0 0 12px #d8bc68}
+#mobile-pool-preview .start-wordmark{margin:24px 0 17px;color:#f1eee4;font-family:Georgia,"Times New Roman",serif;font-size:clamp(62px,6vw,88px);font-style:italic;letter-spacing:-3px;text-shadow:0 10px 26px #000}
+#mobile-pool-preview .start-wordmark span{display:block;margin-top:3px;color:#7ed4df;font:800 .40em/1.1 Inter,"Microsoft YaHei",sans-serif;letter-spacing:9px;text-shadow:0 0 24px #31acbd55}
+#mobile-pool-preview .start-wordmark i{right:-8px;bottom:4px;padding:3px 7px;border:1px solid #bca35970;border-radius:3px;color:#d5bd78;font:700 10px/1 Inter,sans-serif;letter-spacing:2px}
+#mobile-pool-preview .start-title{display:block;margin:19px 0 11px!important;padding-bottom:14px;border-color:#9a844f66;color:#f1f3ee;font-size:29px!important;letter-spacing:1px}
+#mobile-pool-preview .start-title span{display:block;margin-top:8px;color:#89aeb7;font-size:11px;letter-spacing:2px}
+#mobile-pool-preview .start-card .start-copy>p{max-width:410px;color:#aebdc0;font-size:13px;line-height:1.8}
+#mobile-pool-preview .start-btn{min-width:238px;border-color:#f1dfa7;border-radius:6px;background:linear-gradient(110deg,#f1d98f,#bea255);color:#15120a;box-shadow:0 12px 32px #9e7f3544,inset 0 1px #fff9;font-size:15px;letter-spacing:1px}
+#mobile-pool-preview .start-btn span{color:#254d57;font-size:13px}.start-foot{color:#7b969c;letter-spacing:1.8px}
+#mobile-pool-preview .start-table{border-color:#11181d;background:radial-gradient(circle at 51% 42%,#238ead,#0b526e 68%,#07384c 100%);box-shadow:0 28px 52px #000d,inset 0 0 30px #001a2aaa,0 0 0 2px #bca65d66}
+#mobile-pool-preview .start-table::before{border-color:#cbb46b66;box-shadow:0 0 30px #4fb6c235}.start-trace{border-color:#e6f9f7;filter:drop-shadow(0 0 7px #7de3ea)}
+#mobile-pool-preview .start-cue{height:7px;background:linear-gradient(90deg,#050608 0 23%,#36b6c2 24% 30%,#0b0d10 31% 45%,#d4aa56 46% 100%);box-shadow:0 3px 7px #0009}
+#mobile-pool-preview .start-visual>span{color:#bba765;letter-spacing:3px}
+
+@media(max-width:700px){
+  #mobile-pool-preview .start-card{min-height:0;padding:30px 26px;border-radius:12px}
+  #mobile-pool-preview .start-card::after{right:-17px;bottom:-33px;font-size:120px}
+  #mobile-pool-preview .start-wordmark{font-size:48px;margin:14px 0 12px}
+  #mobile-pool-preview .start-wordmark span{font-size:.36em;letter-spacing:7px}
+  #mobile-pool-preview .start-title{font-size:23px!important;margin-top:13px!important}
+  #mobile-pool-preview .start-card .start-copy>p{font-size:13px}
+  #mobile-pool-preview .start-foot{font-size:9px;line-height:1.6}
+}
+
+/* V8 — Xiaotang Sapphire Arena onboarding. */
+#mobile-pool-preview .start-overlay{background:radial-gradient(circle at 50% 18%,#176a8d66 0,transparent 37%),linear-gradient(155deg,#02060cfa,#061a2afa 58%,#020812fa)}
+#mobile-pool-preview .start-card{display:block;width:min(92vw,760px);min-height:0;padding:64px 68px;border:1px solid #62c9ee66;border-radius:28px;background:linear-gradient(145deg,#0c2f49e8,#071827f2 56%,#06101cf7);box-shadow:0 38px 120px #000e,0 0 80px #167aa233,inset 0 1px #c9f4ff24;text-align:left}
+#mobile-pool-preview .start-card::before{height:2px;background:linear-gradient(90deg,transparent,#79ddff,#d8f7ff,#4eb4e4,transparent)}
+#mobile-pool-preview .start-card::after{content:"小糖";right:24px;bottom:-28px;color:#8cddff0a;font:900 150px/1 "PingFang SC","Microsoft YaHei",sans-serif;letter-spacing:-12px}
+#mobile-pool-preview .start-visual{display:none!important}
+#mobile-pool-preview .start-signal{border-color:#68c9ed66;background:#08263ba8;color:#9be4ff}.signal-dot{background:#7ee7ff;box-shadow:0 0 13px #43d9ff}
+#mobile-pool-preview .start-wordmark{margin:31px 0 21px;color:#f3fbff;font:900 clamp(68px,8vw,108px)/.88 "PingFang SC","Microsoft YaHei",sans-serif;font-style:normal;letter-spacing:-8px;text-shadow:0 13px 35px #0008}
+#mobile-pool-preview .start-wordmark span{margin-top:12px;color:#78dafa;font:750 .22em/1.1 Inter,sans-serif;letter-spacing:12px;text-shadow:0 0 28px #36cfff66}
+#mobile-pool-preview .start-wordmark i{right:auto;left:230px;bottom:3px;border-color:#6cd6fa7a;color:#b8edff;background:#0b3146cc}
+#mobile-pool-preview .start-title{margin-top:25px!important;border-color:#70cae34d;color:#f2fbff;font-size:34px!important}
+#mobile-pool-preview .start-title span{color:#8fc8dc;font-size:12px}
+#mobile-pool-preview .start-card .start-copy>p{max-width:520px;color:#acc9d5;font-size:15px;line-height:1.85}
+#mobile-pool-preview .start-btn{margin-top:29px;min-width:270px;border-color:#a5edff;border-radius:14px;background:linear-gradient(110deg,#cdf6ff,#6ed6f3);color:#06243a;box-shadow:0 14px 36px #168eb653;font-size:16px}
+#mobile-pool-preview .start-btn span{color:#0c6581}.start-foot{margin-top:27px!important;color:#6299ad}
+
+#mobile-pool-preview .setup-shell{width:min(94vw,880px);max-height:92svh;padding:42px 46px;border:1px solid #55bde366;border-radius:25px;background:radial-gradient(circle at 92% 0,#16628555,transparent 34%),linear-gradient(150deg,#0b2b42f7,#071623fa 68%);box-shadow:0 36px 110px #000d,0 0 70px #0b759b27;overflow:auto}
+#mobile-pool-preview .setup-progress{display:flex;gap:8px;margin-bottom:33px;padding-bottom:17px;border-bottom:1px solid #65b7d92d}
+#mobile-pool-preview .setup-progress span{flex:1;color:#537e91;font-size:11px;letter-spacing:1.6px}.setup-progress span.active{color:#a8eaff}.setup-progress span.active::before{content:"●";margin-right:7px;color:#54d8ff;text-shadow:0 0 10px #54d8ff}
+#mobile-pool-preview .setup-step.hidden{display:none}
+#mobile-pool-preview .setup-step{position:relative}#mobile-pool-preview .setup-step h1{margin:13px 0 12px;color:#f2fbff;font-size:clamp(38px,6vw,62px);line-height:1.08}#mobile-pool-preview .setup-step h1 em{color:#78dcff;font-style:normal}#mobile-pool-preview .setup-step>p{margin:0 0 28px;color:#8eb4c4;font-size:14px}
+#mobile-pool-preview .setup-grid{display:grid;gap:14px}#mobile-pool-preview .setup-grid-three{grid-template-columns:repeat(3,1fr)}#mobile-pool-preview .setup-grid-two{grid-template-columns:repeat(2,1fr)}
+#mobile-pool-preview .setup-grid>button{min-height:174px;padding:22px 20px;border:1px solid #4f9dbc56;border-radius:18px;background:linear-gradient(150deg,#123c54aa,#0a2435cc);color:#edfaff;text-align:left;transition:transform .18s,border-color .18s,background .18s;box-shadow:inset 0 1px #ffffff0a}
+#mobile-pool-preview .setup-grid>button:hover,#mobile-pool-preview .setup-grid>button:focus-visible{transform:translateY(-3px);border-color:#8ce8ff;background:linear-gradient(150deg,#18516e,#0c2e43);outline:none}
+#mobile-pool-preview .setup-grid>button b,#mobile-pool-preview .setup-grid>button small{display:block}#mobile-pool-preview .setup-grid>button b{margin-top:20px;font-size:19px}#mobile-pool-preview .setup-grid>button small{margin-top:7px;color:#83adbd;font-size:12px;line-height:1.5}
+#mobile-pool-preview .setup-icon{display:grid;place-items:center;width:48px;height:48px;border:1px solid #6bd5f57d;border-radius:14px;background:#0a2f45;color:#8ee8ff;font-size:16px;font-weight:900;letter-spacing:1px;box-shadow:0 0 24px #32bde927}
+#mobile-pool-preview .setup-grid-two .mode-ball{width:56px;height:56px;font-size:24px}#mobile-pool-preview .difficulty-number{display:block;color:#81e1ff;font-size:31px;font-weight:900;font-variant-numeric:tabular-nums}
+#mobile-pool-preview .setup-back{margin-bottom:19px;padding:7px 13px;border:1px solid #4b8296;border-radius:9px;background:#0b2636;color:#91bdcd;font-size:12px}
+#mobile-pool-preview .setup-back::before{content:"←";margin-right:7px}
+#mobile-pool-preview .setup-back:hover{border-color:#78cfe9;color:#d1f5ff;background:#10364b}
+#mobile-pool-preview .practice-card{border-color:#55bde366;background:linear-gradient(150deg,#0d3049,#071722 72%)}
+
+@media(max-width:700px){
+  #mobile-pool-preview .start-card{padding:36px 28px;border-radius:21px}
+  #mobile-pool-preview .start-card::after{right:5px;bottom:-15px;font-size:90px}
+  #mobile-pool-preview .start-wordmark{font-size:64px;letter-spacing:-6px}
+  #mobile-pool-preview .start-wordmark i{left:154px;font-size:8px}
+  #mobile-pool-preview .start-title{font-size:27px!important}
+  #mobile-pool-preview .start-title span{font-size:10px;line-height:1.5}
+  #mobile-pool-preview .start-btn{width:100%;min-width:0}
+  #mobile-pool-preview .setup-shell{padding:25px 20px;border-radius:19px}
+  #mobile-pool-preview .setup-progress{margin-bottom:22px}.setup-progress span{font-size:9px!important}
+  #mobile-pool-preview .setup-step h1{font-size:36px}
+  #mobile-pool-preview .setup-grid-three,#mobile-pool-preview .setup-grid-two{grid-template-columns:1fr}
+  #mobile-pool-preview .setup-grid>button{min-height:0;padding:17px 18px;display:grid;grid-template-columns:52px 1fr;grid-template-rows:auto auto;column-gap:15px;align-items:center}
+  #mobile-pool-preview .setup-grid>button .setup-icon,#mobile-pool-preview .setup-grid>button .mode-ball,#mobile-pool-preview .setup-grid>button .difficulty-number{grid-row:1/3}
+  #mobile-pool-preview .setup-grid>button b{grid-column:2;margin:0;font-size:17px}#mobile-pool-preview .setup-grid>button small{grid-column:2;margin-top:3px}
+  #mobile-pool-preview .difficulty-number{font-size:23px}
+}

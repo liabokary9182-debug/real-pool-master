@@ -4,9 +4,11 @@
   let ctx = canvas.getContext('2d',{alpha:false,desynchronized:true});
   const $ = id => document.getElementById(id);
   const VIEW_W=1400,VIEW_H=790;
-  // Keep the tablet canvas above 3K wide without forcing a 7.5 MP redraw
-  // every frame on high-DPR screens.
-  const PIXEL_RATIO=Math.min(2.4,Math.max(1.75,(window.devicePixelRatio||1)*1.08));
+  // Touch devices get a lighter backing buffer and cheaper ball effects. The
+  // collision solver still runs at 180 Hz, so rendering gains do not alter play.
+  const MOBILE_RENDER=window.matchMedia?.('(pointer:coarse)').matches??false;
+  const deviceScale=window.devicePixelRatio||1;
+  const PIXEL_RATIO=MOBILE_RENDER?Math.min(1.18,Math.max(1,deviceScale*.39)):Math.min(1.8,Math.max(1.4,deviceScale*.72));
   canvas.width=Math.round(VIEW_W*PIXEL_RATIO);canvas.height=Math.round(VIEW_H*PIXEL_RATIO);
   ctx.setTransform(PIXEL_RATIO,0,0,PIXEL_RATIO,0,0);
   const W = 100, H = 50, HEAD_LINE = W/4, R = 1.125*1.05*1.05, DISPLAY_R = R;
@@ -35,7 +37,7 @@
     }));
     return {index,mx,my,nx,ny,tx,ty,radius,jawRadius,well,faces,fallRadius:radius-R*.45,fallFront:-R*.35};
   });
-  const state = {mode:null,opponent:'ai',aiDifficulty:'normal',aiTicket:0,aiThinking:false,phase:'menu',balls:[],pocketAnimations:[],turn:0,groups:[null,null],scores:[0,0],breaking:true,rackSeed:0,ballInHand:false,repositionAllowed:false,aim:-0.02,power:56,spinX:0,spinY:0,shot:null,stopTime:0,shotTime:0,status:'启动球场，选择对局',winner:null,drag:null};
+  const state = {mode:null,opponent:'ai',aiDifficulty:'normal',aiTicket:0,aiThinking:false,phase:'menu',balls:[],pocketAnimations:[],turn:0,groups:[null,null],scores:[0,0],breaking:true,rackSeed:0,ballInHand:false,repositionAllowed:false,aim:-0.02,power:56,guidePowerLock:null,spinX:0,spinY:0,shot:null,stopTime:0,shotTime:0,status:'启动球场，选择对局',winner:null,drag:null};
   // Trial shots use the live collision/cloth functions, with isolated events.
   // Never play sounds, emit pocket flashes, or edit the real shot during trials.
   let physicsContext=null;
@@ -65,9 +67,11 @@
   };
   function startPractice(key){
     const layout=PRACTICE_LAYOUTS[key];if(!layout)return;
+    window.PoolAudio?.stopIntro?.();
+    window.PoolAudio?.startGameMusic?.();
     if(!state.practice)state.practiceOpponent=state.opponent;
     state.aiTicket++;state.aiThinking=false;state.aiPlan=null;state.practice=key;
-    state.mode='nine';state.opponent='local';state.phase='aim';state.turn=0;state.groups=[null,null];state.scores=[0,0];
+    state.mode=state.practiceRuleset||'nine';state.opponent='local';state.phase='aim';state.turn=0;state.groups=[null,null];state.scores=[0,0];
     state.breaking=false;state.ballInHand=false;state.repositionAllowed=false;state.shot=null;state.stopTime=0;state.shotTime=0;state.winner=null;
     state.balls=layout.balls.map(([n,x,y])=>ball(n,x,y));state.pocketAnimations=[];state.stroke=null;state.windup=0;
     state.aim=layout.aim;state.power=layout.power;state.spinX=layout.spinX;state.spinY=layout.spinY;
@@ -82,6 +86,8 @@
     $('cueMeter').style.setProperty('--power-fraction',String(state.power/100));
   }
   function init(mode) {
+    window.PoolAudio?.stopIntro?.();
+    window.PoolAudio?.startGameMusic?.();
     if(state.practice)state.opponent=state.practiceOpponent||'ai';
     state.practice=null;state.stroke=null;state.windup=0;
     state.aiTicket++;state.aiThinking=false;state.aiPlan=null;
@@ -139,10 +145,10 @@
   }
   function syncAngleUI(){
     const degrees=((state.aim*180/Math.PI+180)%360+360)%360-180;
-    $('angleReadout').textContent=degrees.toFixed(3)+'°';
+    $('angleReadout').textContent=degrees.toFixed(4)+'°';
     const ruler=$('angleRuler');
-    ruler.setAttribute('aria-valuenow',degrees.toFixed(3));
-    ruler.style.setProperty('--tick-offset',`${(-degrees*100)%100}px`);
+    ruler.setAttribute('aria-valuenow',degrees.toFixed(4));
+    ruler.style.setProperty('--tick-offset',`${(-degrees*1000)%100}px`);
   }
   function aimAt(x,y) {
     const c=cue(); if(!c||state.phase!=='aim'||state.ballInHand||(state.opponent==='ai'&&state.turn===1))return;
@@ -153,6 +159,7 @@
   function fire(byAI=false,withWindup=false) {
     if(state.phase!=='aim'||state.ballInHand||(state.opponent==='ai'&&state.turn===1&&!byAI))return;
     const c=cue(); if(!c||c.pocketed)return;
+    state.guidePowerLock=null;
     // Flush pending aim changes before freezing the exact stroke inputs.
     updateUI();render();
     // A new stroke must never inherit a lingering flash from the last one.
@@ -198,8 +205,8 @@
     if(b.pocketed)return;
     if(!physicsContext&&state.phase==='moving'&&state.balls.includes(b)){
       const impact=Math.hypot(b.vx,b.vy);
-      const pocket=pocketVisualCenter(index),duration=clamp(.52-impact*.0012,.36,.52);
-      state.pocketAnimations.push({visual:{...b,q:[...b.q]},entryX:b.x,entryY:b.y,effectX:pocket.x,effectY:pocket.y,pocket:index,age:0,impact,duration});
+      const pocket=pocketVisualCenter(index),duration=clamp(.58-impact*.0015,.42,.58);
+      state.pocketAnimations.push({visual:{...b,q:[...b.q]},entryX:b.x,entryY:b.y,vx:b.vx,vy:b.vy,effectX:pocket.x,effectY:pocket.y,pocket:index,age:0,impact,duration});
       window.PoolAudio?.play('pocket',impact);
     }
     b.pocketed=true;b.vx=0;b.vy=0;b.rollVx=0;b.rollVy=0;b.spin=0;
@@ -353,7 +360,7 @@
     // Position still renders every frame. Rebuild the costly sphere texture
     // only after its markings rotate enough to change a visible pixel.
     b.spriteAngle+=rate*dt;
-    if(b.spriteAngle>=.08){b.spriteDirty=true;b.spriteAngle=0;}
+    if(b.spriteAngle>=(MOBILE_RENDER ? .42 : .12)){b.spriteDirty=true;b.spriteAngle=0;}
   }
   function update(dt) {
     if(state.stroke&&(state.stroke.age+=dt)>state.stroke.duration)state.stroke=null;
@@ -1016,67 +1023,77 @@
     return Number.isFinite(distance)?distance:0;
   }
   function pathLength(points){let length=0;for(let i=1;i<points.length;i++)length+=Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y);return length;}
+  function trimGuidePath(points,maxLength){
+    if(points.length<2)return points;
+    const trimmed=[points[0]];let length=0;
+    for(let i=1;i<points.length;i++){
+      const a=points[i-1],b=points[i],segment=Math.hypot(b.x-a.x,b.y-a.y);
+      if(length+segment<=maxLength){trimmed.push(b);length+=segment;continue;}
+      const fraction=(maxLength-length)/Math.max(segment,1e-9);
+      trimmed.push({x:a.x+(b.x-a.x)*fraction,y:a.y+(b.y-a.y)*fraction});break;
+    }
+    return trimmed;
+  }
   function displayGuide(){
-    const key=[state.aim,state.power,state.spinX,state.spinY,state.breaking,...state.balls.flatMap(b=>[b.n,b.x,b.y,b.vx,b.vy,b.rollVx,b.rollVy,b.spin,b.pocketed?1:0])].join(',');
+    const guidePower=state.guidePowerLock??state.power;
+    const key=[state.aim,guidePower,state.spinX,state.spinY,state.breaking,...state.balls.flatMap(b=>[b.n,b.x,b.y,b.vx,b.vy,b.rollVx,b.rollVy,b.spin,b.pocketed?1:0])].join(',');
     if(key===displayGuideKey)return displayGuideCache;
     displayGuideKey=key;
-    const a=cue();if(!a)return displayGuideCache=null;
-    const balls=state.balls.map(b=>({...b})),c=balls.find(b=>b.n===0);
-    const previous=physicsContext,events={firstHit:null,pocketed:[],railAfterHit:false,breakRails:new Set(),captureContacts:true,contacts:[]};
+    const liveCue=cue();if(!liveCue)return displayGuideCache=null;
+    const balls=state.balls.map(b=>({...b,q:[...b.q]})),c=balls.find(b=>b.n===0);
+    const previous=physicsContext,events={firstHit:null,pocketed:[],railAfterHit:false,breakRails:new Set(),captureContacts:true,contacts:[],cushionHits:[]};
     const shotPath=[{x:c.x,y:c.y}],cuePath=[],targetPath=[];
-    const append=(path,b)=>{const p=path.at(-1);if(!p||Math.hypot(b.x-p.x,b.y-p.y)>1e-9)path.push({x:b.x,y:b.y});};
-    let target=null,contact=null,cueDone=false,targetDone=false,firstContacts=0;
+    const point=(path,x,y,force=false)=>{const last=path.at(-1);if(force||!last||Math.hypot(x-last.x,y-last.y)>.025)path.push({x,y});};
+    const moved=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+    let target=null,contact=null,cueDone=false,targetDone=false;
+    let cueTravel=0,targetTravel=0,preTravel=0,cueRails=0,targetRails=0,preRails=0,firstContacts=0;
+    let lastCue={x:c.x,y:c.y},lastTarget=null;
     try{
-      physicsContext=events;applyCueImpulse(c,state.power,state.aim,state.spinX,state.spinY,state.breaking);
+      physicsContext=events;applyCueImpulse(c,guidePower,state.aim,state.spinX,state.spinY,state.breaking);
       for(let i=0;i<5400;i++){
-        const contacts=events.contacts.length,hits=events.cushionHits?.length||0;
+        const contactsBefore=events.contacts.length,hitsBefore=events.cushionHits.length;
+        const beforeCue={x:c.x,y:c.y},beforeTarget=target?{x:target.x,y:target.y}:null;
         physicsStep(balls,STEP);
+        const newHits=events.cushionHits.slice(hitsBefore),newContacts=events.contacts.slice(contactsBefore);
         if(!target){
-          append(shotPath,c);
+          preTravel+=moved(beforeCue,c);
+          for(const hit of newHits.filter(h=>h.n===0)){point(shotPath,hit.x,hit.y,true);preRails++;}
           if(events.firstHit!==null){
-            target=balls.find(b=>b.n===events.firstHit);firstContacts=events.contacts.length;contact=events.contacts.find(e=>e.a===0||e.b===0);
-            shotPath.push({x:c.x,y:c.y});cuePath.push({x:c.x,y:c.y});targetPath.push({x:target.x,y:target.y});
-          }else if(c.pocketed||(events.cushionHits?.length||0)>hits||ballsSettled(balls))break;
+            target=balls.find(b=>b.n===events.firstHit);contact=events.contacts.find(e=>e.a===0||e.b===0);
+            const cueContact=contact?(contact.a===0?contact.afterA:contact.afterB):c;
+            const targetContact=contact?(contact.a===0?contact.afterB:contact.afterA):target;
+            point(shotPath,cueContact.x,cueContact.y,true);
+            point(cuePath,cueContact.x,cueContact.y,true);
+            point(targetPath,targetContact.x,targetContact.y,true);
+            lastCue={x:cueContact.x,y:cueContact.y};lastTarget={x:targetContact.x,y:targetContact.y};
+            firstContacts=events.contacts.length;
+          }else if(c.pocketed||preRails>=3||preTravel>=235||ballsSettled(balls)){
+            point(shotPath,c.x,c.y,true);break;
+          }
         }else{
-          const newHits=(events.cushionHits||[]).slice(hits),newContacts=events.contacts.slice(Math.max(contacts,firstContacts));
-          const blocked=n=>newHits.some(h=>h.n===n)||newContacts.some(h=>h.a===n||h.b===n);
-          if(!cueDone){append(cuePath,c);cueDone=c.pocketed||blocked(0)||pathLength(cuePath)>=8||Math.hypot(c.vx,c.vy)<.01&&Math.hypot(c.rollVx,c.rollVy)<.01;}
-          if(!targetDone){append(targetPath,target);targetDone=target.pocketed||blocked(target.n)||pathLength(targetPath)>=11||Math.hypot(target.vx,target.vy)<.01;}
+          cueTravel+=moved(beforeCue,c);targetTravel+=moved(beforeTarget,target);
+          for(const hit of newHits){
+            if(hit.n===0&&!cueDone){point(cuePath,hit.x,hit.y,true);if(++cueRails>=3)cueDone=true;}
+            if(hit.n===target.n&&!targetDone){point(targetPath,hit.x,hit.y,true);if(++targetRails>=3)targetDone=true;}
+          }
+          const secondary=events.contacts.slice(firstContacts);
+          const blocked=n=>secondary.some(h=>h.a===n||h.b===n);
+          if(!cueDone&&(c.pocketed||blocked(0)||cueTravel>=8||Math.hypot(c.vx,c.vy)<.01&&Math.hypot(c.rollVx,c.rollVy)<.01)){
+            point(cuePath,c.x,c.y,true);cueDone=true;
+          }
+          if(!targetDone&&(target.pocketed||blocked(target.n)||targetTravel>=11||Math.hypot(target.vx,target.vy)<.01&&Math.hypot(target.rollVx,target.rollVy)<.01)){
+            point(targetPath,target.x,target.y,true);targetDone=true;
+          }
           if(cueDone&&targetDone||ballsSettled(balls))break;
         }
       }
     }finally{physicsContext=previous;}
-    // The live trial determines reachability and the outgoing impulse. Render
-    // straight rays only, stopping before a second event or a spin-induced bend.
-    const launchAngle=state.aim-state.spinX/Math.max(1,Math.hypot(state.spinX,state.spinY))*.018;
-    const dx=Math.cos(launchAngle),dy=Math.sin(launchAngle),origin={x:a.x,y:a.y};
-    let end=shotPath.at(-1),objectOrigin=target?state.balls.find(b=>b.n===target.n):null;
-    if(objectOrigin){
-      const along=(objectOrigin.x-a.x)*dx+(objectOrigin.y-a.y)*dy;
-      const lateral=(objectOrigin.x-a.x)*dy-(objectOrigin.y-a.y)*dx;
-      const distance=along-Math.sqrt(Math.max(0,(2*R)**2-lateral*lateral));
-      end={x:a.x+dx*distance,y:a.y+dy*distance};
-    }else{
-      const distance=Math.max(0,(end.x-a.x)*dx+(end.y-a.y)*dy);
-      end={x:a.x+dx*distance,y:a.y+dy*distance};
-    }
-    const outgoing=(path,start,velocity,limit)=>{
-      if(!start||!velocity)return [];
-      const speed=Math.hypot(velocity.vx,velocity.vy);
-      if(speed<.12)return [];
-      const ux=velocity.vx/speed,uy=velocity.vy/speed;
-      let length=0;
-      for(let i=1;i<path.length;i++){
-        const px=path[i].x-path[0].x,py=path[i].y-path[0].y;
-        const forward=px*ux+py*uy,side=Math.abs(px*uy-py*ux);
-        if(forward<length-1e-5||side>Math.max(.025,forward*.025))break;
-        length=Math.min(limit,forward);if(length>=limit)break;
-      }
-      return length>.025?[{x:start.x,y:start.y},{x:start.x+ux*length,y:start.y+uy*length}]:[];
-    };
-    const cueVelocity=contact?(contact.a===0?contact.afterA:contact.afterB):null;
-    const objectVelocity=contact?(contact.a===0?contact.afterB:contact.afterA):null;
-    return displayGuideCache={shotPath:[origin,end],cuePath:outgoing(cuePath,end,cueVelocity,8),targetPath:outgoing(targetPath,objectOrigin,objectVelocity,11),objectCenter:objectOrigin?{x:objectOrigin.x,y:objectOrigin.y}:null,targetNumber:target?.n??null,shotBlocked:!target,physicsBased:true,straight:true};
+    if(target){if(!cueDone)point(cuePath,c.x,c.y,true);if(!targetDone)point(targetPath,target.x,target.y,true);}
+    const objectCenter=target?(contact?(contact.a===0?contact.afterB:contact.afterA):target):null;
+    // The guide ends at the first cushion. Keep the later physics trial only
+    // for internal reachability; never draw a rebound segment after a rail.
+    const directTarget=target&&preRails===0,oneSegment=path=>path.length>1?path.slice(0,2):path;
+    return displayGuideCache={shotPath:oneSegment(shotPath),cuePath:directTarget?oneSegment(trimGuidePath(cuePath,8)):[],targetPath:directTarget?oneSegment(trimGuidePath(targetPath,11)):[],objectCenter:directTarget&&objectCenter?{x:objectCenter.x,y:objectCenter.y}:null,targetNumber:directTarget?target.n:null,shotBlocked:!directTarget,physicsBased:true,straight:true,railCount:preRails};
   }
   function roundedRect(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);}
   function fillRect(x,y,w,h,r,color){ctx.fillStyle=color;roundedRect(x,y,w,h,r);ctx.fill();}
@@ -1109,9 +1126,9 @@
     const brandX=l+W*SCALE/2,brandY=t+H*SCALE/2;
     ctx.save();ctx.translate(brandX,brandY);ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.save();ctx.scale(.9,1);ctx.fillStyle='#dcebe052';
-    ctx.font='italic 800 49px Arial, sans-serif';ctx.fillText('S800',0,-14);ctx.restore();
-    ctx.fillStyle='#dcebe060';ctx.font='500 20px "PingFang SC", "Microsoft YaHei", sans-serif';
-    ctx.fillText('利',-29,24);ctx.fillText('百',0,24);ctx.fillText('文',29,24);ctx.restore();
+    ctx.font='italic 800 68px Arial, sans-serif';ctx.fillText('S800',0,-18);ctx.restore();
+    ctx.fillStyle='#dcebe068';ctx.font='600 27px "PingFang SC", "Microsoft YaHei", sans-serif';
+    ctx.fillText('利',-40,30);ctx.fillText('百',0,30);ctx.fillText('文',40,30);ctx.restore();
     // Sparse fibres are cached, rather than repainting 56,000 per frame.
     let seed=19327;
     for(let i=0;i<9500;i++){
@@ -1276,11 +1293,11 @@
     const {x,y}=worldToScreen(worldX,worldY),rr=DISPLAY_R*SCALE*scale;
     ctx.save();ctx.globalAlpha=alpha;
     const speed=Math.hypot(b.vx,b.vy);
-    if(state.phase==='moving'&&scale===1&&speed>28){
+    if(!MOBILE_RENDER&&state.phase==='moving'&&scale===1&&speed>28){
       const trail=Math.min(7,speed*.048),weight=Math.min(.16,speed/900);
       ctx.save();ctx.globalAlpha=alpha*weight;ctx.drawImage(b.sprite,x-rr-b.vx/speed*trail,y-rr-b.vy/speed*trail,rr*2,rr*2);ctx.restore();
     }
-    if(shadow){ctx.shadowColor='#00111f9e';ctx.shadowBlur=5;ctx.fillStyle='#021b2b8a';ctx.beginPath();ctx.ellipse(x+2.3,y+rr*.69,rr*.9,rr*.35,0,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
+    if(shadow&&!MOBILE_RENDER){ctx.shadowColor='#00111f9e';ctx.shadowBlur=5;ctx.fillStyle='#021b2b8a';ctx.beginPath();ctx.ellipse(x+2.3,y+rr*.69,rr*.9,rr*.35,0,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
     ctx.drawImage(b.sprite,x-rr,y-rr,rr*2,rr*2);
     ctx.restore();
   }
@@ -1338,12 +1355,18 @@
     // Short draw/follow/English paths share the live collision and cloth code.
     ctx.globalAlpha=.65;guidePath(prediction.shotPath,color);
     ctx.globalAlpha=1;guidePath(prediction.shotPath,color,Math.min(18,pathLength(prediction.shotPath)));
+    for(const bounce of prediction.shotPath.slice(1,-1)){
+      const q=worldToScreen(bounce.x,bounce.y);ctx.fillStyle='#baf8ff';ctx.beginPath();ctx.arc(q.x,q.y,3.1,0,Math.PI*2);ctx.fill();
+    }
     if(prediction.targetNumber!==null){
       const hit=prediction.shotPath.at(-1),object=prediction.objectCenter,end=worldToScreen(hit.x,hit.y),objectCenter=worldToScreen(object.x,object.y);
       ctx.strokeStyle=color;ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(end.x,end.y,R*SCALE,0,Math.PI*2);ctx.stroke();
       ctx.globalAlpha=.45;ctx.beginPath();ctx.moveTo(end.x,end.y);ctx.lineTo(objectCenter.x,objectCenter.y);ctx.stroke();ctx.globalAlpha=1;
       guidePath(prediction.cuePath,'#a0e6ff',8);
       guidePath(prediction.targetPath,color,11);
+      for(const bounce of prediction.targetPath.slice(1,-1)){
+        const q=worldToScreen(bounce.x,bounce.y);ctx.fillStyle=color;ctx.beginPath();ctx.arc(q.x,q.y,2.7,0,Math.PI*2);ctx.fill();
+      }
     }
     ctx.restore();drawCue(c,state.aim,state.power);
   }
@@ -1351,34 +1374,52 @@
   function buildCueTexture(){
     const length=1400,texture=document.createElement('canvas');texture.width=length;texture.height=56;
     const g=texture.getContext('2d'),mid=28;
-    const body=()=>{g.beginPath();g.moveTo(7,mid-3.2);g.lineTo(950,mid-9.5);g.lineTo(1390,mid-16);g.quadraticCurveTo(1399,mid-16,1399,mid);g.quadraticCurveTo(1399,mid+16,1390,mid+16);g.lineTo(950,mid+9.5);g.lineTo(7,mid+3.2);g.closePath();};
+    const body=()=>{g.beginPath();g.moveTo(7,mid-3);g.lineTo(963,mid-9.2);g.lineTo(1390,mid-15.5);g.quadraticCurveTo(1399,mid-15.5,1399,mid);g.quadraticCurveTo(1399,mid+15.5,1390,mid+15.5);g.lineTo(963,mid+9.2);g.lineTo(7,mid+3);g.closePath();};
     body();g.save();g.clip();
-    let wood=g.createLinearGradient(0,mid-14,0,mid+14);
-    for(const [at,color] of [[0,'#875a26'],[.23,'#d19a46'],[.46,'#ffe0a0'],[.62,'#e9b959'],[1,'#8d591e']])wood.addColorStop(at,color);
-    g.fillStyle=wood;g.fillRect(0,0,length,56);
-    // Lengthwise ash grain follows the tapered shaft, with no bulky joint.
-    for(let i=0;i<14;i++){
-      g.strokeStyle=i%3===0?'#69401899':'#fff0bd99';g.lineWidth=i%3===0?1.25:.7;g.beginPath();
-      const y=mid+(i-6.5)*1.5;g.moveTo(15,mid+(y-mid)*.15);
-      g.bezierCurveTo(360,y-2.2,620,y+2.4,980,y);g.stroke();
+    const wood=g.createLinearGradient(0,mid-14,0,mid+14);
+    for(const [at,color] of [[0,'#754615'],[.16,'#bd7925'],[.37,'#ffd777'],[.53,'#f6bd4e'],[.73,'#b66b1e'],[1,'#6e3d12']])wood.addColorStop(at,color);
+    g.fillStyle=wood;g.fillRect(0,0,985,56);
+    // The reference shaft has long ash flames rather than parallel painted
+    // stripes. Each grain line folds into a narrow chevron along the taper.
+    for(let x=70,k=0;x<930;x+=86,k++){
+      const spread=2.1+(x/980)*5.2,side=k%2?1:-1;
+      g.strokeStyle=k%3===0?'#6f3b12b8':'#fff0aeaf';g.lineWidth=k%3===0?1.35:.78;
+      g.beginPath();g.moveTo(Math.max(12,x-92),mid+side*spread*.2);
+      g.bezierCurveTo(x-48,mid+side*spread*1.45,x-20,mid+side*spread*1.25,x,mid);
+      g.bezierCurveTo(x+23,mid-side*spread*1.15,x+48,mid-side*spread*.9,x+77,mid-side*spread*.22);g.stroke();
+      g.strokeStyle='#4f2b0b66';g.lineWidth=.55;g.beginPath();g.moveTo(x-55,mid-side*spread*.05);g.quadraticCurveTo(x-8,mid+side*spread*.88,x+62,mid+side*spread*.15);g.stroke();
     }
     const black=g.createLinearGradient(0,mid-18,0,mid+18);
-    for(const [at,color] of [[0,'#080a0e'],[.18,'#393d44'],[.34,'#0a0b10'],[.65,'#17191f'],[1,'#020308']])black.addColorStop(at,color);
-    g.fillStyle=black;g.fillRect(985,0,415,56);
+    for(const [at,color] of [[0,'#020306'],[.14,'#343a43'],[.28,'#10141a'],[.48,'#05070b'],[.72,'#1a1e25'],[1,'#000104']])black.addColorStop(at,color);
+    g.fillStyle=black;g.fillRect(970,0,430,56);
+    // Long gold splice points merge the ash shaft into the slim black butt.
     for(const side of [-1,1]){
-      g.beginPath();g.moveTo(810,mid+side*9);g.lineTo(1030,mid+side*7);g.lineTo(985,mid+side*2);g.closePath();g.fill();
-      g.strokeStyle='#c08c3d';g.lineWidth=.65;g.stroke();
+      const splice=g.createLinearGradient(820,0,1008,0);splice.addColorStop(0,'#805016');splice.addColorStop(.48,'#ffd56f');splice.addColorStop(1,'#7b4711');
+      g.fillStyle=splice;g.beginPath();g.moveTo(790,mid+side*7.8);g.lineTo(1018,mid+side*7.1);g.lineTo(973,mid+side*1.1);g.closePath();g.fill();
+      g.strokeStyle='#ffe09b88';g.lineWidth=.7;g.stroke();
     }
+    g.fillStyle='#05070a';g.fillRect(968,mid-2.3,48,4.6);
     const diamond=(x,y,rx,ry,color)=>{g.fillStyle=color;g.beginPath();g.moveTo(x-rx,y);g.lineTo(x,y-ry);g.lineTo(x+rx,y);g.lineTo(x,y+ry);g.closePath();g.fill();};
-    for(const x of [1100,1242]){
-      diamond(x,mid,53,7.2,'#65d7dd');diamond(x,mid,32,4.8,'#080c12');diamond(x,mid,14,5,'#f3e8d1');
-      for(const side of [-1,1]){g.fillStyle='#54ced8';g.beginPath();g.moveTo(x+side*22,mid);g.lineTo(x+side*61,mid+side*6);g.lineTo(x+side*43,mid);g.lineTo(x+side*61,mid-side*6);g.closePath();g.fill();}
-    }
-    g.fillStyle='#f0e5cf';g.beginPath();for(let i=0;i<8;i++){const a=i*Math.PI/4,r=i%2?2.6:7;const x=1173+Math.cos(a)*r,y=mid+Math.sin(a)*r;if(i===0)g.moveTo(x,y);else g.lineTo(x,y);}g.closePath();g.fill();
-    g.strokeStyle='#d6c794';g.lineWidth=1.7;g.beginPath();g.arc(1336,mid,8,0,Math.PI*2);g.stroke();
-    g.fillStyle='#1231ac';g.fillRect(1365,0,9,56);g.fillStyle='#5783f5';g.fillRect(1366,0,2,56);g.fillStyle='#06070a';g.fillRect(1376,0,24,56);
-    const gloss=g.createLinearGradient(0,0,0,56);gloss.addColorStop(0,'#ffffff00');gloss.addColorStop(.28,'#ffffff18');gloss.addColorStop(.45,'#ffffff00');gloss.addColorStop(1,'#00000020');g.fillStyle=gloss;g.fillRect(0,0,length,56);g.restore();
-    g.fillStyle='#e8e6de';g.fillRect(4,mid-3.3,11,6.6);g.fillStyle='#487380';g.beginPath();g.roundRect(0,mid-3.4,5,6.8,1.7);g.fill();
+    const xingling=x=>{
+      const teal=g.createLinearGradient(x-58,0,x+58,0);teal.addColorStop(0,'#279aa6');teal.addColorStop(.45,'#75edf0');teal.addColorStop(1,'#1b8794');g.fillStyle=teal;
+      g.beginPath();g.moveTo(x-60,mid);g.lineTo(x-35,mid-7.4);g.lineTo(x-13,mid-5.2);g.lineTo(x-28,mid);g.lineTo(x-13,mid+5.2);g.lineTo(x-35,mid+7.4);g.closePath();g.fill();
+      g.beginPath();g.moveTo(x+60,mid);g.lineTo(x+35,mid-7.4);g.lineTo(x+13,mid-5.2);g.lineTo(x+28,mid);g.lineTo(x+13,mid+5.2);g.lineTo(x+35,mid+7.4);g.closePath();g.fill();
+      g.strokeStyle='#a4ffffaa';g.lineWidth=.75;g.beginPath();g.moveTo(x-54,mid);g.lineTo(x-33,mid-5.1);g.lineTo(x-17,mid-3.7);g.moveTo(x+54,mid);g.lineTo(x+33,mid-5.1);g.lineTo(x+17,mid-3.7);g.stroke();
+      diamond(x,mid,17,7,'#ece8db');diamond(x,mid,8.5,4.1,'#06090e');diamond(x,mid,3.1,5.4,'#5edbe0');
+      diamond(x-34,mid,6.5,2.7,'#071017');diamond(x+34,mid,6.5,2.7,'#071017');
+    };
+    xingling(1092);xingling(1244);
+    // Ivory four-point star separates the two turquoise Xingling inlays.
+    g.fillStyle='#f4ead6';g.beginPath();g.moveTo(1168,mid);g.lineTo(1174,mid-3);g.lineTo(1179,mid-10);g.lineTo(1184,mid-3);g.lineTo(1190,mid);g.lineTo(1184,mid+3);g.lineTo(1179,mid+10);g.lineTo(1174,mid+3);g.closePath();g.fill();
+    diamond(1179,mid,3.1,4.8,'#9f8d66');
+    // Small gold seal medallion and the blue ring/black bumper match the butt cap.
+    g.fillStyle='#090b0d';g.strokeStyle='#d8c078';g.lineWidth=2;g.beginPath();g.arc(1341,mid,9.5,0,Math.PI*2);g.fill();g.stroke();
+    g.strokeStyle='#d8c078';g.lineWidth=1.15;g.beginPath();g.moveTo(1335,mid-3.7);g.lineTo(1347,mid+3.7);g.moveTo(1336,mid+4);g.lineTo(1346,mid-4);g.moveTo(1341,mid-7);g.lineTo(1341,mid+7);g.stroke();
+    const ring=g.createLinearGradient(1365,0,1377,0);ring.addColorStop(0,'#0a1b66');ring.addColorStop(.45,'#315dff');ring.addColorStop(1,'#071042');g.fillStyle=ring;g.fillRect(1365,0,12,56);
+    g.fillStyle='#030407';g.fillRect(1377,0,23,56);g.fillStyle='#242a32';g.fillRect(1378,0,2,56);
+    const gloss=g.createLinearGradient(0,0,0,56);gloss.addColorStop(0,'#ffffff05');gloss.addColorStop(.22,'#ffffff24');gloss.addColorStop(.39,'#ffffff08');gloss.addColorStop(.68,'#00000008');gloss.addColorStop(1,'#00000042');g.fillStyle=gloss;g.fillRect(0,0,length,56);g.restore();
+    // Small-head cue: compact blue tip, narrow ivory ferrule.
+    g.fillStyle='#eee9da';g.fillRect(4,mid-3.05,11,6.1);g.fillStyle='#49717d';g.beginPath();g.roundRect(0,mid-3.25,4.6,6.5,1.5);g.fill();
     const vertical=document.createElement('canvas');vertical.width=56;vertical.height=length;
     const v=vertical.getContext('2d');v.translate(56,0);v.rotate(Math.PI/2);v.drawImage(texture,0,0);
     $('cueStick').style.backgroundImage=`url(${vertical.toDataURL()})`;
@@ -1409,34 +1450,38 @@
     else{const t=clamp(s.age/s.duration,0,1);gap=R*SCALE-(s.power>=42?22:14)*Math.sin(Math.PI*Math.min(1,t*2));opacity=1-t;}
     drawCue(s,s.aim,s.power,gap,opacity);
   }
+  function pocketAnimationPose(a){
+    const t=clamp(a.age/a.duration,0,1),fall=clamp((a.age-.035)/Math.max(.001,a.duration-.035),0,1);
+    const sink=fall*fall*(3-2*fall);
+    // A short Hermite hand-off preserves the exact entry position and velocity,
+    // then eases to rest at the protected well centre before the depth fall.
+    const settleDuration=Math.min(.11,a.duration*.24),u=clamp(a.age/settleDuration,0,1);
+    const h00=2*u*u*u-3*u*u+1,h10=u*u*u-2*u*u+u,h01=-2*u*u*u+3*u*u;
+    const x=h00*a.entryX+h10*a.vx*settleDuration+h01*a.effectX;
+    const y=h00*a.entryY+h10*a.vy*settleDuration+h01*a.effectY;
+    return {t,sink,x,y,scale:1-.76*sink,alpha:1-clamp((t-.76)/.24,0,1)};
+  }
+  function drawPocketFallMask(pocket){
+    const profile=pocketFallProfile(pocket),well=worldToScreen(profile.x,profile.y);
+    ctx.beginPath();
+    // Clip to the same circular cap used by pocket physics. The rail and cloth
+    // are never part of this mask, which keeps the sinking sphere below the lip.
+    const start=profile.angle-profile.halfAngle,end=profile.angle+profile.halfAngle,radius=Math.max(1,profile.radius*SCALE-2);
+    ctx.moveTo(well.x+Math.cos(start)*radius,well.y+Math.sin(start)*radius);ctx.arc(well.x,well.y,radius,start,end);ctx.closePath();
+    return {profile,well,start,end,radius};
+  }
   function drawPocketEffect(a){
-    const t=clamp(a.age/a.duration,0,1),pocket=POCKET_GEOMETRY[a.pocket];
-    // Preserve the entry velocity while gravity accelerates the vertical fall.
-    // The pocket lip occludes the sphere; it does not explode into particles.
-    const travel=1-Math.exp(-t*5),fall=clamp((t-.12)/.88,0,1)**2;
-    const x=a.entryX+(a.effectX+pocket.nx*.3-a.entryX)*travel;
-    const y=a.entryY+(a.effectY+pocket.ny*.3-a.entryY)*travel;
-    const center=worldToScreen(x,y),well=worldToScreen(a.effectX,a.effectY);
-    const scale=1-.38*fall,rr=DISPLAY_R*SCALE*scale,drop=fall*DISPLAY_R*SCALE*2.3;
-    const alpha=1-clamp((t-.86)/.14,0,1);
-    ctx.save();
-    if(t>.08){
-      ctx.beginPath();ctx.arc(well.x,well.y,(pocket.radius+.12)*SCALE,0,Math.PI*2);ctx.clip();
-      const front=pocket.fallFront-R*(1-fall),width=pocket.radius+R;
-      ctx.beginPath();
-      for(const [i,[lateral,depth]] of [[-width,front],[width,front],[width,6],[-width,6]].entries()){
-        const edge=worldToScreen(pocket.mx+pocket.tx*lateral+pocket.nx*depth,pocket.my+pocket.ty*lateral+pocket.ny*depth);
-        if(i===0)ctx.moveTo(edge.x,edge.y);else ctx.lineTo(edge.x,edge.y);
-      }
-      ctx.closePath();ctx.clip();
-    }
-    drawBall(a.visual,scale,x,y+drop/SCALE,alpha,false);
-    ctx.globalAlpha=alpha;
-    const shade=ctx.createLinearGradient(0,center.y-rr,0,center.y+rr+drop);
-    shade.addColorStop(0,`rgba(0,0,0,${fall*.65})`);
-    shade.addColorStop(1,`rgba(0,0,0,${Math.min(.96,.16+fall*.9)})`);
-    ctx.fillStyle=shade;ctx.beginPath();ctx.arc(center.x,center.y+drop,rr,0,Math.PI*2);ctx.fill();
-    ctx.restore();
+    const pocket=POCKET_GEOMETRY[a.pocket],pose=pocketAnimationPose(a);
+    const center=worldToScreen(pose.x,pose.y),rr=DISPLAY_R*SCALE*pose.scale;
+    ctx.save();const mouth=drawPocketFallMask(pocket);ctx.clip();
+    ctx.globalAlpha=.28*(1-pose.sink);ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(center.x,center.y,rr*1.08,rr*.5,0,0,Math.PI*2);ctx.fill();
+    drawBall(a.visual,pose.scale,pose.x,pose.y,pose.alpha,false);
+    ctx.globalAlpha=pose.alpha*(.1+.84*pose.sink);
+    const shade=ctx.createRadialGradient(center.x-rr*.24,center.y-rr*.28,rr*.08,center.x,center.y,rr*1.08);
+    shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(.58,`rgba(0,0,0,${.14+.32*pose.sink})`);shade.addColorStop(1,'rgba(0,0,0,.97)');
+    ctx.fillStyle=shade;ctx.beginPath();ctx.arc(center.x,center.y,rr,0,Math.PI*2);ctx.fill();ctx.restore();
+    ctx.save();ctx.globalAlpha=.82*(1-pose.sink*.7);ctx.strokeStyle='#030608';ctx.lineWidth=5.2;
+    ctx.beginPath();ctx.arc(mouth.well.x,mouth.well.y,mouth.radius,mouth.start,mouth.end);ctx.stroke();ctx.restore();
   }
   let tableSurface=null;
   function render() {
@@ -1479,7 +1524,7 @@
     const c=cue(),dx=p.x-c.x,dy=p.y-c.y,ax=Math.cos(state.aim),ay=Math.sin(state.aim);
     if(state.breaking&&state.repositionAllowed&&Math.hypot(dx,dy)<=R*1.6){state.drag='place-break';return;}
     const behind=-(dx*ax+dy*ay),side=Math.abs(dx*ay-dy*ax);
-    if(behind>=2.3&&behind<=27&&side<2.5){state.drag={kind:'power',start:p,pull:0,startingPower:state.power};return;}
+    if(behind>=2.3&&behind<=27&&side<2.5){state.guidePowerLock=state.power;state.drag={kind:'power',start:p,pull:0,startingPower:state.power};return;}
     aimAt(p.x,p.y);
     state.drag={kind:'aim',startAngle:Math.atan2(p.y-c.y,p.x-c.x),startAim:state.aim,startRadius:Math.hypot(dx,dy)};
   });
@@ -1492,8 +1537,8 @@
       state.aim=state.drag.startAim+delta*clamp(state.drag.startRadius/70,.06,.24);requestAimFrame();
     }else {const d=state.drag.start;const pull=(d.x-p.x)*Math.cos(state.aim)+(d.y-p.y)*Math.sin(state.aim);state.drag.pull=Math.max(0,pull);state.power=state.drag.pull<.7?state.drag.startingPower:clamp(Math.round(5+(state.drag.pull-.7)*5.7),5,100);syncPowerUI();render();}
   });
-  const pointerUp=e=>{if((state.drag==='place'||state.drag==='place-break')&&state.phase==='aim'){const p=pointerWorld(e);if(placeCue(p.x,p.y,false))say('白球位置已预览，可继续调整或确认摆放。');}else if(state.drag?.kind==='power'){const p=pointerWorld(e),d=state.drag.start;state.drag.pull=Math.max(0,(d.x-p.x)*Math.cos(state.aim)+(d.y-p.y)*Math.sin(state.aim));if(state.drag.pull>=1.5){syncPowerUI();fire(false,true);}else{state.power=state.drag.startingPower;syncPowerUI();render();}}state.drag=null;};
-  canvas.addEventListener('pointerup',pointerUp);canvas.addEventListener('pointercancel',()=>{if(state.drag?.kind==='power'){state.power=state.drag.startingPower;syncPowerUI();render();}state.drag=null;});
+  const pointerUp=e=>{if((state.drag==='place'||state.drag==='place-break')&&state.phase==='aim'){const p=pointerWorld(e);if(placeCue(p.x,p.y,false))say('白球位置已预览，可继续调整或确认摆放。');}else if(state.drag?.kind==='power'){const p=pointerWorld(e),d=state.drag.start;state.drag.pull=Math.max(0,(d.x-p.x)*Math.cos(state.aim)+(d.y-p.y)*Math.sin(state.aim));if(state.drag.pull>=1.5){syncPowerUI();fire(false,true);}else{state.power=state.drag.startingPower;state.guidePowerLock=null;syncPowerUI();render();}}state.drag=null;};
+  canvas.addEventListener('pointerup',pointerUp);canvas.addEventListener('pointercancel',()=>{if(state.drag?.kind==='power'){state.power=state.drag.startingPower;state.guidePowerLock=null;syncPowerUI();render();}state.drag=null;});
   const spinPad=$('spinPad');
   function moveSpinDot(){const dot=$('spinDot');dot.style.left=`${50+state.spinX*36}%`;dot.style.top=`${50-state.spinY*36}%`;if($('strokeReadout'))$('strokeReadout').textContent=strokeName(state);}
   function setSpin(e){if(!canAdjustStroke())return;const rect=spinPad.getBoundingClientRect();const x=sideways()?(e.clientY-rect.top)/rect.height*2-1:(e.clientX-rect.left)/rect.width*2-1,y=sideways()?1-(rect.right-e.clientX)/rect.width*2:1-(e.clientY-rect.top)/rect.height*2;const k=Math.max(1,Math.hypot(x,y));state.spinX=clamp(x/k,-1,1);state.spinY=clamp(y/k,-1,1);moveSpinDot();requestAimFrame();}
@@ -1501,8 +1546,18 @@
   spinPad.addEventListener('pointermove',e=>{if(spinPad.hasPointerCapture(e.pointerId))setSpin(e);});
   $('resetSpin').addEventListener('click',()=>{if(!canAdjustStroke())return;state.spinX=0;state.spinY=0;moveSpinDot();requestAimFrame();});
   $('power').addEventListener('input',e=>{if(!canAdjustStroke())return;state.power=Number(e.target.value);syncPowerUI();render();});
-  $('practiceBtn')?.addEventListener('click',()=>$('practiceOverlay').classList.remove('hidden'));
-  $('closePractice')?.addEventListener('click',()=>$('practiceOverlay').classList.add('hidden'));
+  function openPracticeMenu(rules=state.mode==='eight'?'eight':'nine'){
+    state.practiceRuleset=rules;
+    if($('practiceRulesetLabel'))$('practiceRulesetLabel').textContent=rules==='eight'?'八球规则':'九球规则';
+    $('practiceOverlay').classList.remove('hidden');
+  }
+  $('practiceBtn')?.addEventListener('click',()=>openPracticeMenu());
+  const closePracticeMenu=()=>{
+    $('practiceOverlay').classList.add('hidden');
+    if(state.phase==='menu'){$('menuOverlay').classList.remove('hidden');showSetupStep('rules');}
+  };
+  $('closePractice')?.addEventListener('click',closePracticeMenu);
+  $('backPractice')?.addEventListener('click',closePracticeMenu);
   $('repeatPractice')?.addEventListener('click',()=>startPractice(state.practice));
   document.querySelectorAll('[data-practice]').forEach(btn=>btn.addEventListener('click',()=>startPractice(btn.dataset.practice)));
   const meter=$('cueMeter');let meterDrag=null;
@@ -1520,7 +1575,7 @@
   }
   meter.addEventListener('pointerdown',e=>{
     if(state.phase!=='aim'||state.ballInHand||(state.opponent==='ai'&&state.turn===1))return;
-    e.preventDefault();meterDrag={id:e.pointerId,startAxis:meterAxis(e),pull:0,startingPower:state.power};meter.classList.add('dragging');meter.setPointerCapture(e.pointerId);state.power=5;syncPowerUI();render();
+    e.preventDefault();state.guidePowerLock=state.power;meterDrag={id:e.pointerId,startAxis:meterAxis(e),pull:0,startingPower:state.power};meter.classList.add('dragging');meter.setPointerCapture(e.pointerId);state.power=5;syncPowerUI();render();
   });
   meter.addEventListener('pointermove',e=>{
     updateMeterDrag(e);
@@ -1530,9 +1585,9 @@
     // Release commits the last previewed strength; it does not retune the shot.
     const shoot=meterDrag.pull>=14,startingPower=meterDrag.startingPower;
     meterDrag=null;meter.classList.remove('dragging');meter.style.setProperty('--cue-pull','0px');
-    if(shoot)fire(false,true);else{state.power=startingPower;syncPowerUI();render();}
+    if(shoot)fire(false,true);else{state.power=startingPower;state.guidePowerLock=null;syncPowerUI();render();}
   });
-  meter.addEventListener('pointercancel',()=>{if(meterDrag){state.power=meterDrag.startingPower;syncPowerUI();render();}meterDrag=null;meter.classList.remove('dragging');meter.style.setProperty('--cue-pull','0px');});
+  meter.addEventListener('pointercancel',()=>{if(meterDrag){state.power=meterDrag.startingPower;state.guidePowerLock=null;syncPowerUI();render();}meterDrag=null;meter.classList.remove('dragging');meter.style.setProperty('--cue-pull','0px');});
   meter.addEventListener('keydown',e=>{
     if(!canAdjustStroke())return;
     if(e.key==='ArrowDown'||e.key==='ArrowUp'){
@@ -1554,7 +1609,7 @@
   });
   angleRuler.addEventListener('pointermove',e=>{
     if(!angleDrag||angleDrag.id!==e.pointerId)return;
-    state.aim=angleDrag.aim+(rulerAxis(e)-angleDrag.start)*.01*Math.PI/180;
+    state.aim=angleDrag.aim+(rulerAxis(e)-angleDrag.start)*.001*Math.PI/180;
     requestAimFrame();
   });
   const stopAngleDrag=()=>{angleDrag=null;};
@@ -1562,16 +1617,41 @@
   angleRuler.addEventListener('pointercancel',stopAngleDrag);
   angleRuler.addEventListener('keydown',e=>{
     if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;
-    e.preventDefault();state.aim+=(e.key==='ArrowLeft'?-1:1)*Math.PI/18000;updateUI();render();
+    e.preventDefault();const step=e.shiftKey?.0001:.001;state.aim+=(e.key==='ArrowLeft'?-1:1)*step*Math.PI/180;updateUI();render();
   });
-  for(const [id,opponent] of [['versusAI','ai'],['versusLocal','local']])$(id).addEventListener('click',()=>{state.opponent=opponent;$('versusAI').classList.toggle('selected',opponent==='ai');$('versusLocal').classList.toggle('selected',opponent==='local');$('difficultySelect').hidden=opponent!=='ai';});
-  document.querySelectorAll('[data-difficulty]').forEach(btn=>btn.addEventListener('click',()=>{
-    state.aiDifficulty=btn.dataset.difficulty;
-    document.querySelectorAll('[data-difficulty]').forEach(q=>q.classList.toggle('selected',q===btn));
+  let setupChoice='ai',setupRuleset='eight';
+  function showSetupStep(step){
+    const ids={mode:'setupMode',rules:'setupRules',difficulty:'setupDifficulty'};
+    for(const [name,id] of Object.entries(ids))$(id).classList.toggle('hidden',name!==step);
+    document.querySelectorAll('[data-progress]').forEach(label=>label.classList.toggle('active',label.dataset.progress===step));
+  }
+  function openSetup(step='mode'){
+    window.PoolAudio?.stopGameMusic?.();
+    window.PoolAudio?.startIntro?.();
+    $('startOverlay').classList.add('hidden');$('practiceOverlay')?.classList.add('hidden');$('menuOverlay').classList.remove('hidden');showSetupStep(step);
+  }
+  document.querySelectorAll('[data-flow-mode]').forEach(btn=>btn.addEventListener('click',()=>{
+    setupChoice=btn.dataset.flowMode;
+    $('setupRulesHint').textContent=setupChoice==='practice'?'先选择八球或九球规则，再挑选训练项目。':setupChoice==='local'?'双人同屏不需要选择难度。':'选择玩法后继续设置电脑难度。';
+    showSetupStep('rules');
   }));
-  document.querySelectorAll('[data-mode]').forEach(btn=>btn.addEventListener('click',()=>init(btn.dataset.mode)));
-  $('startBtn').addEventListener('click',()=>{$('startOverlay').classList.add('hidden');$('menuOverlay').classList.remove('hidden');});
-  $('newBtn').addEventListener('click',()=>{state.aiTicket++;state.aiThinking=false;state.aiPlan=null;if(state.practice)state.opponent=state.practiceOpponent||'ai';state.practice=null;$('practiceOverlay')?.classList.add('hidden');$('menuOverlay').classList.remove('hidden');state.phase='menu';updateUI();});
+  document.querySelectorAll('[data-flow-rules]').forEach(btn=>btn.addEventListener('click',()=>{
+    setupRuleset=btn.dataset.flowRules;
+    if(setupChoice==='ai'){state.opponent='ai';showSetupStep('difficulty');return;}
+    if(setupChoice==='practice'){$('menuOverlay').classList.add('hidden');state.phase='menu';openPracticeMenu(setupRuleset);return;}
+    state.opponent='local';init(setupRuleset);
+  }));
+  document.querySelectorAll('[data-flow-difficulty]').forEach(btn=>btn.addEventListener('click',()=>{
+    state.opponent='ai';state.aiDifficulty=btn.dataset.flowDifficulty;init(setupRuleset);
+  }));
+  document.querySelectorAll('[data-setup-back]').forEach(btn=>btn.addEventListener('click',()=>{
+    if(btn.dataset.setupBack==='welcome'){
+      $('menuOverlay').classList.add('hidden');$('startOverlay').classList.remove('hidden');window.PoolAudio?.startIntro?.();return;
+    }
+    showSetupStep(btn.dataset.setupBack);
+  }));
+  $('startBtn').addEventListener('click',()=>openSetup('mode'));
+  $('newBtn').addEventListener('click',()=>{state.aiTicket++;state.aiThinking=false;state.aiPlan=null;if(state.practice)state.opponent=state.practiceOpponent||'ai';state.practice=null;state.phase='menu';updateUI();openSetup('mode');});
   $('rulesBtn').addEventListener('click',()=>$('rulesOverlay').classList.remove('hidden'));
   $('closeRules').addEventListener('click',()=>$('rulesOverlay').classList.add('hidden'));
   $('rulesOverlay').addEventListener('click',e=>{if(e.target.id==='rulesOverlay')$('rulesOverlay').classList.add('hidden');});
@@ -1582,16 +1662,17 @@
     if(e.key==='f'||e.key==='F'){fullscreen();return;}
     if(e.key==='Escape'){$('rulesOverlay').classList.add('hidden');return;}
     if(state.phase!=='aim')return;
-    if(e.key==='ArrowLeft'||e.key==='ArrowRight'){if(e.target===angleRuler)return;e.preventDefault();if(state.opponent==='ai'&&state.turn===1)return;state.aim+=(e.key==='ArrowLeft'?-1:1)*Math.PI/18000;updateUI();render();}
+    if(e.key==='ArrowLeft'||e.key==='ArrowRight'){if(e.target===angleRuler)return;e.preventDefault();if(state.opponent==='ai'&&state.turn===1)return;const step=e.shiftKey?.0001:.001;state.aim+=(e.key==='ArrowLeft'?-1:1)*step*Math.PI/180;updateUI();render();}
     if(e.key===' '){e.preventDefault();fire(false,true);}
   });
-  let last=performance.now(),acc=0,manualTime=false;
-  function frame(now){const elapsed=Math.min(.05,(now-last)/1000);last=now;const active=state.phase==='moving'||state.pocketAnimations.length>0;if(!manualTime){acc+=elapsed;while(acc>=STEP){update(STEP);acc-=STEP;}}if(active||state.phase==='moving'||state.pocketAnimations.length>0)render();requestAnimationFrame(frame);}
+  const TARGET_RENDER_INTERVAL=MOBILE_RENDER?1000/120:0;
+  let last=performance.now(),acc=0,manualTime=false,lastRender=0;
+  function frame(now){const elapsed=Math.min(.05,(now-last)/1000);last=now;const active=state.phase==='moving'||state.pocketAnimations.length>0;if(!manualTime){acc+=elapsed;while(acc>=STEP){update(STEP);acc-=STEP;}}if(active&&(!MOBILE_RENDER||now-lastRender>=TARGET_RENDER_INTERVAL-.75)){render();lastRender=now;}requestAnimationFrame(frame);}
   window.advanceTime=ms=>{manualTime=true;acc=0;const steps=Math.ceil(ms/1000/STEP);for(let i=0;i<steps;i++)update(STEP);render();};
   window.render_game_to_text=()=>JSON.stringify({coordinates:`world inches, origin at top-left cushion nose; +x right, +y down; table 100x50; ball diameter ${(2*R).toFixed(4)}; corner mouth ${CORNER_MOUTH}; side mouth ${SIDE_MOUTH}`,mode:state.mode,opponent:state.opponent,aiDifficulty:state.aiDifficulty,aiThinking:state.aiThinking,aiPlan:state.aiPlan?{target:state.aiPlan.target,pocket:state.aiPlan.pocket,type:state.aiPlan.type,spinX:state.aiPlan.spinX||0,spinY:state.aiPlan.spinY||0,snookerPlanned:!!state.aiPlan.snookerPlanned,power:+state.aiPlan.power.toFixed(1),description:state.aiPlan.description}:null,phase:state.phase,turn:state.turn+1,groups:state.groups,scores:state.scores,breaking:state.breaking,rackSeed:state.rackSeed,ballInHand:state.ballInHand,repositionAllowed:state.repositionAllowed,aimDegrees:+(state.aim*180/Math.PI).toFixed(2),power:state.power,spin:[+state.spinX.toFixed(2),+state.spinY.toFixed(2)],balls:state.balls.map(b=>({n:b.n,x:+b.x.toFixed(2),y:+b.y.toFixed(2),vx:+b.vx.toFixed(2),vy:+b.vy.toFixed(2),rollVx:+b.rollVx.toFixed(2),rollVy:+b.rollVy.toFixed(2),sideSpin:+b.spin.toFixed(2),roll:+b.roll.toFixed(2),pocketed:b.pocketed})),status:state.status,winner:state.winner});
   if(new URLSearchParams(location.search).has('test')){
     $('startOverlay').classList.add('hidden');$('menuOverlay').classList.remove('hidden');
-    window.__poolTest={getShotSummary(){return {firstHit:state.shot?.firstHit??null,pocketed:state.shot?.pocketed||[]};},getFallAnimations(){return state.pocketAnimations.map(a=>({n:a.visual.n,pocket:a.pocket,age:a.age,duration:a.duration,q:[...a.visual.q]}));},pocketRollingTest(index=1,angleDegrees=0,speed=6,offMouth=false){
+    window.__poolTest={getShotSummary(){return {firstHit:state.shot?.firstHit??null,pocketed:state.shot?.pocketed||[]};},getFallAnimations(){return state.pocketAnimations.map(a=>({n:a.visual.n,pocket:a.pocket,age:a.age,duration:a.duration,vx:a.vx,vy:a.vy,...pocketAnimationPose(a),q:[...a.visual.q]}));},pocketRollingTest(index=1,angleDegrees=0,speed=6,offMouth=false){
       const p=POCKET_GEOMETRY[index],angle=angleDegrees*Math.PI/180;
       const dx=p.nx*Math.cos(angle)+p.tx*Math.sin(angle),dy=p.ny*Math.cos(angle)+p.ty*Math.sin(angle);
       const distance=Math.min(8,speed*speed/(2*ROLL_DECEL)*.7),offset=offMouth?p.radius+1.4:0;

@@ -4,25 +4,152 @@
   const musicButton=document.getElementById('musicBtn');
   const musicFile=document.getElementById('musicFile');
   const musicPanel=document.getElementById('musicPanel'),musicStatus=document.getElementById('musicStatus');
+  const soundcloudFrame=document.getElementById('soundcloudPlayer');
+  const introMusic=new Audio('./sounds/xiaotang-intro.mp3');
+  introMusic.preload='auto';introMusic.loop=true;introMusic.playsInline=true;introMusic.volume=.32;
   const AudioEngine=window.AudioContext||window.webkitAudioContext;
-  let context=null,effects=null,limiter=null,meter=null,recordings=[],loading=null;
-  let music=null,musicUrl=null,enabled=false,lastBall=0,noiseBuffer=null,duckTimer=null;
+  let context=null,effects=null,limiter=null,meter=null,recordings=[],loading=null,effectLoading=null;
+  let localMusic=null,musicUrl=null,enabled=false,lastBall=0,noiseBuffer=null,duckTimer=null;
+  let soundcloudWidget=null,soundcloudReady=false,nativeUnlocked=false,nativeWarning=false;
+  let introWanted=true,introFadeTicket=0;
+  let gameMusicBuffer=null,gameMusicLoading=null,gameMusicWanted=false,gameMusicMaster=null,gameMusicTimer=null,gameMusicNextStart=0;
+  const gameMusicSources=new Set();
   const effectStats={cue:0,ball:0,rail:0,pocket:0},lastEffect={cue:-1,ball:-1,rail:-1,pocket:-1};
   const lastWeight={cue:0,ball:0,rail:0,pocket:0};
+  const effectSources={
+    cue:['./sounds/cue-soft.wav'],
+    ball:['./sounds/ball-soft-1.wav','./sounds/ball-soft-2.wav','./sounds/ball-soft-3.wav'],
+    rail:['./sounds/rail-soft.wav'],
+    pocket:['./sounds/pocket-soft.wav','./sounds/rail-soft.wav']
+  };
+  const nativePools={},nativeCursor={cue:0,ball:0,rail:0,pocket:0};
+  const decodedPools={cue:[],ball:[],rail:[],pocket:[]},decodedCursor={cue:0,ball:0,rail:0,pocket:0};
+  for(const [kind,urls] of Object.entries(effectSources)){
+    nativePools[kind]=Array.from({length:kind==='ball'?8:kind==='pocket'?5:4},(_,i)=>{
+      const channel=new Audio(urls[i%urls.length]);channel.preload='auto';channel.playsInline=true;return channel;
+    });
+  }
+
+  function unlockNative(){
+    if(nativeUnlocked)return;
+    nativeUnlocked=true;
+    for(const pool of Object.values(nativePools))for(const channel of pool){
+      channel.muted=true;channel.currentTime=0;
+      const started=channel.play();
+      if(started?.then)started.then(()=>{channel.pause();channel.currentTime=0;channel.muted=false;}).catch(()=>{channel.muted=false;nativeUnlocked=false;});
+      else{channel.pause();channel.currentTime=0;channel.muted=false;}
+    }
+  }
+
+  function startIntroMusic(){
+    introWanted=true;introFadeTicket++;introMusic.volume=.32;
+    const started=introMusic.play();
+    if(started?.catch)started.catch(()=>{});
+    return started||Promise.resolve();
+  }
+  function stopIntroMusic(fade=true){
+    introWanted=false;const ticket=++introFadeTicket;
+    if(!fade){introMusic.pause();introMusic.currentTime=0;introMusic.volume=.32;return;}
+    const startVolume=introMusic.volume,steps=8;
+    const fadeStep=step=>{
+      if(ticket!==introFadeTicket)return;
+      if(step>=steps){introMusic.pause();introMusic.currentTime=0;introMusic.volume=.32;return;}
+      introMusic.volume=startVolume*(1-(step+1)/steps);setTimeout(()=>fadeStep(step+1),40);
+    };
+    fadeStep(0);
+  }
+  function clearGameMusicSources(){
+    clearTimeout(gameMusicTimer);gameMusicTimer=null;
+    for(const source of gameMusicSources){try{source.stop();}catch{}}
+    gameMusicSources.clear();
+    try{gameMusicMaster?.disconnect();}catch{}gameMusicMaster=null;
+  }
+  function fillGameMusicQueue(){
+    if(!gameMusicWanted||!context||!gameMusicBuffer||!gameMusicMaster)return;
+    const overlap=Math.min(.65,gameMusicBuffer.duration*.08),period=gameMusicBuffer.duration-overlap;
+    while(gameMusicNextStart<context.currentTime+60){
+      const source=context.createBufferSource(),crossfade=context.createGain(),start=gameMusicNextStart;
+      source.buffer=gameMusicBuffer;
+      crossfade.gain.setValueAtTime(.0001,start);
+      crossfade.gain.linearRampToValueAtTime(1,start+overlap);
+      crossfade.gain.setValueAtTime(1,start+gameMusicBuffer.duration-overlap);
+      crossfade.gain.linearRampToValueAtTime(.0001,start+gameMusicBuffer.duration);
+      source.connect(crossfade);crossfade.connect(gameMusicMaster);gameMusicSources.add(source);
+      source.onended=()=>{gameMusicSources.delete(source);source.disconnect();crossfade.disconnect();};
+      source.start(start);source.stop(start+gameMusicBuffer.duration+.02);gameMusicNextStart+=period;
+    }
+    gameMusicTimer=setTimeout(fillGameMusicQueue,20000);
+  }
+  async function startGameMusic(){
+    stopGameMusic(false);gameMusicWanted=true;ensureContext();setMusic(false);
+    try{await gameMusicLoading;}catch{}
+    if(!gameMusicWanted||!context||!gameMusicBuffer)return false;
+    if(context.state==='suspended')try{await context.resume();}catch{}
+    if(!gameMusicWanted||context.state!=='running')return false;
+    gameMusicMaster=context.createGain();gameMusicMaster.gain.value=.20;gameMusicMaster.connect(limiter);
+    gameMusicNextStart=context.currentTime+.025;fillGameMusicQueue();return true;
+  }
+  function stopGameMusic(fade=true){
+    gameMusicWanted=false;clearTimeout(gameMusicTimer);gameMusicTimer=null;
+    if(!gameMusicMaster||!context||!fade){clearGameMusicSources();return;}
+    const master=gameMusicMaster,now=context.currentTime;
+    master.gain.cancelScheduledValues(now);master.gain.setValueAtTime(Math.max(.0001,master.gain.value),now);master.gain.linearRampToValueAtTime(.0001,now+.24);
+    setTimeout(()=>{if(gameMusicMaster===master)clearGameMusicSources();},280);
+  }
+
+  function nativeEffect(kind,weight,delay=0,tail=false){
+    const run=()=>{
+      const pool=nativePools[kind],channel=pool[nativeCursor[kind]++%pool.length];
+      channel.pause();channel.currentTime=0;channel.muted=false;
+      channel.playbackRate=kind==='cue'?.90:kind==='rail'?.70:kind==='pocket'?(tail?.62:.76):.88+.09*weight;
+      channel.volume=Math.min(.88,(kind==='cue'?.28:kind==='ball'?.31:kind==='rail'?.23:.34)+(kind==='ball'?.48:.34)*weight)*(tail?.44:1);
+      const started=channel.play();
+      if(started?.catch)return started.catch(error=>{if(!nativeWarning){nativeWarning=true;console.warn('本地碰撞音效未能播放，改用合成备用音。',error);}throw error;});
+      return Promise.resolve();
+    };
+    if(!delay)return run();
+    return new Promise((resolve,reject)=>setTimeout(()=>run().then(resolve,reject),delay));
+  }
+
+  function bufferedEffect(kind,weight,delay=0,tail=false){
+    const pool=decodedPools[kind];
+    if(!context||context.state!=='running'||!pool?.length)return false;
+    const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
+    const at=context.currentTime+delay;
+    source.buffer=pool[decodedCursor[kind]++%pool.length];
+    source.playbackRate.value=kind==='cue'?.90:kind==='rail'?.70:kind==='pocket'?(tail?.62:.76):.88+.09*weight;
+    filter.type='lowpass';filter.frequency.value=kind==='ball'?5800:kind==='cue'?4200:kind==='rail'?2400:3100;
+    const volume=Math.min(.88,(kind==='cue'?.28:kind==='ball'?.31:kind==='rail'?.23:.34)+(kind==='ball'?.48:.34)*weight)*(tail?.44:1);
+    gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),at+.0008);
+    gain.gain.exponentialRampToValueAtTime(.0001,at+Math.min(.14,source.buffer.duration/source.playbackRate.value));
+    source.connect(filter);filter.connect(gain);gain.connect(effects);
+    source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect();};source.start(at);
+    return true;
+  }
 
   function ensureContext(){
     if(!AudioEngine)return false;
     if(!context){
-      context=new AudioEngine();
-      limiter=context.createDynamicsCompressor();limiter.threshold.value=-15;limiter.knee.value=10;
-      limiter.ratio.value=4;limiter.attack.value=.005;limiter.release.value=.12;
+      try{context=new AudioEngine({latencyHint:'interactive'});}catch{context=new AudioEngine();}
+      limiter=context.createDynamicsCompressor();limiter.threshold.value=-7;limiter.knee.value=4;
+      limiter.ratio.value=5;limiter.attack.value=.004;limiter.release.value=.09;
       meter=context.createAnalyser();meter.fftSize=1024;limiter.connect(meter);meter.connect(context.destination);
-      effects=context.createGain();effects.gain.value=.85;effects.connect(limiter);
+      effects=context.createGain();effects.gain.value=.66;effects.connect(limiter);
       loading=Promise.all([1,2,3].map(async i=>{
         const response=await fetch(`./sounds/ball-clack-${i}.wav`);
         if(!response.ok)throw Error(`Pool sound ${i}: HTTP ${response.status}`);
         return context.decodeAudioData(await response.arrayBuffer());
       })).then(values=>{recordings=values.map(prepareClack);}).catch(error=>console.warn('台球录音未加载，使用柔和的合成回退音效。',error));
+      effectLoading=Promise.all(Object.entries(effectSources).map(async([kind,urls])=>{
+        const buffers=await Promise.all(urls.map(async url=>{
+          const response=await fetch(url);if(!response.ok)throw Error(`${kind}: HTTP ${response.status}`);
+          return context.decodeAudioData(await response.arrayBuffer());
+        }));
+        decodedPools[kind]=buffers;
+      })).catch(error=>console.warn('低延迟音效未完成预热，暂用原生音频回退。',error));
+      gameMusicLoading=fetch('./sounds/xiaotang-game-loop.m4a').then(response=>{
+        if(!response.ok)throw Error(`Game music: HTTP ${response.status}`);return response.arrayBuffer();
+      }).then(data=>context.decodeAudioData(data)).then(buffer=>{gameMusicBuffer=buffer;}).catch(error=>console.warn('对局背景音乐未加载。',error));
     }
     if(context.state==='suspended')context.resume().catch(()=>{});
     return true;
@@ -40,7 +167,7 @@
     const length=Math.min(mono.length-start,Math.round(buffer.sampleRate*.10));
     const prepared=context.createBuffer(1,length,buffer.sampleRate),out=prepared.getChannelData(0);
     const fade=Math.max(1,Math.round(buffer.sampleRate*.004));
-    for(let i=0;i<length;i++)out[i]=mono[start+i]*(.55/peak)*Math.min(1,(i+1)/(buffer.sampleRate*.0003),(length-i)/fade);
+    for(let i=0;i<length;i++)out[i]=mono[start+i]*(.64/peak)*Math.min(1,(i+1)/(buffer.sampleRate*.00018),(length-i)/fade);
     return prepared;
   }
   function tone(at,f0,f1,length,volume,type='sine'){
@@ -69,87 +196,117 @@
     const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
     source.buffer=recordings[lastBall++%recordings.length];
     const length=kind==='cue'?.065:.06+.02*weight;
-    source.playbackRate.value=kind==='cue'?.96:1;
-    filter.type='lowpass';filter.frequency.value=kind==='cue'?3200:3500+3500*weight;
+    source.playbackRate.value=kind==='cue'?.96:.94+.12*weight;
+    filter.type='lowpass';filter.frequency.value=kind==='cue'?3600:4300+5000*weight;
     gain.gain.setValueAtTime(.0001,at);
-    gain.gain.exponentialRampToValueAtTime((kind==='cue'?.38:.42)*weight,at+.001);
+    gain.gain.exponentialRampToValueAtTime((kind==='cue'?.44:.7)*weight,at+.00055);
     gain.gain.exponentialRampToValueAtTime(.0001,at+length);
     source.connect(filter);filter.connect(gain);gain.connect(effects);
     source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect();};source.start(at);source.stop(at+length+.005);
     return true;
   }
+  function metalRing(at,weight){
+    // A damped steel-liner sound without the previous piercing high-frequency edge.
+    tone(at,760,650,.075,.034*weight,'triangle');
+    tone(at+.001,1120,980,.058,.024*weight,'sine');
+    tone(at+.003,1650,1420,.041,.014*weight,'sine');
+    softImpact(at,weight,.025,3200,.04);
+  }
+  function fallbackImpact(kind,at,weight){
+    if(!context)return;
+    if(kind==='cue'){softImpact(at,weight,.035,3000,.13);tone(at,620,310,.04,.065*weight);tone(at,150,85,.05,.02*weight);}
+    else if(kind==='ball'){softImpact(at,weight,.018,3000+1800*weight,.13);tone(at,720,560,.02,.018*weight,'sine');}
+  }
+  function duckMusic(){
+    clearTimeout(duckTimer);
+    if(gameMusicMaster&&gameMusicWanted&&context){const now=context.currentTime;gameMusicMaster.gain.cancelScheduledValues(now);gameMusicMaster.gain.setTargetAtTime(.10,now,.018);gameMusicMaster.gain.setTargetAtTime(.20,now+.22,.055);}
+    if(localMusic&&enabled){localMusic.volume=.08;duckTimer=setTimeout(()=>{if(localMusic)localMusic.volume=.18;},280);}
+    else if(soundcloudWidget&&enabled){try{soundcloudWidget.setVolume(30);duckTimer=setTimeout(()=>soundcloudWidget?.setVolume(52),280);}catch{}}
+  }
   function play(kind,impact=20){
     if(!(kind in effectStats))return;
     effectStats[kind]++;
-    if(!ensureContext())return;
+    const hasContext=ensureContext();
     const weight=Math.pow(Math.max(0,Math.min(1,impact/90)),.65);
     if(weight<.025)return;
-    const at=context.currentTime,gap=kind==='ball'?.012:kind==='rail'?.025:.02;
+    const at=hasContext?context.currentTime:performance.now()/1000,gap=kind==='ball'?.009:kind==='rail'?.025:.02;
     // A soft contact must not suppress a much harder rack collision.
     if(at-lastEffect[kind]<gap&&weight<=lastWeight[kind]*1.4)return;
     lastEffect[kind]=at;lastWeight[kind]=weight;
+    const native=bufferedEffect(kind,weight)?Promise.resolve():nativeEffect(kind,weight);
     if(kind==='cue'){
-      if(!recordedClack(at,weight,kind)){softImpact(at,weight,.035,3000,.11);tone(at,620,310,.04,.06*weight);}
-      tone(at,150,85,.05,.018*weight);
-      if(enabled){music.volume=.11;clearTimeout(duckTimer);duckTimer=setTimeout(()=>{music.volume=.20;},260);}
+      native.catch(()=>fallbackImpact(kind,at,weight));duckMusic();
     }else if(kind==='ball'){
-      if(!recordedClack(at,weight,kind)){
-        softImpact(at,weight,.018,3500+3500*weight,.14);
-        tone(at,1250,950,.022,.025*weight);
-      }
+      native.catch(()=>fallbackImpact(kind,at,weight));
     }else if(kind==='rail'){
-      softImpact(at,weight,.055,850,.075);
-      tone(at,170,75,.065,.055*weight);
+      if(hasContext){softImpact(at,weight,.06,650,.065);tone(at,145,70,.07,.045*weight);}
     }else{
-      // The ball rolls over the shelf, then meets the pocket lining below it.
-      softImpact(at+.12,weight,.085,390,.065);
-      tone(at+.12,96,72,.085,.026*weight);
-      softImpact(at+.22,weight*.38,.05,700,.025);
+      if(!bufferedEffect('pocket',weight,.112,true))nativeEffect('pocket',weight,112,true).catch(()=>{});
+      if(hasContext){
+        softImpact(at+.018,weight,.045,1050,.085);tone(at+.018,185,92,.058,.04*weight,'triangle');
+        metalRing(at+.092,.68+.32*weight);softImpact(at+.19,weight,.075,520,.075);tone(at+.19,128,70,.09,.038*weight);metalRing(at+.215,.26+.2*weight);
+      }
     }
   }
   function updateMusicButton(){
-    musicButton.textContent=enabled?'♫ 音乐开':'♫ 音乐关';
+    musicButton.textContent=enabled?'♫ Lullaby 播放中':'♫ Lullaby';
     musicButton.setAttribute('aria-pressed',String(enabled));
-    musicButton.setAttribute('aria-label',enabled?'关闭背景音乐':'播放背景音乐');
+    musicButton.setAttribute('aria-label',enabled?'暂停 Lullaby':'播放 Lullaby');
   }
   let musicTicket=0,wanted=false,musicState='idle';
-  let musicTitle='Gymnopedie No. 1',musicArtist='Kevin MacLeod';
-  music=new Audio('./sounds/table-piano.mp3');music.loop=true;music.volume=.20;music.preload='auto';
+  let musicTitle='Lullaby',musicArtist='Enzalla';
   function message(text){if(musicStatus)musicStatus.textContent=text;updateMusicButton();}
+  function bindSoundcloud(){
+    if(soundcloudWidget||!soundcloudFrame||!window.SC?.Widget)return;
+    soundcloudWidget=window.SC.Widget(soundcloudFrame);
+    const events=window.SC.Widget.Events;
+    soundcloudWidget.bind(events.READY,()=>{soundcloudReady=true;soundcloudWidget.setVolume(52);message('Enzalla · Lullaby · 官方 SoundCloud');if(wanted&&!localMusic)soundcloudWidget.play();});
+    soundcloudWidget.bind(events.PLAY,()=>{if(localMusic)return;wanted=true;enabled=true;musicState='playing';message('Enzalla · Lullaby · 正在播放');});
+    soundcloudWidget.bind(events.PAUSE,()=>{if(localMusic)return;enabled=false;musicState='paused';message('Enzalla · Lullaby · 已暂停');});
+    soundcloudWidget.bind(events.FINISH,()=>{if(wanted&&!localMusic)soundcloudWidget.play();});
+    soundcloudWidget.bind(events.ERROR,()=>{enabled=false;musicState='error';message('播放器连接失败，可点“官方曲目”打开播放');});
+  }
   async function setMusic(on){
     const ticket=++musicTicket;wanted=on;
-    if(!on){music.pause();enabled=false;musicState='paused';message('背景音乐已暂停');return;}
-    try{
-      musicState='loading';
-      await music.play();
-      if(ticket!==musicTicket){if(!wanted)music.pause();return;}
-      enabled=true;musicState='playing';message(`${musicArtist} · ${musicTitle} · 本地循环播放`);
-    }catch{
-      if(ticket!==musicTicket)return;
-      enabled=false;musicState='blocked';message('点击顶部音乐键开始播放');
+    if(on)stopGameMusic();
+    if(musicPanel)musicPanel.hidden=false;
+    if(!on){
+      localMusic?.pause();try{soundcloudWidget?.pause();}catch{}
+      enabled=false;musicState='paused';message('背景音乐已暂停');return;
     }
+    if(localMusic){
+      try{musicState='loading';await localMusic.play();if(ticket!==musicTicket)return;enabled=true;musicState='playing';message(`${musicArtist} · ${musicTitle} · 本机循环播放`);}
+      catch{if(ticket!==musicTicket)return;enabled=false;musicState='blocked';message('请再点一次音乐键开始播放');}
+      return;
+    }
+    bindSoundcloud();musicState='loading';message(soundcloudReady?'正在播放 Enzalla · Lullaby':'正在连接 Enzalla · Lullaby…');
+    if(soundcloudReady)soundcloudWidget.play();else message('请在播放器中点播放；加载后顶部音乐键可暂停');
   }
   musicFile?.addEventListener('change',async()=>{
     const file=musicFile.files?.[0];if(!file)return;
-    musicTicket++;music.pause();music.src='';
+    musicTicket++;try{soundcloudWidget?.pause();}catch{}localMusic?.pause();
     if(musicUrl)URL.revokeObjectURL(musicUrl);
-    musicUrl=URL.createObjectURL(file);music.src=musicUrl;musicTitle=file.name;musicArtist='本机音频';
+    musicUrl=URL.createObjectURL(file);localMusic=new Audio(musicUrl);localMusic.loop=true;localMusic.volume=.18;localMusic.preload='auto';musicTitle=file.name;musicArtist='本机音频';
     await setMusic(true);
   });
-  musicButton.addEventListener('click',()=>{ensureContext();return setMusic(!wanted);});
+  musicButton.addEventListener('click',()=>{unlockAudio();return setMusic(!wanted);});
   document.getElementById('closeMusic')?.addEventListener('click',()=>{musicPanel.hidden=true;});
   document.getElementById('localMusicBtn')?.addEventListener('click',()=>musicFile?.click());
-  document.addEventListener('pointerdown',e=>{
-    ensureContext();
-    if(e.target?.id!=='musicBtn')setMusic(true);
-  },{once:true});
+  function unlockAudio(){unlockNative();return ensureContext();}
+  startButton?.addEventListener('pointerdown',()=>{unlockAudio();startIntroMusic();},{passive:true});
+  const firstGesture=()=>{unlockAudio();if(!document.getElementById('startOverlay')?.classList?.contains('hidden')||!document.getElementById('menuOverlay')?.classList?.contains('hidden'))startIntroMusic();};
+  document.addEventListener('pointerdown',firstGesture,{capture:true,passive:true});
+  document.addEventListener('touchstart',firstGesture,{capture:true,passive:true});
   document.addEventListener('visibilitychange',()=>{
-    if(document.hidden){context?.suspend();music.pause();}
-    else{context?.resume().catch(()=>{});if(wanted)setMusic(true);}
+    if(document.hidden){context?.suspend();introMusic.pause();}
+    else{context?.resume().catch(()=>{});if(introWanted)startIntroMusic();}
   });
-  window.PoolAudio={play,unlock:ensureContext,stats:effectStats,contextState:()=>context?.state||'unavailable',
-    samplesReady:()=>recordings.length===3,waitForSamples:()=>loading||Promise.resolve(),
+  bindSoundcloud();window.addEventListener?.('load',()=>{bindSoundcloud();ensureContext();startIntroMusic();});
+  window.PoolAudio={play,unlock:unlockAudio,stats:effectStats,contextState:()=>context?.state||'native-html-audio',
+    samplesReady:()=>recordings.length===3,effectsReady:()=>Object.values(decodedPools).every(pool=>pool.length),waitForSamples:()=>Promise.all([loading,effectLoading].filter(Boolean)),
     outputLevel:()=>{if(!meter)return 0;const samples=new Float32Array(meter.fftSize);meter.getFloatTimeDomainData(samples);return Math.sqrt(samples.reduce((sum,v)=>sum+v*v,0)/samples.length);},
-    setMusic,musicEnabled:()=>enabled,musicInfo:()=>({source:musicUrl?'local-import':'bundled-local',state:musicState,title:musicTitle,artist:musicArtist})};
-  message('Gymnopedie No. 1 · Kevin MacLeod · CC BY 4.0 · 本地音频');
+    setMusic,startIntro:startIntroMusic,stopIntro:stopIntroMusic,introPlaying:()=>!introMusic.paused,
+    startGameMusic,stopGameMusic,gameMusicPlaying:()=>gameMusicWanted&&!!gameMusicMaster,
+    musicEnabled:()=>enabled,musicInfo:()=>({source:musicUrl?'local-import':'soundcloud-official',state:musicState,title:musicTitle,artist:musicArtist})};
+  message('Enzalla · Lullaby · 官方 SoundCloud 播放器');
 })();

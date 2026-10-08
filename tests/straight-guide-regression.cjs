@@ -15,6 +15,8 @@ const path=require('node:path'),os=require('node:os');
  fixtures.push({name:'nearest-obstruction',balls:[{n:0,x:30,y:25},{n:1,x:70,y:25},{n:2,x:46,y:25}],power:56});
  fixtures.push({name:'middle-pocket',balls:[{n:0,x:50,y:22},{n:1,x:50,y:8}],power:56,aim:-Math.PI/2});
  fixtures.push({name:'corner-pocket',balls:[{n:0,x:24,y:12},{n:1,x:12,y:6}],power:56,aim:Math.atan2(-6,-12)});
+ fixtures.push({name:'one-rail-kick',balls:[{n:0,x:25,y:25},{n:1,x:55,y:10}],power:80,aim:-172*Math.PI/180,expectedRails:1});
+ fixtures.push({name:'two-rail-kick',balls:[{n:0,x:20,y:25},{n:1,x:70,y:15}],power:80,aim:-177.5*Math.PI/180,expectedRails:2});
  for(const fixture of fixtures){
    const result=await page.evaluate(f=>{
      const t=__poolTest;t.setGuideBalls(f.balls,f.aim||0,f.power,f.spinY||0,f.spinX||0);
@@ -23,8 +25,11 @@ const path=require('node:path'),os=require('node:os');
      return {g,unchanged,actual:t.getShotSummary().firstHit};
    },fixture);
    assert(result.unchanged,`${fixture.name}: preview mutated live state`);
-   assert.equal(result.g.targetNumber,result.actual,`${fixture.name}: first contact mismatch`);
-   for(const path of [result.g.shotPath,result.g.cuePath,result.g.targetPath])assert(path.length<=2,`${fixture.name}: bent guide`);
+   if(fixture.expectedRails)assert.equal(result.actual,1,`${fixture.name}: live cushion route changed`);
+   else assert.equal(result.g.targetNumber,result.actual,`${fixture.name}: first contact mismatch`);
+   assert.equal(result.g.straight,true,`${fixture.name}: guide not marked straight`);
+   for(const path of [result.g.shotPath,result.g.cuePath,result.g.targetPath])assert(path.length<=2,`${fixture.name}: rebound segment leaked into guide`);
+   if(fixture.expectedRails){assert.equal(result.g.railCount,fixture.expectedRails,`${fixture.name}: missing internal cushion prediction`);assert.equal(result.g.targetNumber,null);}
    if(result.g.targetNumber!==null){
      const end=result.g.shotPath.at(-1),o=result.g.objectCenter,r=1.125*1.05*1.05;
      assert(Math.abs(Math.hypot(end.x-o.x,end.y-o.y)-2*r)<1e-7,`${fixture.name}: incorrect ghost-ball contact`);
