@@ -25,8 +25,8 @@ vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../audio
   w.PoolAudio.play('ball',90);const loudGain=gains.at(-1).gain.peak;
   assert(loudGain>softGain*2,'soft and hard collisions have indistinguishable volume');
   const before=started.length,tones=oscillators.length;w.PoolAudio.play('pocket',60);
-  assert.equal(started.length-before,2,'pocket repeats the impact recording');
-  assert.equal(oscillators.length-tones,1,'pocket still adds multiple metallic rings');
+  assert.equal(started.length-before,1,'pocket repeats the impact recording');
+  assert.equal(oscillators.length-tones,0,'pocket still adds multiple metallic rings');
   assert(started.every(s=>s.playbackRate.value===0||s.playbackRate.value>=.9),'real recordings unnaturally slowed');
   console.log(JSON.stringify({passed:true,recordedBall:true,impactDynamics:true,singlePocketImpact:true}));
 })().catch(e=>{console.error(e);process.exitCode=1;});

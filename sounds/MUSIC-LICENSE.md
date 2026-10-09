@@ -16,3 +16,7 @@ This is a temporary piano track for playback testing. It is **not** Enzalla's â€
 The requested original remains pending a usable download and permission to bundle it;
 the official Bandcamp page lists a paid download with all rights reserved:
 https://enzalla.bandcamp.com/track/lullaby
+
+## Pocket impact update (2026-10-09)
+
+`pocket-crisp.wav` is a 125 ms mono 44.1 kHz derivative of the existing public-domain `ball-clack-2.wav` collision recording: onset trimming, short exponential decay, and original damped 235/670 Hz body resonances. No new third-party recording was added. The game plays this single impact when the falling ball reaches the modeled bottom, without the old duplicate delayed synthetic impact. Existing collision provenance is documented in README.md (Dsw4, Pool Sounds.ogg, Wikimedia Commons).

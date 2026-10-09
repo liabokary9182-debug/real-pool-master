@@ -17,7 +17,7 @@
     cue:['./sounds/cue-soft.wav'],
     ball:['./sounds/ball-soft-1.wav','./sounds/ball-soft-2.wav','./sounds/ball-soft-3.wav'],
     rail:['./sounds/rail-soft.wav'],
-    pocket:['./sounds/pocket-soft.wav']
+    pocket:['./sounds/pocket-crisp.wav']
   };
   const nativePools={},nativeCursor={cue:0,ball:0,rail:0,pocket:0};
   const decodedPools={cue:[],ball:[],rail:[],pocket:[]},decodedCursor={cue:0,ball:0,rail:0,pocket:0};
@@ -100,7 +100,7 @@
       const pool=nativePools[kind],channel=pool[nativeCursor[kind]++%pool.length];
       channel.pause();channel.currentTime=0;channel.muted=false;
       channel.playbackRate=kind==='cue'?.98:kind==='rail'?.94:kind==='pocket'?.96:.97+.06*weight;
-      channel.volume=(kind==='cue'?.65:kind==='ball'?.78:kind==='rail'?.55:.67)*weight*(tail?.24:1);
+      channel.volume=(kind==='cue'?.65:kind==='ball'?.78:kind==='rail'?.55:.80)*weight*(tail?.24:1);
       const started=channel.play();
       if(started?.catch)return started.catch(error=>{if(!nativeWarning){nativeWarning=true;console.warn('本地碰撞音效未能播放，改用合成备用音。',error);}throw error;});
       return Promise.resolve();
@@ -116,8 +116,8 @@
     const at=context.currentTime+delay;
     source.buffer=pool[decodedCursor[kind]++%pool.length];
     source.playbackRate.value=kind==='cue'?.98:kind==='rail'?.94:kind==='pocket'?.96:.97+.06*weight;
-    filter.type='lowpass';filter.frequency.value=kind==='ball'?5800:kind==='cue'?4200:kind==='rail'?2400:3100;
-    const volume=(kind==='cue'?.65:kind==='ball'?.78:kind==='rail'?.55:.67)*weight*(tail?.24:1);
+    filter.type='lowpass';filter.frequency.value=kind==='ball'?5800:kind==='cue'?4200:kind==='rail'?2400:7800;
+    const volume=(kind==='cue'?.65:kind==='ball'?.78:kind==='rail'?.55:.80)*weight*(tail?.24:1);
     gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),at+.0008);
     gain.gain.exponentialRampToValueAtTime(.0001,at+Math.min(.14,source.buffer.duration/source.playbackRate.value));
     source.connect(filter);filter.connect(gain);gain.connect(effects);
@@ -217,7 +217,7 @@
     const hasContext=ensureContext();
     const weight=Math.pow(Math.max(0,Math.min(1,impact/90)),.65);
     if(weight<.025)return;
-    const at=hasContext?context.currentTime:performance.now()/1000,gap=kind==='ball'?.009:kind==='rail'?.025:.02;
+    const at=hasContext?context.currentTime:performance.now()/1000,gap=kind==='ball'?.009:kind==='rail'?.025:kind==='pocket'?0:.02;
     // A soft contact must not suppress a much harder rack collision.
     if(at-lastEffect[kind]<gap&&weight<=lastWeight[kind]*1.4)return;
     lastEffect[kind]=at;lastWeight[kind]=weight;
@@ -230,12 +230,7 @@
     }else if(kind==='rail'){
       if(hasContext){softImpact(at,weight,.06,650,.065);tone(at,145,70,.07,.045*weight);}
     }else{
-      if(hasContext){
-        // A single mouth impact followed by a damped drop into the pocket.
-        // No repeated clack or metallic ringing for a cloth/leather pocket.
-        softImpact(at+.085,weight,.09,700,.075);
-        tone(at+.085,155,72,.085,.035*weight);
-      }
+      native.catch(()=>{if(hasContext)softImpact(at,weight,.075,5200,.22);});
     }
   }
   function unlockAudio(){unlockNative();return ensureContext();}

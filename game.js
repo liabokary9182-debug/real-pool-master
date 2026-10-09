@@ -198,7 +198,9 @@
     c.vx=Math.cos(shotAngle)*speed;c.vy=Math.sin(shotAngle)*speed;
     c.rollVx=Math.cos(shotAngle)*speed*spinY*1.05*spinGain;
     c.rollVy=Math.sin(shotAngle)*speed*spinY*1.05*spinGain;
-    c.spin=spinX*speed*.42*spinGain;c.english=Math.abs(spinX)>.03;c.rollHeading=shotAngle;
+    // In screen coordinates +z rotates clockwise. Right english is the
+    // opposite rotation, and must kick right relative to the incoming shot.
+    c.spin=-spinX*speed*.42*spinGain;c.english=Math.abs(spinX)>.03;c.rollHeading=shotAngle;
   }
   function pocketVisualCenter(index){
     const p=POCKETS[index];
@@ -209,9 +211,7 @@
     if(b.pocketed)return;
     if(!physicsContext&&state.phase==='moving'&&state.balls.includes(b)){
       const impact=Math.hypot(b.vx,b.vy);
-      const pocket=pocketVisualCenter(index),duration=clamp(.58-impact*.0015,.42,.58);
-      state.pocketAnimations.push({visual:{...b,q:[...b.q]},entryX:b.x,entryY:b.y,vx:b.vx,vy:b.vy,effectX:pocket.x,effectY:pocket.y,pocket:index,age:0,impact,duration});
-      window.PoolAudio?.play('pocket',impact);
+      state.pocketAnimations.push(makePocketFall(b,index,impact));
     }
     b.pocketed=true;b.vx=0;b.vy=0;b.rollVx=0;b.rollVy=0;b.spin=0;
     const events=physicsContext||state.shot;
@@ -223,6 +223,39 @@
   }
   function pocketFallContains(p,x,y){
     return (x-p.mx)*p.nx+(y-p.my)*p.ny>=p.fallFront&&(x-p.well.x)**2+(y-p.well.y)**2<=p.fallRadius*p.fallRadius;
+  }
+  function makePocketFall(b,index,impact=Math.hypot(b.vx,b.vy)){
+    const pocket=pocketVisualCenter(index);
+    return {visual:{...b,q:[...b.q]},entryX:b.x,entryY:b.y,vx:b.vx,vy:b.vy,
+      fallX:b.x,fallY:b.y,fallVx:b.vx,fallVy:b.vy,effectX:pocket.x,effectY:pocket.y,
+      pocket:index,age:0,impact,duration:Math.sqrt(12*R/GRAVITY),sounded:false};
+  }
+  function advancePocketFall(a,dt){
+    const p=POCKET_GEOMETRY[a.pocket];let remaining=dt;
+    // Continuous travel until a lining collision: the very first derivative
+    // is exactly the last cloth velocity, with no attraction to the centre.
+    for(let bounce=0;bounce<6&&remaining>1e-9;bounce++){
+      const dx=a.fallX-p.well.x,dy=a.fallY-p.well.y;
+      const speed2=a.fallVx*a.fallVx+a.fallVy*a.fallVy;
+      if(speed2<1e-12)break;
+      const dot=dx*a.fallVx+dy*a.fallVy;
+      const circle=(-dot+Math.sqrt(Math.max(0,dot*dot+speed2*(p.fallRadius*p.fallRadius-dx*dx-dy*dy))))/speed2;
+      const outward=a.fallVx*p.nx+a.fallVy*p.ny;
+      const depth=(a.fallX-p.mx)*p.nx+(a.fallY-p.my)*p.ny;
+      const shelf=outward<0?Math.max(0,(depth-p.fallFront)/-outward):Infinity;
+      const hit=Math.max(0,Math.min(circle,shelf)),travel=Math.min(remaining,hit);
+      a.fallX+=a.fallVx*travel;a.fallY+=a.fallVy*travel;remaining-=travel;
+      if(hit>travel+1e-9)break;
+      const nx=shelf<circle?p.nx:(p.well.x-a.fallX)/p.fallRadius;
+      const ny=shelf<circle?p.ny:(p.well.y-a.fallY)/p.fallRadius;
+      const normal=a.fallVx*nx+a.fallVy*ny;
+      a.fallVx=.68*(a.fallVx-normal*nx)-.18*normal*nx;
+      a.fallVy=.68*(a.fallVy-normal*ny)-.18*normal*ny;
+      a.visual.rollVx*=.6;a.visual.rollVy*=.6;a.visual.spin*=.6;
+      // Tiny inward offset prevents roundoff from reporting the same hit twice.
+      a.fallX+=nx*1e-8;a.fallY+=ny*1e-8;
+    }
+    a.age+=dt;
   }
   function pocketCheck(b) {
     b.pocketCandidate=null;
@@ -369,10 +402,11 @@
   function update(dt) {
     if(state.stroke&&(state.stroke.age+=dt)>state.stroke.duration)state.stroke=null;
     state.pocketAnimations=state.pocketAnimations.filter(a=>{
-      a.age+=dt;
-      const decay=Math.exp(-dt*7);
-      a.visual.rollVx*=decay;a.visual.rollVy*=decay;a.visual.spin*=decay;
+      advancePocketFall(a,dt);
       advanceBallOrientation(a.visual,dt);
+      if(!a.sounded&&.5*GRAVITY*a.age*a.age>=2.8*R){
+        a.sounded=true;window.PoolAudio?.play('pocket',Math.hypot(a.impact,GRAVITY*a.age));
+      }
       return a.age<a.duration;
     });
     if(state.phase!=='moving')return;
@@ -750,7 +784,7 @@
   function plausibleAttackAttempt(plan,result){
     // Accept a genuine attacking miss close to the intended mouth when no
     // nominal pot exists. A legal nudge that never approaches a bag is safety.
-    if(!result.safe||result.firstHit!==plan.target||result.potApproach>4.5||plan.pd-result.potApproach<1)return false;
+    if(!result.safe||result.firstHit!==plan.target||result.potApproach>7||plan.pd-result.potApproach<1)return false;
     const hits=result.cushionHits||[];
     return plan.type==='bank'?hits.some(h=>h.n===plan.target&&!h.jaw):plan.type==='kick'?hits.some(h=>h.n===0&&h.beforeFirstHit&&!h.jaw):true;
   }
@@ -1183,6 +1217,17 @@
     }
     ctx.drawImage(tableBackdrop,0,0,VIEW_W,VIEW_H);
   }
+  function drawChengyuEmblem(x,y,scale=1,alpha=1){
+    ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);ctx.globalAlpha=alpha;
+    ctx.strokeStyle='#d8efe8';ctx.lineCap='round';ctx.lineJoin='round';
+    for(let i=0;i<3;i++){
+      const d=i*13;ctx.lineWidth=4-i*.55;ctx.beginPath();ctx.moveTo(42-d,-38+d*.28);
+      ctx.bezierCurveTo(-5-d,-67+d*.4,-72+d*.5,-14,-44+d*.3,23-d*.2);
+      ctx.bezierCurveTo(-18,54-d*.65,29-d*.35,35-d*.5,50-d,9-d*.18);ctx.stroke();
+    }
+    ctx.fillStyle='#e8f4e9';ctx.beginPath();ctx.ellipse(43,-26,4.5,7,-.5,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#dbb778';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(16,29);ctx.bezierCurveTo(46,49,64,28,64,6);ctx.stroke();ctx.restore();
+  }
   function paintTable(){
     const l=OX,t=OY,r=OX+W*SCALE,b=OY+H*SCALE;
     ctx.fillStyle='#090e17';ctx.fillRect(0,0,VIEW_W,VIEW_H);
@@ -1198,14 +1243,12 @@
     ctx.fillStyle=felt;ctx.fillRect(l-5,t-5,W*SCALE+10,H*SCALE+10);
     ctx.save();ctx.strokeStyle='#c9eef060';ctx.lineWidth=1.2;ctx.setLineDash([8,7]);
     ctx.beginPath();ctx.moveTo(l+HEAD_LINE*SCALE,t+2);ctx.lineTo(l+HEAD_LINE*SCALE,b-2);ctx.stroke();ctx.restore();
-    // Compact cloth-print lettering, beneath the weave rather than floating
-    // over it. System Chinese fonts keep the mark legible on iPhone.
+    // Original tide-ribbon print sits beneath the cloth fibres.
     const brandX=l+W*SCALE/2,brandY=t+H*SCALE/2;
-    ctx.save();ctx.translate(brandX,brandY);ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.save();ctx.scale(.9,1);ctx.fillStyle='#dcebe052';
-    ctx.font='500 43px Arial, sans-serif';ctx.fillText('C1 / CHENGYU',0,-15);ctx.restore();
-    ctx.fillStyle='#dcebe068';ctx.font='600 27px "PingFang SC", "Microsoft YaHei", sans-serif';
-    ctx.fillText('澄 域',0,27);ctx.restore();
+    drawChengyuEmblem(brandX,brandY-28,1,.25);
+    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#def4ee50';
+    ctx.font='500 25px "PingFang SC", "Microsoft YaHei", sans-serif';ctx.fillText('澄  域',brandX,brandY+42);
+    ctx.fillStyle='#d7efeb39';ctx.font='600 10px Arial, sans-serif';ctx.fillText('C 1   /   T I D E L I N E',brandX,brandY+66);ctx.restore();
     // Sparse fibres are cached, rather than repainting 56,000 per frame.
     let seed=19327;
     for(let i=0;i<9500;i++){
@@ -1510,23 +1553,10 @@
     drawCue(s,s.aim,s.power,gap,opacity);
   }
   function pocketAnimationPose(a){
-    const p=POCKET_GEOMETRY[a.pocket],t=clamp(a.age/a.duration,0,1);
-    const fall=clamp((a.age-.025)/Math.max(.001,a.duration-.025),0,1),sink=fall*fall;
-    const settleDuration=clamp(R/Math.max(12,a.impact)*1.5,.035,.10),u=clamp(a.age/settleDuration,0,1);
-    // Every Bezier control stays in the convex fall cap. Unlike the former
-    // velocity Hermite curve, even a fast cut cannot overshoot the well/rail.
-    const safePoint=(x,y)=>{
-      const depth=(p.well.x-p.mx)*p.nx+(p.well.y-p.my)*p.ny;
-      const d=clamp((x-p.well.x)*p.nx+(y-p.well.y)*p.ny,p.fallFront-depth,p.fallRadius);
-      const limit=Math.sqrt(Math.max(0,p.fallRadius*p.fallRadius-d*d));
-      const lateral=clamp((x-p.well.x)*p.tx+(y-p.well.y)*p.ty,-limit,limit);
-      return {x:p.well.x+d*p.nx+lateral*p.tx,y:p.well.y+d*p.ny+lateral*p.ty};
-    };
-    const travel=Math.min(settleDuration/3,R*.6/Math.max(.001,a.impact));
-    const c=safePoint(a.entryX+a.vx*travel,a.entryY+a.vy*travel),end=safePoint(a.effectX,a.effectY),v=1-u;
-    const x=v*v*v*a.entryX+3*v*v*u*c.x+(3*v*u*u+u*u*u)*end.x;
-    const y=v*v*v*a.entryY+3*v*v*u*c.y+(3*v*u*u+u*u*u)*end.y;
-    return {t,sink,x,y,scale:1-.64*sink,alpha:1-clamp((t-.84)/.16,0,1),depth:.55*R*sink};
+    const t=clamp(a.age/a.duration,0,1);
+    const drop=.5*GRAVITY*a.age*a.age,sink=clamp(drop/(6*R),0,1);
+    const fade=clamp((drop-2*R)/(4*R),0,1);
+    return {t,sink,x:a.fallX,y:a.fallY,scale:1/(1+drop/(6*R)),alpha:1-fade*fade*(3-2*fade),depth:0,drop};
   }
   function drawPocketFallMask(pocket){
     const profile=pocketFallProfile(pocket),well=worldToScreen(profile.x,profile.y);
@@ -1568,7 +1598,7 @@
     const ratio=clamp(Math.max(cssWidth/VIEW_W,cssHeight/VIEW_H)*deviceScale,MOBILE_RENDER?1.35:1.5,MOBILE_RENDER?1.8:2);
     if(Math.abs(ratio-PIXEL_RATIO)<.04)return;
     PIXEL_RATIO=ratio;canvas.width=Math.round(VIEW_W*ratio);canvas.height=Math.round(VIEW_H*ratio);
-    ctx.setTransform(ratio,0,0,ratio,0,0);tableSurface=null;render();
+    ctx.setTransform(ratio,0,0,ratio,0,0);tableSurface=null;tableBackdrop=null;render();
   }
   function render() {
     refreshBallTextures();
@@ -1597,6 +1627,7 @@
     requestAnimationFrame(()=>{aimFramePending=false;if(state.phase==='aim'){updateUI();render();}});
   }
   const sideways=()=>document.getElementById('mobile-pool-preview')?.classList.contains('is-landscape')||false;
+  const aimScreenPoint=e=>sideways()?{x:e.clientY,y:-e.clientX}:{x:e.clientX,y:e.clientY};
   function pointerWorld(e){
     const rect=canvas.getBoundingClientRect();
     return sideways()
@@ -1609,24 +1640,21 @@
     if(state.ballInHand){state.drag='place';placeCue(p.x,p.y,false);return;}
     const c=cue(),dx=p.x-c.x,dy=p.y-c.y,ax=Math.cos(state.aim),ay=Math.sin(state.aim);
     if(state.breaking&&state.repositionAllowed&&Math.hypot(dx,dy)<=R*1.6){state.drag='place-break';return;}
-    const behind=-(dx*ax+dy*ay),side=Math.abs(dx*ay-dy*ax);
-    if(behind>=2.3&&behind<=27&&side<2.5){state.guidePowerLock=state.power;state.drag={kind:'power',start:p,pull:0,startingPower:state.power};return;}
-    state.drag={kind:'aim',start:p,last:p,startAim:state.aim,travel:0};
+    // The cloth is exclusively an aiming surface. Pulling the left cue lane
+    // fires; a precision drag behind the cue must never accidentally fire.
+    state.drag={kind:'aim',start:p,startScreen:aimScreenPoint(e),startAim:state.aim,axis:null,moved:false};
   });
   canvas.addEventListener('pointermove',e=>{
     if(!state.drag||state.phase!=='aim')return;const p=pointerWorld(e);
     if(state.drag==='place'||state.drag==='place-break')placeCue(p.x,p.y,false);
     else if(state.drag.kind==='aim'){
-      const drag=state.drag,dx=p.x-drag.last.x,dy=p.y-drag.last.y;
-      const distance=Math.hypot(dx,dy)*SCALE;drag.travel+=distance;drag.last=p;
-      // Tangential displacement avoids the near-cue atan2 singularity and
-      // wraparound jumps. Small movements always use the slowest gain.
-      const gain=.008+Math.min(.020,Math.max(0,distance-8)*.0006);
-      const tangent=(dy*Math.cos(drag.startAim)-dx*Math.sin(drag.startAim))*SCALE;
-      state.aim+=tangent*gain*Math.PI/180;requestAimFrame();
+      const drag=state.drag,point=aimScreenPoint(e),dx=point.x-drag.startScreen.x,dy=point.y-drag.startScreen.y;
+      if(!drag.axis&&Math.hypot(dx,dy)>2){drag.axis=Math.abs(dx)>=Math.abs(dy)?'x':'y';drag.moved=true;}
+      if(drag.axis){const distance=drag.axis==='x'?dx:dy;
+        state.aim=drag.startAim+Math.sign(distance)*Math.max(0,Math.abs(distance)-2)*.035*Math.PI/180;requestAimFrame();}
     }else {const d=state.drag.start;const pull=(d.x-p.x)*Math.cos(state.aim)+(d.y-p.y)*Math.sin(state.aim);state.drag.pull=Math.max(0,pull);state.power=state.drag.pull<.7?state.drag.startingPower:clamp(Math.round(5+(state.drag.pull-.7)*5.7),5,100);syncPowerUI();render();}
   });
-  const pointerUp=e=>{if(state.drag?.kind==='aim'&&state.phase==='aim'&&state.drag.travel<3){const p=pointerWorld(e);aimAt(p.x,p.y);}if((state.drag==='place'||state.drag==='place-break')&&state.phase==='aim'){const p=pointerWorld(e);if(placeCue(p.x,p.y,false))say('白球位置已预览，可继续调整或确认摆放。');}else if(state.drag?.kind==='power'){const p=pointerWorld(e),d=state.drag.start;state.drag.pull=Math.max(0,(d.x-p.x)*Math.cos(state.aim)+(d.y-p.y)*Math.sin(state.aim));if(state.drag.pull>=1.5){syncPowerUI();fire(false,true);}else{state.power=state.drag.startingPower;state.guidePowerLock=null;syncPowerUI();render();}}state.drag=null;};
+  const pointerUp=e=>{if(state.drag?.kind==='aim'&&state.phase==='aim'&&!state.drag.moved){const p=pointerWorld(e);aimAt(p.x,p.y);}if((state.drag==='place'||state.drag==='place-break')&&state.phase==='aim'){const p=pointerWorld(e);if(placeCue(p.x,p.y,false))say('白球位置已预览，可继续调整或确认摆放。');}else if(state.drag?.kind==='power'){const p=pointerWorld(e),d=state.drag.start;state.drag.pull=Math.max(0,(d.x-p.x)*Math.cos(state.aim)+(d.y-p.y)*Math.sin(state.aim));if(state.drag.pull>=1.5){syncPowerUI();fire(false,true);}else{state.power=state.drag.startingPower;state.guidePowerLock=null;syncPowerUI();render();}}state.drag=null;};
   canvas.addEventListener('pointerup',pointerUp);canvas.addEventListener('pointercancel',()=>{if(state.drag?.kind==='power'){state.power=state.drag.startingPower;state.guidePowerLock=null;syncPowerUI();render();}state.drag=null;});
   const spinPad=$('spinPad');
   function moveSpinDot(){const dot=$('spinDot');dot.style.left=`${50+state.spinX*36}%`;dot.style.top=`${50-state.spinY*36}%`;if($('strokeReadout'))$('strokeReadout').textContent=strokeName(state);}
@@ -1698,7 +1726,7 @@
   });
   angleRuler.addEventListener('pointermove',e=>{
     if(!angleDrag||angleDrag.id!==e.pointerId)return;
-    state.aim=angleDrag.aim+(rulerAxis(e)-angleDrag.start)*.0005*Math.PI/180;
+    state.aim=angleDrag.aim+(rulerAxis(e)-angleDrag.start)*.004*Math.PI/180;
     requestAimFrame();
   });
   const stopAngleDrag=()=>{angleDrag=null;};
@@ -1800,7 +1828,7 @@
   window.render_game_to_text=()=>JSON.stringify({coordinates:`world inches, origin at top-left cushion nose; +x right, +y down; table 100x50; ball diameter ${(2*R).toFixed(4)}; corner mouth ${CORNER_MOUTH}; side mouth ${SIDE_MOUTH}`,mode:state.mode,opponent:state.opponent,aiDifficulty:state.aiDifficulty,aiThinking:state.aiThinking,aiPlan:state.aiPlan?{target:state.aiPlan.target,pocket:state.aiPlan.pocket,type:state.aiPlan.type,spinX:state.aiPlan.spinX||0,spinY:state.aiPlan.spinY||0,snookerPlanned:!!state.aiPlan.snookerPlanned,power:+state.aiPlan.power.toFixed(1),description:state.aiPlan.description}:null,phase:state.phase,turn:state.turn+1,groups:state.groups,scores:state.scores,matchScores:state.matchScores,returnPage:state.returnPage,breaking:state.breaking,rackSeed:state.rackSeed,ballInHand:state.ballInHand,repositionAllowed:state.repositionAllowed,aimDegrees:+(state.aim*180/Math.PI).toFixed(2),power:state.power,spin:[+state.spinX.toFixed(2),+state.spinY.toFixed(2)],balls:state.balls.map(b=>({n:b.n,x:+b.x.toFixed(2),y:+b.y.toFixed(2),vx:+b.vx.toFixed(2),vy:+b.vy.toFixed(2),rollVx:+b.rollVx.toFixed(2),rollVy:+b.rollVy.toFixed(2),sideSpin:+b.spin.toFixed(2),roll:+b.roll.toFixed(2),pocketed:b.pocketed})),status:state.status,winner:state.winner});
   if(new URLSearchParams(location.search).has('test')){
     $('startOverlay').classList.add('hidden');$('menuOverlay').classList.remove('hidden');
-    window.__poolTest={assessAttack:attackRisk,simulateShot:simulateAIShot,masterStrokeCost,getRenderInfo(){return {ratio:PIXEL_RATIO,textureSize:BALL_SPRITE_SIZE,width:canvas.width,height:canvas.height};},getPocketGeometry(){return POCKET_GEOMETRY.map(p=>({...p,well:{...p.well}}));},getShotSummary(){return {firstHit:state.shot?.firstHit??null,pocketed:state.shot?.pocketed||[]};},getFallAnimations(){return state.pocketAnimations.map(a=>({n:a.visual.n,pocket:a.pocket,age:a.age,duration:a.duration,entryX:a.entryX,entryY:a.entryY,vx:a.vx,vy:a.vy,...pocketAnimationPose(a),q:[...a.visual.q]}));},pocketRollingTest(index=1,angleDegrees=0,speed=6,offMouth=false){
+    window.__poolTest={sampleFall(index,x,y,vx,vy,age){const a=makePocketFall(Object.assign(ball(1,x,y),{vx,vy,rollVx:vx,rollVy:vy}),index);advancePocketFall(a,age);advanceBallOrientation(a.visual,age);return {...pocketAnimationPose(a),vx:a.fallVx,vy:a.fallVy,q:[...a.visual.q]};},launchBall(power,aim,side=0){const b=ball(0,50,25);applyCueImpulse(b,power,aim,side,0,false);return b;},railTest(b,nx,ny){const copy={...b};railHit(copy,nx,ny);return copy;},assessAttack:attackRisk,simulateShot:simulateAIShot,masterStrokeCost,getRenderInfo(){return {ratio:PIXEL_RATIO,textureSize:BALL_SPRITE_SIZE,width:canvas.width,height:canvas.height};},getPocketGeometry(){return POCKET_GEOMETRY.map(p=>({...p,well:{...p.well}}));},getShotSummary(){return {firstHit:state.shot?.firstHit??null,pocketed:state.shot?.pocketed||[]};},getFallAnimations(){return state.pocketAnimations.map(a=>({n:a.visual.n,pocket:a.pocket,age:a.age,duration:a.duration,entryX:a.entryX,entryY:a.entryY,vx:a.vx,vy:a.vy,...pocketAnimationPose(a),q:[...a.visual.q]}));},pocketRollingTest(index=1,angleDegrees=0,speed=6,offMouth=false){
       const p=POCKET_GEOMETRY[index],angle=angleDegrees*Math.PI/180;
       const dx=p.nx*Math.cos(angle)+p.tx*Math.sin(angle),dy=p.ny*Math.cos(angle)+p.ty*Math.sin(angle);
       const distance=Math.min(8,speed*speed/(2*ROLL_DECEL)*.7),offset=offMouth?p.radius+1.4:0;

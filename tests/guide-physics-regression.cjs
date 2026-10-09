@@ -48,11 +48,10 @@ for(let p=0;p<6;p++){
  assert(Math.hypot(visualVx-first.vx,visualVy-first.vy)<Math.max(1,entrySpeed*.4),`pocket ${p}: entry animation velocity jumped`);
  w.advanceTime(80);const deeper=t.getFallAnimations()[0];
  assert(deeper.scale<first.scale,`pocket ${p}: ball did not drop into depth`);
- w.advanceTime(60);const settled=t.getFallAnimations()[0];w.advanceTime(30);const settledNext=t.getFallAnimations()[0];
- assert(Math.hypot(settledNext.x-settled.x,settledNext.y-settled.y)<1e-9,`pocket ${p}: ball kept rolling after the hand-off`);
  const events=t.getShotSummary().pocketed;
- w.advanceTime(180);assert(t.getFallAnimations().length,`pocket ${p}: too fast`);
- w.advanceTime(500);assert.equal(t.getFallAnimations().length,0);
+ const remaining=(deeper.duration-deeper.age)*1000;
+ assert(remaining>0&&remaining<250,`pocket ${p}: implausible drop time`);
+ w.advanceTime(remaining+30);assert.equal(t.getFallAnimations().length,0,`pocket ${p}: drop did not finish`);
  assert.equal(events.filter(e=>e.n===1).length,1,`pocket ${p}: duplicate score`);
  assert(JSON.parse(w.render_game_to_text()).balls.find(b=>b.n===1).pocketed,`pocket ${p}: score disappeared`);
 }
@@ -71,7 +70,7 @@ assert(shot.balls.find(b=>b.n===0).vx>0,'release did not strike');
 t.setGuideBalls([{n:0,x:30,y:25},{n:1,x:52,y:25}],0,56);
 const ruler=ids.get('angleRuler'),rulerEvent=x=>({pointerId:7,clientX:x,clientY:0,preventDefault(){}});
 ruler.handlers.pointerdown(rulerEvent(100));ruler.handlers.pointermove(rulerEvent(200));ruler.handlers.pointerup(rulerEvent(200));
-assert.equal(JSON.parse(w.render_game_to_text()).aimDegrees,.05,'precision ruler scale drifted');
-console.log(JSON.stringify({passed:true,guideFixtures:fixtures.length,pocketFixtures:6,meterRelease:true,guideLockedDuringPull:true,rulerStep:'.0005deg/px'}));
+assert.equal(JSON.parse(w.render_game_to_text()).aimDegrees,.4,'precision ruler scale drifted');
+console.log(JSON.stringify({passed:true,guideFixtures:fixtures.length,pocketFixtures:6,meterRelease:true,guideLockedDuringPull:true,rulerStep:'.004deg/px'}));
 
 function pathLength(points){let length=0;for(let i=1;i<points.length;i++)length+=Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y);return length;}
