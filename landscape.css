@@ -1,15 +1,7 @@
-/* Mobile play requires physical landscape orientation on every screen. */
-#mobile-pool-preview #landscapeGate{display:none}
-#mobile-pool-preview.orientation-blocked{position:relative!important;min-height:320px!important;height:var(--visible-height,100svh)!important;overflow:hidden!important}
-#mobile-pool-preview.orientation-blocked .mobile-game-surface{visibility:hidden;pointer-events:none}
-#mobile-pool-preview.orientation-blocked #landscapeGate{position:absolute;inset:0;z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:32px;text-align:center;background:radial-gradient(ellipse at 50% 35%,#113f72,#050d20 70%);color:#e2f3ff;font-family:system-ui,sans-serif}
-#mobile-pool-preview #landscapeGate[hidden]{display:none!important}
-#mobile-pool-preview .rotate-phone{width:74px;height:42px;border:3px solid #9dd9ff;border-radius:8px;box-shadow:0 0 36px #399fe14d;position:relative}
-#mobile-pool-preview .rotate-phone::after{content:'↻';position:absolute;right:-28px;top:-22px;font-size:34px;line-height:1;color:#9dd9ff}
-#mobile-pool-preview #landscapeGate h2{font-size:22px;margin:12px 0 0;letter-spacing:2px;color:#e2f3ff}
-#mobile-pool-preview #landscapeGate p{font-size:14px;line-height:1.7;margin:0;color:#99b8d8}
+/* Always show a landscape game; no orientation gate or blocked controls. */
 #mobile-pool-preview.phone-landscape{position:relative!important;width:100%!important;height:var(--phone-height)!important;min-height:0!important;overflow:hidden!important;padding:0!important}
 #mobile-pool-preview.phone-landscape .mobile-game-surface{position:relative!important;width:100%!important;height:100%!important;transform:none!important;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+#mobile-pool-preview.phone-landscape.is-landscape .mobile-game-surface{width:var(--landscape-width)!important;height:var(--landscape-height)!important;transform-origin:top left!important;transform:translateX(var(--landscape-height)) rotate(90deg)!important}
 #mobile-pool-preview.phone-landscape .app{display:flex!important;flex-direction:column!important;height:100%!important;min-height:0!important;overflow:hidden!important}
 #mobile-pool-preview.phone-landscape .topbar{position:relative!important;flex:0 0 44px!important;min-height:44px!important;height:44px!important;padding:2px 8px!important}
 #mobile-pool-preview.phone-landscape .brand{display:none!important}
