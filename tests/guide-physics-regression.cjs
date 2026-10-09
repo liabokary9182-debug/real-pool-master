@@ -67,11 +67,11 @@ meter.handlers.pointerup(event(160));w.advanceTime(100);
 const shot=JSON.parse(w.render_game_to_text());
 assert.equal(shot.power,previewPower);assert.equal(meter.styles['--power-fraction'],String(previewPower/100));
 assert(shot.balls.find(b=>b.n===0).vx>0,'release did not strike');
-// The precision ruler moves one thousandth of a degree per pixel.
+// The precision ruler moves one two-thousandth of a degree per pixel.
 t.setGuideBalls([{n:0,x:30,y:25},{n:1,x:52,y:25}],0,56);
 const ruler=ids.get('angleRuler'),rulerEvent=x=>({pointerId:7,clientX:x,clientY:0,preventDefault(){}});
 ruler.handlers.pointerdown(rulerEvent(100));ruler.handlers.pointermove(rulerEvent(200));ruler.handlers.pointerup(rulerEvent(200));
-assert.equal(JSON.parse(w.render_game_to_text()).aimDegrees,.1,'precision ruler scale drifted');
-console.log(JSON.stringify({passed:true,guideFixtures:fixtures.length,pocketFixtures:6,meterRelease:true,guideLockedDuringPull:true,rulerStep:'.001deg/px'}));
+assert.equal(JSON.parse(w.render_game_to_text()).aimDegrees,.05,'precision ruler scale drifted');
+console.log(JSON.stringify({passed:true,guideFixtures:fixtures.length,pocketFixtures:6,meterRelease:true,guideLockedDuringPull:true,rulerStep:'.0005deg/px'}));
 
 function pathLength(points){let length=0;for(let i=1;i<points.length;i++)length+=Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y);return length;}

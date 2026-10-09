@@ -32,7 +32,7 @@ vm.runInContext(fs.readFileSync(path.join(__dirname,'../audio.js'),'utf8'),sandb
   sandbox.PoolAudio.play('rail',45);
   sandbox.PoolAudio.play('pocket',60);
   await Promise.resolve();
-  assert(MockAudio.playCount-afterUnlock>=5,'effect calls did not reach native audio channels');
+  assert(MockAudio.playCount-afterUnlock>=4,'effect calls did not reach native audio channels');
   assert.deepEqual({...sandbox.PoolAudio.stats},{cue:1,ball:1,rail:1,pocket:1});
   assert.equal(sandbox.PoolAudio.musicInfo().source,'provided-local-audio');
   assert.equal(typeof sandbox.PoolAudio.setMusic,'undefined','obsolete remote music controller still exposed');

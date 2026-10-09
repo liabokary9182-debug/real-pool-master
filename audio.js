@@ -17,7 +17,7 @@
     cue:['./sounds/cue-soft.wav'],
     ball:['./sounds/ball-soft-1.wav','./sounds/ball-soft-2.wav','./sounds/ball-soft-3.wav'],
     rail:['./sounds/rail-soft.wav'],
-    pocket:['./sounds/pocket-soft.wav','./sounds/rail-soft.wav']
+    pocket:['./sounds/pocket-soft.wav']
   };
   const nativePools={},nativeCursor={cue:0,ball:0,rail:0,pocket:0};
   const decodedPools={cue:[],ball:[],rail:[],pocket:[]},decodedCursor={cue:0,ball:0,rail:0,pocket:0};
@@ -99,8 +99,8 @@
     const run=()=>{
       const pool=nativePools[kind],channel=pool[nativeCursor[kind]++%pool.length];
       channel.pause();channel.currentTime=0;channel.muted=false;
-      channel.playbackRate=kind==='cue'?.90:kind==='rail'?.70:kind==='pocket'?(tail?.62:.76):.88+.09*weight;
-      channel.volume=Math.min(.88,(kind==='cue'?.28:kind==='ball'?.31:kind==='rail'?.23:.34)+(kind==='ball'?.48:.34)*weight)*(tail?.44:1);
+      channel.playbackRate=kind==='cue'?.98:kind==='rail'?.94:kind==='pocket'?.96:.97+.06*weight;
+      channel.volume=(kind==='cue'?.65:kind==='ball'?.78:kind==='rail'?.55:.67)*weight*(tail?.24:1);
       const started=channel.play();
       if(started?.catch)return started.catch(error=>{if(!nativeWarning){nativeWarning=true;console.warn('本地碰撞音效未能播放，改用合成备用音。',error);}throw error;});
       return Promise.resolve();
@@ -115,9 +115,9 @@
     const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
     const at=context.currentTime+delay;
     source.buffer=pool[decodedCursor[kind]++%pool.length];
-    source.playbackRate.value=kind==='cue'?.90:kind==='rail'?.70:kind==='pocket'?(tail?.62:.76):.88+.09*weight;
+    source.playbackRate.value=kind==='cue'?.98:kind==='rail'?.94:kind==='pocket'?.96:.97+.06*weight;
     filter.type='lowpass';filter.frequency.value=kind==='ball'?5800:kind==='cue'?4200:kind==='rail'?2400:3100;
-    const volume=Math.min(.88,(kind==='cue'?.28:kind==='ball'?.31:kind==='rail'?.23:.34)+(kind==='ball'?.48:.34)*weight)*(tail?.44:1);
+    const volume=(kind==='cue'?.65:kind==='ball'?.78:kind==='rail'?.55:.67)*weight*(tail?.24:1);
     gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),at+.0008);
     gain.gain.exponentialRampToValueAtTime(.0001,at+Math.min(.14,source.buffer.duration/source.playbackRate.value));
     source.connect(filter);filter.connect(gain);gain.connect(effects);
@@ -193,8 +193,8 @@
     if(!recordings.length)return false;
     const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
     source.buffer=recordings[lastBall++%recordings.length];
-    const length=kind==='cue'?.065:.06+.02*weight;
-    source.playbackRate.value=kind==='cue'?.96:.94+.12*weight;
+    const length=kind==='cue'?.065:.085;
+    source.playbackRate.value=kind==='cue'?.98:.98+.04*weight;
     filter.type='lowpass';filter.frequency.value=kind==='cue'?3600:4300+5000*weight;
     gain.gain.setValueAtTime(.0001,at);
     gain.gain.exponentialRampToValueAtTime((kind==='cue'?.44:.7)*weight,at+.00055);
@@ -202,13 +202,6 @@
     source.connect(filter);filter.connect(gain);gain.connect(effects);
     source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect();};source.start(at);source.stop(at+length+.005);
     return true;
-  }
-  function metalRing(at,weight){
-    // A damped steel-liner sound without the previous piercing high-frequency edge.
-    tone(at,760,650,.075,.034*weight,'triangle');
-    tone(at+.001,1120,980,.058,.024*weight,'sine');
-    tone(at+.003,1650,1420,.041,.014*weight,'sine');
-    softImpact(at,weight,.025,3200,.04);
   }
   function fallbackImpact(kind,at,weight){
     if(!context)return;
@@ -228,7 +221,8 @@
     // A soft contact must not suppress a much harder rack collision.
     if(at-lastEffect[kind]<gap&&weight<=lastWeight[kind]*1.4)return;
     lastEffect[kind]=at;lastWeight[kind]=weight;
-    const native=bufferedEffect(kind,weight)?Promise.resolve():nativeEffect(kind,weight);
+    const recorded=kind==='ball'&&hasContext&&context.state==='running'&&recordedClack(at,weight,kind);
+    const native=recorded||bufferedEffect(kind,weight)?Promise.resolve():nativeEffect(kind,weight);
     if(kind==='cue'){
       native.catch(()=>fallbackImpact(kind,at,weight));duckMusic();
     }else if(kind==='ball'){
@@ -236,10 +230,11 @@
     }else if(kind==='rail'){
       if(hasContext){softImpact(at,weight,.06,650,.065);tone(at,145,70,.07,.045*weight);}
     }else{
-      if(!bufferedEffect('pocket',weight,.112,true))nativeEffect('pocket',weight,112,true).catch(()=>{});
       if(hasContext){
-        softImpact(at+.018,weight,.045,1050,.085);tone(at+.018,185,92,.058,.04*weight,'triangle');
-        metalRing(at+.092,.68+.32*weight);softImpact(at+.19,weight,.075,520,.075);tone(at+.19,128,70,.09,.038*weight);metalRing(at+.215,.26+.2*weight);
+        // A single mouth impact followed by a damped drop into the pocket.
+        // No repeated clack or metallic ringing for a cloth/leather pocket.
+        softImpact(at+.085,weight,.09,700,.075);
+        tone(at+.085,155,72,.085,.035*weight);
       }
     }
   }

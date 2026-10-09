@@ -16,7 +16,7 @@
   <link rel="preload" href="./sounds/xiaotang-intro.mp3" as="audio" type="audio/mpeg">
   <link rel="preload" href="./sounds/xiaotang-game-loop.m4a" as="fetch" type="audio/mp4" crossorigin="anonymous">
   <link rel="stylesheet" href="./xingling.css?v=20261008-xiaotang-v9">
-  <link rel="stylesheet" href="./sapphire.css?v=20261009-review">
+  <link rel="stylesheet" href="./sapphire.css?v=20261009-performance">
   <link rel="stylesheet" href="./landscape.css?v=20261009-direct-landscape">
 </head>
 <body id="mobile-pool-preview" data-screen="welcome">
@@ -41,14 +41,14 @@
       </section>
       <aside class="controls">
 <div class="stroke-controls">
-        <div class="control-head"><span>击球控制台</span><small>拖动球台调整瞄准</small></div>
-        <div class="angle-panel"><div class="angle-head"><span>精密瞄准</span><b id="angleReadout">0.0000°</b></div><div id="angleRuler" class="angle-ruler" role="slider" aria-label="横向拖动刻度尺调整瞄准角" aria-valuemin="-180" aria-valuemax="180" aria-valuenow="0" tabindex="0"><span class="angle-ticks"></span><span class="angle-needle"></span></div><div class="angle-foot"><span>−0.1°</span><span>小格 0.01° · 拖动 0.001°</span><span>＋0.1°</span></div></div>
+        <div class="control-head"><span>击球控制台</span><small>点按选方向 · 拖动精调</small></div>
+        <div class="angle-panel"><div class="angle-head"><span>精密瞄准</span><b id="angleReadout">0.0000°</b></div><div id="angleRuler" class="angle-ruler" role="slider" aria-label="横向拖动刻度尺调整瞄准角" aria-valuemin="-180" aria-valuemax="180" aria-valuenow="0" tabindex="0"><span class="angle-ticks"></span><span class="angle-needle"></span></div><div class="angle-foot"><span>−0.1°</span><span>小格 0.01° · 拖动 0.0005°/像素</span><span>＋0.1°</span></div></div>
         <div class="spin-group"><div><span>击球点</span><small id="strokeReadout" aria-live="polite">中杆</small></div><div class="spin-pad" id="spinPad" role="slider" aria-label="击球点"><div class="spin-cross"></div><div id="spinDot" class="spin-dot"></div></div><button id="resetSpin" type="button" class="small-button">居中</button></div>
         <div class="power-group"><div class="control-line"><span>出杆力度</span><b id="powerReadout">56%</b></div><input id="power" type="range" min="5" max="100" value="56" aria-label="击球力度"><div class="power-ends"><span>轻推</span><span>强力</span></div></div>
         <button id="placeCueBtn" class="place-cue" type="button" hidden>确认白球位置</button>
         <button id="shootBtn" class="shoot" type="button">击 球 <span>→</span></button>
         <div class="practice-actions"><button id="practiceBtn" class="quiet" type="button">专项练球</button><button id="repeatPractice" class="quiet" type="button" hidden>重摆本球</button></div>
-        <div class="tip" id="tipText">拖动画面瞄准；拉动球杆松手击球，或调节力度后点击击球。</div>
+        <div class="tip" id="tipText">点按选方向，拖动精调；拉动球杆松手击球，或调节力度后点击击球。</div>
         <div class="spec"><span>球台参数</span><small>球径 63.01 mm · 六袋入口均约 110.5 mm</small></div>
 
 </div>
@@ -72,10 +72,10 @@
     <div class="setup-progress" aria-label="开始流程"><span class="active" data-progress="mode">01 对战</span><span data-progress="rules">02 玩法</span><span data-progress="difficulty">03 难度</span></div>
     <section class="setup-step" id="setupMode"><button class="setup-back" type="button" data-setup-back="welcome">返回</button><div class="eyebrow">CHOOSE MATCH</div><h1>请选择<br><em>对战模式</em></h1><p>选择这一局的进入方式，下一步再选择八球或九球。</p><div class="setup-grid setup-grid-three"><button type="button" data-flow-mode="ai"><span class="setup-icon">AI</span><b>人机对战</b><small>挑战三档智能对手</small></button><button type="button" data-flow-mode="practice"><span class="setup-icon">练</span><b>专项训练</b><small>反复练习同一条球路</small></button><button type="button" data-flow-mode="local"><span class="setup-icon">2P</span><b>双人同屏</b><small>两位玩家轮流出杆</small></button></div></section>
     <section class="setup-step hidden" id="setupRules"><button class="setup-back" type="button" data-setup-back="mode">返回</button><div class="eyebrow">CHOOSE RULESET</div><h1>选择玩法</h1><p id="setupRulesHint">选择八球或九球。</p><div class="setup-grid setup-grid-two"><button type="button" data-flow-rules="eight"><span class="mode-ball black">8</span><b>八球</b><small>先清空己方球，再打进黑八</small></button><button type="button" data-flow-rules="nine"><span class="mode-ball yellow">9</span><b>九球</b><small>依次先碰当前最小号球</small></button></div></section>
-    <section class="setup-step hidden" id="setupDifficulty"><button class="setup-back" type="button" data-setup-back="rules">返回</button><div class="eyebrow">CHOOSE DIFFICULTY</div><h1>选择难度</h1><p>难度只用于人机对战。</p><div class="setup-grid setup-grid-three difficulty-cards"><button type="button" data-flow-difficulty="easy"><span class="difficulty-number">40%</span><b>普通</b><small>适合熟悉操作</small></button><button type="button" data-flow-difficulty="normal"><span class="difficulty-number">60%</span><b>进阶</b><small>更稳定的进攻选择</small></button><button type="button" data-flow-difficulty="hard"><span class="difficulty-number">95%</span><b>大师</b><small>规划杆法与下一球</small></button></div></section>
+    <section class="setup-step hidden" id="setupDifficulty"><button class="setup-back" type="button" data-setup-back="rules">返回</button><div class="eyebrow">CHOOSE DIFFICULTY</div><h1>选择难度</h1><p>难度只用于人机对战。</p><div class="setup-grid setup-grid-three difficulty-cards"><button type="button" data-flow-difficulty="easy"><span class="difficulty-number">40%</span><b>普通</b><small>适合熟悉操作</small></button><button type="button" data-flow-difficulty="normal"><span class="difficulty-number">60%</span><b>进阶</b><small>更稳定的进攻选择</small></button><button type="button" data-flow-difficulty="hard"><span class="difficulty-number">PRO</span><b>大师</b><small>规划杆法与下一球</small></button></div></section>
   </div></div>
   <div class="overlay hidden" id="practiceOverlay"><div class="menu-card practice-card"><button id="closePractice" class="close" type="button" aria-label="关闭练球菜单">×</button><button id="backPractice" class="setup-back" type="button">返回</button><div class="eyebrow">PRACTICE TABLE</div><h2>选择专项训练</h2><p><span id="practiceRulesetLabel">九球规则</span> · 同一球位反复出杆，调整力度和击球点，观察真实落点。</p><div class="practice-grid"><button class="quiet" type="button" data-practice="pocket"><b>慢球进袋</b><small>18% 轻推 · 检查中袋</small></button><button class="quiet" type="button" data-practice="draw"><b>低杆拉回</b><small>70% 力度 · 白球回退</small></button><button class="quiet" type="button" data-practice="follow"><b>高杆跟进</b><small>相同球位 · 对比低杆</small></button><button class="quiet" type="button" data-practice="english"><b>加塞碰库</b><small>左右塞 · 对比反弹方向</small></button></div></div></div>
-  <div class="overlay hidden" id="rulesOverlay"><div class="menu-card rules-card"><button id="closeRules" class="close" type="button" aria-label="关闭">×</button><div class="eyebrow">HOW TO PLAY</div><h2>玩法与操作</h2><p><b>瞄准：</b>在球台上拖动调整方向，在右侧横向拖动刻度尺作精细调整；方向键每次调整 0.001°，按住 Shift 为 0.0001°。辅助线只显示当前直线段，碰到库边立即结束，不显示反弹后的路线。红线表示首碰球不合法。<b>力度：</b>向下拉左侧小头杆，松手击球，旁边刻度条同步显示力度；5%～25% 为细化的轻推区间。<b>旋转：</b>移动击球点，旁边显示当前杆法；每次出杆后自动回到中杆。也可按空格或点击“击球”。</p><p><b>专项练球：</b>提供慢球进袋、低杆、高杆与加塞碰库；点“重摆本球”恢复相同球位与预设力度。本杆结束后显示白球落点，无胜负和换人；点顶部“返回”回到训练项目选择。</p><p><b>袋口：</b>球进入袋洞的有效下沉区域后立刻停止平面滚动，只在袋洞遮罩内垂直下沉；袋沿始终覆盖球体，避免穿过胶边。六袋绘制、落袋判定与遮罩使用同一套袋口几何。</p><p><b>大师：</b>会比较高低杆、左右轻重塞与混合塞，并对候选杆法的力度作微调，规划下一球；直接进攻困难时尝试翻袋或碰库勾球，防守时寻找藏白球、遮住对手首碰线的落点。出杆前显示击球点和力度，选择与执行仍可能失误。</p><p><b>自由球：</b>点按或拖动台面摆放白球，点击“确认白球位置”；击球前可以点击“重新摆放白球”再次调整。</p><p><b>八球：</b>开球后先分配全色与花色；先打自己的球，清空后合法打进 8 号球即可获胜，无需指定袋口。犯规后对手自由摆放白球。</p><p><b>九球：</b>每杆先碰当前最小号球；合法打进 9 号球获胜。</p><p>第一次点按会解锁击球、球碰球、碰库和落袋四类本地音效；背景音乐不会抢占音效通道。欢迎页播放已提供的入场音乐，对局使用已提供的新音频循环播放，返回选择页面时自动切换。网页包含首球、无碰库、白球落袋及胜负判定。开球流程为适合网页对战的简化规则。</p></div></div>
+  <div class="overlay hidden" id="rulesOverlay"><div class="menu-card rules-card"><button id="closeRules" class="close" type="button" aria-label="关闭">×</button><div class="eyebrow">HOW TO PLAY</div><h2>玩法与操作</h2><p><b>瞄准：</b>点按球台选择大方向，再拖动低速精调方向，在右侧横向拖动刻度尺作精细调整；方向键每次调整 0.001°，按住 Shift 为 0.0001°。辅助线只显示当前直线段，碰到库边立即结束，不显示反弹后的路线。红线表示首碰球不合法。<b>力度：</b>向下拉左侧小头杆，松手击球，旁边刻度条同步显示力度；5%～25% 为细化的轻推区间。<b>旋转：</b>移动击球点，旁边显示当前杆法；每次出杆后自动回到中杆。也可按空格或点击“击球”。</p><p><b>专项练球：</b>提供慢球进袋、低杆、高杆与加塞碰库；点“重摆本球”恢复相同球位与预设力度。本杆结束后显示白球落点，无胜负和换人；点顶部“返回”回到训练项目选择。</p><p><b>袋口：</b>球进入袋洞的有效下沉区域后立刻停止平面滚动，只在袋洞遮罩内垂直下沉；袋沿始终覆盖球体，避免穿过胶边。六袋绘制、落袋判定与遮罩使用同一套袋口几何。</p><p><b>大师：</b>会比较高低杆、左右轻重塞与混合塞，并对候选杆法的力度作微调，规划下一球；直接进攻困难时尝试翻袋或碰库勾球，防守时寻找藏白球、遮住对手首碰线的落点。出杆前显示击球点和力度，选择与执行仍可能失误。</p><p><b>自由球：</b>点按或拖动台面摆放白球，点击“确认白球位置”；击球前可以点击“重新摆放白球”再次调整。</p><p><b>八球：</b>开球后先分配全色与花色；先打自己的球，清空后合法打进 8 号球即可获胜，无需指定袋口。犯规后对手自由摆放白球。</p><p><b>九球：</b>每杆先碰当前最小号球；合法打进 9 号球获胜。</p><p>第一次点按会解锁击球、球碰球、碰库和落袋四类本地音效；背景音乐不会抢占音效通道。欢迎页播放已提供的入场音乐，对局使用已提供的新音频循环播放，返回选择页面时自动切换。网页包含首球、无碰库、白球落袋及胜负判定。开球流程为适合网页对战的简化规则。</p></div></div>
   <section class="overlay hidden result-overlay" id="resultOverlay" role="dialog" aria-modal="true" aria-labelledby="resultTitle" aria-describedby="resultReason">
     <div class="result-card">
       <div class="result-top"><span>小糖台球 / SAPPHIRE</span><span id="resultRack">本局结束</span></div>
@@ -93,8 +93,8 @@
   </section>
   </div>
   <script src="./landscape.js?v=20261009-direct-landscape"></script>
-  <script src="./game.js?v=20261009-sapphire-review"></script>
-  <script src="./audio.js?v=20261009-sapphire-review"></script>
+  <script src="./game.js?v=20261009-performance"></script>
+  <script src="./audio.js?v=20261009-performance"></script>
   <script src="./mobile.js?v=20261009-landscape"></script>
 </body>
 </html>

@@ -1,5 +1,5 @@
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
-module.exports=function loadGame({raster=false}={}){
+module.exports=function loadGame({raster=false,mobile=false,dpr=1,animationFrame=()=>{},source=null}={}){
   let native=null;if(raster)native=require('@napi-rs/canvas');
   const noop=()=>{};
   function element(){
@@ -23,8 +23,8 @@ module.exports=function loadGame({raster=false}={}){
   }
   // Native drawImage requires a native Image, so load it with the same onload contract.
   const ImageClass=native?class extends native.Image{set src(v){queueMicrotask(()=>{super.src=fs.readFileSync(path.join(__dirname,'..',v));});}get src(){return super.src;}}:ReferenceImage;
-  const sandbox={document,Image:ImageClass,location:{search:'?test'},URLSearchParams,performance,crypto:require('node:crypto').webcrypto,setTimeout:noop,requestAnimationFrame:noop,console,Uint8ClampedArray,Uint32Array};
-  sandbox.window=sandbox;sandbox.devicePixelRatio=1;sandbox.matchMedia=()=>({matches:false});
-  vm.createContext(sandbox);vm.runInContext(fs.readFileSync(path.join(__dirname,'../game.js'),'utf8'),sandbox);
+  const sandbox={document,Image:ImageClass,location:{search:'?test'},URLSearchParams,performance,crypto:require('node:crypto').webcrypto,setTimeout:noop,requestAnimationFrame:animationFrame,console,Uint8ClampedArray,Uint32Array};
+  sandbox.window=sandbox;sandbox.devicePixelRatio=dpr;sandbox.matchMedia=()=>({matches:mobile});
+  vm.createContext(sandbox);vm.runInContext(source||fs.readFileSync(path.join(__dirname,'../game.js'),'utf8'),sandbox);
   return {window:sandbox,canvas:main,ids,elements:parsed};
 };

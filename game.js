@@ -8,7 +8,7 @@
   // collision solver still runs at 180 Hz, so rendering gains do not alter play.
   const MOBILE_RENDER=window.matchMedia?.('(pointer:coarse)').matches??false;
   const deviceScale=window.devicePixelRatio||1;
-  const PIXEL_RATIO=MOBILE_RENDER?Math.min(1.18,Math.max(1,deviceScale*.39)):Math.min(1.8,Math.max(1.4,deviceScale*.72));
+  let PIXEL_RATIO=Math.min(MOBILE_RENDER?1.8:2,Math.max(MOBILE_RENDER?1.35:1.5,deviceScale*.65));
   canvas.width=Math.round(VIEW_W*PIXEL_RATIO);canvas.height=Math.round(VIEW_H*PIXEL_RATIO);
   ctx.setTransform(PIXEL_RATIO,0,0,PIXEL_RATIO,0,0);
   const W = 100, H = 50, HEAD_LINE = W/4, R = 1.125*1.05*1.05, DISPLAY_R = R;
@@ -364,7 +364,7 @@
     // Position still renders every frame. Rebuild the costly sphere texture
     // only after its markings rotate enough to change a visible pixel.
     b.spriteAngle+=rate*dt;
-    if(b.spriteAngle>=(MOBILE_RENDER ? .42 : .12)){b.spriteDirty=true;b.spriteAngle=0;}
+    if(b.spriteAngle>=(MOBILE_RENDER ? .24 : .12)){b.spriteDirty=true;b.spriteAngle=0;}
   }
   function update(dt) {
     if(state.stroke&&(state.stroke.age+=dt)>state.stroke.duration)state.stroke=null;
@@ -489,13 +489,16 @@
     const level=aiLevel(),sign=Math.random()<.5?-1:1;
     // Human-like execution uncertainty is visible in the actual shot inputs.
     // It never changes ball mass, cushion response or pocket acceptance.
-    const precision=state.aiDifficulty==='hard'&&(plan.type==='bank'||plan.type==='kick'||plan.type==='snooker')?.25:1;
+    const precision=1;
     const aimError=sign*(.55+Math.random()*.45)*level.angleError*precision*Math.PI/180;
     const powerFactor=1+(Math.random()*2-1)*level.powerError;
     const rounded=(offset=0,factor=1)=>({...plan,aim:Math.round((plan.aim+offset)*180/Math.PI*100)/100*Math.PI/180,power:Math.round(clamp(plan.power*factor,5,100))});
     let actual=rounded(aimError,powerFactor),result=simulateAIShot(actual);
     const attack=['attack','bank','kick'].includes(plan.type);
     const pots=r=>r.safe&&(r.potted||r.winning);
+    // Master accepts its real execution error, rather than retrying the exact
+    // nominal shot until a nominally possible but fragile pot goes in.
+    if(state.aiDifficulty==='hard')return {...actual,executionError:{angleDegrees:(actual.aim-plan.aim)*180/Math.PI,powerPercent:(actual.power/plan.power-1)*100},difficulty:'hard',expectedPot:pots(result),executionVerified:result.safe};
     // Independent execution draws target the long-run rate. There is no
     // per-turn counter, miss quota or forced failure after a pot streak.
     const wantedPot=attack&&Math.random()<level.potRate;
@@ -533,6 +536,15 @@
     const dx=side?0:(p.x===0?-Math.SQRT1_2:Math.SQRT1_2),dy=side?(p.y===0?-1:1):(p.y===0?-Math.SQRT1_2:Math.SQRT1_2);
     return {x:(side?p.x:p.x===0?CUT/2:W-CUT/2)+dx*.3-dy*lateral,y:(side?p.y:p.y===0?CUT/2:H-CUT/2)+dy*.3+dx*lateral};
   }
+  function attackRisk(option,target){
+    const cos=clamp(option.cos,.01,1),cut=Math.acos(cos)*180/Math.PI;
+    const railGap=Math.min(target.x-R,W-R-target.x,target.y-R,H-R-target.y);
+    const longCut=Math.max(0,option.cd-30)*Math.max(0,cut-25)/65;
+    const travelCut=Math.max(0,option.pd-25)*Math.max(0,cut-30)/55;
+    const frozenPenalty=railGap<.6?Math.max(0,cut-25)*(option.cd+option.pd)/100:0;
+    const unrealistic=(railGap<.6&&option.cd+option.pd>85&&cut>55)||(option.cd>45&&option.pd>35&&cut>67);
+    return {risk:longCut+travelCut+frozenPenalty,unrealistic};
+  }
   function aiOptions(targets){
     const c=cue(),options=[];
     for(const target of targets)for(let pocket=0;pocket<6;pocket++)for(const lateral of [0,-.5,.5]){
@@ -542,7 +554,12 @@
       const cd=Math.hypot(gx-c.x,gy-c.y),cos=((gx-c.x)*nx+(gy-c.y)*ny)/Math.max(cd,.01);
       if(gx<R||gx>W-R||gy<R||gy>H-R||cos<.28||!lineClear(c.x,c.y,gx,gy,[0,target.n]))continue;
       // Wide cuts and long object-ball travel are less forgiving than cue travel.
-      options.push({target:target.n,pocket,aim:Math.atan2(gy-c.y,gx-c.x),cd,pd,cos,score:pd*.8+cd*.35+(1-cos)*70+Math.abs(lateral)*2});
+      const option={target:target.n,pocket,aim:Math.atan2(gy-c.y,gx-c.x),cd,pd,cos,score:pd*.8+cd*.35+(1-cos)*70+Math.abs(lateral)*2};
+      if(state.aiDifficulty==='hard'){
+        const assessment=attackRisk(option,target);if(assessment.unrealistic)continue;
+        option.realismRisk=assessment.risk;option.score+=assessment.risk*1.4;
+      }
+      options.push(option);
     }
     return options.sort((a,b)=>a.score-b.score);
   }
@@ -598,7 +615,9 @@
       const nx=(p.x-target.x)/pd,ny=(p.y-target.y)/pd,gx=target.x-2*R*nx,gy=target.y-2*R*ny;
       const cd=Math.hypot(gx-c.x,gy-c.y),cos=((gx-c.x)*nx+(gy-c.y)*ny)/Math.max(cd,.01);
       if(gx<R||gx>W-R||gy<R||gy>H-R||cos<.28||!lineClearIn(balls,c.x,c.y,gx,gy,[0,target.n]))continue;
-      best=Math.min(best,pd*.23+cd*.14+(1-cos)*28);
+      const risk=attackRisk({pd,cd,cos},target);
+      if(state.aiDifficulty==='hard'&&risk.unrealistic)continue;
+      best=Math.min(best,pd*.23+cd*.14+(1-cos)*28+(state.aiDifficulty==='hard'?risk.risk*.65:0));
     }
     const distance=Math.min(...targets.map(b=>Math.hypot(b.x-c.x,b.y-c.y)));
     const railDistance=Math.min(c.x,W-c.x,c.y,H-c.y);
@@ -628,7 +647,11 @@
     // Prefer simpler, controllable strokes when the resulting leave is similar.
     // Strong spin is selected for position, not rewarded for its own sake.
     const spin=Math.hypot(plan.spinX||0,plan.spinY||0);
-    return masterPositionScore(result)+spin*spin*2.5+plan.power*.025+Math.max(0,plan.power-75)*.12;
+    // Prefer a positive stroke for comparable leaves, but allow a soft roll
+    // for a short straight pot. Position and scratch avoidance still dominate.
+    const strokeFloor=clamp(30+((plan.cd||0)+(plan.pd||0))*.15,30,46);
+    const softCost=Math.max(0,strokeFloor-plan.power)*.65;
+    return masterPositionScore(result)+spin*spin*2.5+softCost+Math.max(0,plan.power-78)*.22;
   }
   async function refineMasterPosition(plans,isCurrent){
     const seen=new Set(),candidates=[];
@@ -654,6 +677,17 @@
         refined.push({...plan,score:base.score-base.positionCost+cost,positionCost:cost});
       }
       if(++count%4===0)await new Promise(resolve=>setTimeout(resolve,0));
+    }
+    // Refine the actual contact point locally, not just the preset spin grid.
+    for(const base of seeds.slice(0,2))for(const [dx,dy] of [[-.1,0],[.1,0],[0,-.1],[0,.1]])for(const delta of [-2,0,2]){
+      if(!isCurrent())return null;
+      const sx=clamp((base.spinX||0)+dx,-.95,.95),sy=clamp((base.spinY||0)+dy,-.95,.95);
+      if(Math.hypot(sx,sy)>1)continue;
+      const plan={...spinVariant(base,sx,sy),power:clamp(base.power+delta,8,100)},result=simulateAIShot(plan);
+      if(result.safe&&(result.potted||result.winning)&&validTacticalRoute(plan,result)){
+        const cost=masterStrokeCost(plan,result);refined.push({...plan,score:base.score-base.positionCost+cost,positionCost:cost,positionPlanned:true});
+      }
+      if(++count%2===0)await new Promise(resolve=>setTimeout(resolve,0));
     }
     // Search firmer real strokes with strong English/draw/follow. The extra
     // speed comes from the displayed power, shared with human shots.
@@ -904,11 +938,11 @@
         let result=simulateAIShot(plan);
         if((result.potted||result.winning)&&!result.safe){plan.spinY=-.65;result=simulateAIShot(plan);}
         if(result.safe&&(result.potted||result.winning))successful.push({...plan,winning:result.winning,score:option.score+aiPositionScore(result)+plan.power*.08,positionCost:aiPositionScore(result)});
-        if(++attackTrials%4===0)await new Promise(resolve=>setTimeout(resolve,0));
+        if(++attackTrials%2===0)await new Promise(resolve=>setTimeout(resolve,0));
       }
       await new Promise(resolve=>setTimeout(resolve,0));
     }
-    if(state.aiDifficulty==='hard'&&(!successful.length||Math.min(...successful.map(p=>p.score))>60)){
+    if(state.aiDifficulty==='hard'&&(!successful.length||Math.min(...successful.map(p=>p.score))>60||Math.min(...successful.map(p=>p.realismRisk||0))>12)){
       const tactical=await searchMasterAttacks(targets,isCurrent);if(!isCurrent())return null;successful.push(...tactical);
     }
     successful.sort((a,b)=>a.score-b.score);
@@ -919,13 +953,14 @@
       if(state.aiDifficulty==='hard'){const refined=await refineMasterPosition(finalists,isCurrent);if(!refined)return null;if(refined.length)finalists=refined.slice(0,6);}
       for(const plan of finalists){
         let robust=0;
-        for(const sign of [-1,1]){
+        for(const sign of [-1,1])for(const powerSign of (state.aiDifficulty==='hard'?[-1,1]:[sign])){
           if(!isCurrent())return null;
-          const perturbation=plan.type==='bank'||plan.type==='kick'?.00052:.0015;
-          const result=simulateAIShot({...plan,aim:plan.aim+sign*perturbation,power:clamp(Math.round(plan.power*(1+sign*.015)),8,100)});
+          const perturbation=state.aiDifficulty==='hard'?.0021:.0015;
+          const result=simulateAIShot({...plan,aim:plan.aim+sign*perturbation,power:clamp(Math.round(plan.power*(1+powerSign*.015)),8,100)});
           if(result.safe&&(result.potted||result.winning)&&validTacticalRoute(plan,result))robust++;
         }
-        plan.score+=(2-robust)*12;plan.robustness=robust/2;
+        const checks=state.aiDifficulty==='hard'?4:2;
+        plan.score+=(checks-robust)*12;plan.robustness=robust/checks;
         await new Promise(resolve=>setTimeout(resolve,0));
       }
       finalists.sort((a,b)=>a.score-b.score);
@@ -1238,7 +1273,9 @@
     const tx=2*(q[1]*z-q[2]*y),ty=2*(q[2]*x-q[0]*z),tz=2*(q[0]*y-q[1]*x);
     return [x+q[3]*tx+q[1]*tz-q[2]*ty,y+q[3]*ty+q[2]*tx-q[0]*tz,z+q[3]*tz+q[0]*ty-q[1]*tx];
   }
-  const BALL_SPRITE_SIZE=112,BALL_SPRITE_MID=56,BALL_SPRITE_RADIUS=53.3;
+  // 80 texels cover a phone ball even at high DPR; shading far more texels
+  // than the displayed diameter was the dominant moving-frame cost.
+  const BALL_SPRITE_SIZE=MOBILE_RENDER?80:112,BALL_SPRITE_MID=BALL_SPRITE_SIZE/2,BALL_SPRITE_RADIUS=BALL_SPRITE_SIZE*.476;
   const ballPixelMap=(()=>{
     const cells=[];
     for(let py=0;py<BALL_SPRITE_SIZE;py++)for(let px=0;px<BALL_SPRITE_SIZE;px++){
@@ -1254,7 +1291,7 @@
       const shade=(1-.36*Math.pow(1-z,1.25))*light*grain;
       cells.push([(py*BALL_SPRITE_SIZE+px)*4,u,v,z,shade,255*(highlight+broadHighlight+pinLight+rimBounce),Math.round(255*clamp((1-r2)*BALL_SPRITE_RADIUS*.75,0,1))]);
     }
-    return cells;
+    return new Float32Array(cells.flat());
   })();
   const numberBadges=new Map();
   function numberBadgePixels(n){
@@ -1290,7 +1327,9 @@
     const right=badge?rotated(b.q,1,0,0):null,up=badge?rotated(b.q,0,1,0):null;
     const cueMarks=b.n===0?[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]].map(v=>rotated(b.q,...v)):null;
     const color=PALETTE[b.n<=8?b.n:b.n-8],ivory=[247,241,229];
-    for(const [at,u,v,z,shade,specular,alpha] of ballPixelMap){
+    // Flat typed storage avoids allocating an iterator for every shaded texel.
+    for(let i=0;i<ballPixelMap.length;i+=7){
+      const at=ballPixelMap[i],u=ballPixelMap[i+1],v=ballPixelMap[i+2],z=ballPixelMap[i+3],shade=ballPixelMap[i+4],specular=ballPixelMap[i+5],alpha=ballPixelMap[i+6];
       const signedLatitude=u*pole[0]+v*pole[1]+z*pole[2],latitude=Math.abs(signedLatitude);
       const painted=b.n!==0&&(b.n<=8?latitude<.972:latitude<.52);
       const cueMark=cueMarks?.some(m=>u*m[0]+v*m[1]+z*m[2]>.991);
@@ -1314,7 +1353,7 @@
     b.sprite=sprite;b.spritePixels=pixels;b.spriteDirty=false;
   }
   function drawBall(b,scale=1,worldX=b.x,worldY=b.y,alpha=1,shadow=true){
-    if(!b.sprite||b.spriteDirty)renderBallSprite(b);
+    if(!b.sprite)renderBallSprite(b);
     const {x,y}=worldToScreen(worldX,worldY),rr=DISPLAY_R*SCALE*scale;
     ctx.save();ctx.globalAlpha=alpha;
     const speed=Math.hypot(b.vx,b.vy);
@@ -1322,7 +1361,7 @@
       const trail=Math.min(7,speed*.048),weight=Math.min(.16,speed/900);
       ctx.save();ctx.globalAlpha=alpha*weight;ctx.drawImage(b.sprite,x-rr-b.vx/speed*trail,y-rr-b.vy/speed*trail,rr*2,rr*2);ctx.restore();
     }
-    if(shadow&&!MOBILE_RENDER){ctx.shadowColor='#00111f9e';ctx.shadowBlur=5;ctx.fillStyle='#021b2b8a';ctx.beginPath();ctx.ellipse(x+2.3,y+rr*.69,rr*.9,rr*.35,0,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
+    if(shadow){ctx.shadowColor='#00111f9e';ctx.shadowBlur=MOBILE_RENDER?0:5;ctx.fillStyle='#021b2b8a';ctx.beginPath();ctx.ellipse(x+2.3,y+rr*.69,rr*.9,rr*.35,0,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
     ctx.drawImage(b.sprite,x-rr,y-rr,rr*2,rr*2);
     ctx.restore();
   }
@@ -1517,7 +1556,27 @@
     ctx.beginPath();ctx.arc(mouth.well.x,mouth.well.y,mouth.radius,mouth.start,mouth.end);ctx.stroke();ctx.restore();
   }
   let tableSurface=null;
+  let textureCursor=0;
+  function refreshBallTextures(){
+    const models=[...live(),...state.pocketAnimations.map(a=>a.visual)];
+    let budget=state.phase==='moving'?(MOBILE_RENDER?4:8):models.length;
+    for(let i=0;i<models.length;i++){
+      const b=models[(textureCursor+i)%models.length];
+      if(!b.sprite||(b.spriteDirty&&budget>0)){renderBallSprite(b);budget--;}
+    }
+    if(models.length)textureCursor=(textureCursor+(MOBILE_RENDER?4:8))%models.length;
+  }
+  function resizeRenderBuffer(){
+    const rect=canvas.getBoundingClientRect();
+    const cssWidth=sideways()?rect.height:rect.width,cssHeight=sideways()?rect.width:rect.height;
+    if(!cssWidth||!cssHeight)return;
+    const ratio=clamp(Math.max(cssWidth/VIEW_W,cssHeight/VIEW_H)*deviceScale,MOBILE_RENDER?1.35:1.5,MOBILE_RENDER?1.8:2);
+    if(Math.abs(ratio-PIXEL_RATIO)<.04)return;
+    PIXEL_RATIO=ratio;canvas.width=Math.round(VIEW_W*ratio);canvas.height=Math.round(VIEW_H*ratio);
+    ctx.setTransform(ratio,0,0,ratio,0,0);tableSurface=null;render();
+  }
   function render() {
+    refreshBallTextures();
     if(!tableSurface){
       drawTable();
       tableSurface=document.createElement('canvas');tableSurface.width=canvas.width;tableSurface.height=canvas.height;
@@ -1557,19 +1616,22 @@
     if(state.breaking&&state.repositionAllowed&&Math.hypot(dx,dy)<=R*1.6){state.drag='place-break';return;}
     const behind=-(dx*ax+dy*ay),side=Math.abs(dx*ay-dy*ax);
     if(behind>=2.3&&behind<=27&&side<2.5){state.guidePowerLock=state.power;state.drag={kind:'power',start:p,pull:0,startingPower:state.power};return;}
-    aimAt(p.x,p.y);
-    state.drag={kind:'aim',startAngle:Math.atan2(p.y-c.y,p.x-c.x),startAim:state.aim,startRadius:Math.hypot(dx,dy)};
+    state.drag={kind:'aim',start:p,last:p,startAim:state.aim,travel:0};
   });
   canvas.addEventListener('pointermove',e=>{
     if(!state.drag||state.phase!=='aim')return;const p=pointerWorld(e);
     if(state.drag==='place'||state.drag==='place-break')placeCue(p.x,p.y,false);
     else if(state.drag.kind==='aim'){
-      const c=cue(),angle=Math.atan2(p.y-c.y,p.x-c.x);
-      const delta=Math.atan2(Math.sin(angle-state.drag.startAngle),Math.cos(angle-state.drag.startAngle));
-      state.aim=state.drag.startAim+delta*clamp(state.drag.startRadius/70,.06,.24);requestAimFrame();
+      const drag=state.drag,dx=p.x-drag.last.x,dy=p.y-drag.last.y;
+      const distance=Math.hypot(dx,dy)*SCALE;drag.travel+=distance;drag.last=p;
+      // Tangential displacement avoids the near-cue atan2 singularity and
+      // wraparound jumps. Small movements always use the slowest gain.
+      const gain=.008+Math.min(.020,Math.max(0,distance-8)*.0006);
+      const tangent=(dy*Math.cos(drag.startAim)-dx*Math.sin(drag.startAim))*SCALE;
+      state.aim+=tangent*gain*Math.PI/180;requestAimFrame();
     }else {const d=state.drag.start;const pull=(d.x-p.x)*Math.cos(state.aim)+(d.y-p.y)*Math.sin(state.aim);state.drag.pull=Math.max(0,pull);state.power=state.drag.pull<.7?state.drag.startingPower:clamp(Math.round(5+(state.drag.pull-.7)*5.7),5,100);syncPowerUI();render();}
   });
-  const pointerUp=e=>{if((state.drag==='place'||state.drag==='place-break')&&state.phase==='aim'){const p=pointerWorld(e);if(placeCue(p.x,p.y,false))say('白球位置已预览，可继续调整或确认摆放。');}else if(state.drag?.kind==='power'){const p=pointerWorld(e),d=state.drag.start;state.drag.pull=Math.max(0,(d.x-p.x)*Math.cos(state.aim)+(d.y-p.y)*Math.sin(state.aim));if(state.drag.pull>=1.5){syncPowerUI();fire(false,true);}else{state.power=state.drag.startingPower;state.guidePowerLock=null;syncPowerUI();render();}}state.drag=null;};
+  const pointerUp=e=>{if(state.drag?.kind==='aim'&&state.phase==='aim'&&state.drag.travel<3){const p=pointerWorld(e);aimAt(p.x,p.y);}if((state.drag==='place'||state.drag==='place-break')&&state.phase==='aim'){const p=pointerWorld(e);if(placeCue(p.x,p.y,false))say('白球位置已预览，可继续调整或确认摆放。');}else if(state.drag?.kind==='power'){const p=pointerWorld(e),d=state.drag.start;state.drag.pull=Math.max(0,(d.x-p.x)*Math.cos(state.aim)+(d.y-p.y)*Math.sin(state.aim));if(state.drag.pull>=1.5){syncPowerUI();fire(false,true);}else{state.power=state.drag.startingPower;state.guidePowerLock=null;syncPowerUI();render();}}state.drag=null;};
   canvas.addEventListener('pointerup',pointerUp);canvas.addEventListener('pointercancel',()=>{if(state.drag?.kind==='power'){state.power=state.drag.startingPower;state.guidePowerLock=null;syncPowerUI();render();}state.drag=null;});
   const spinPad=$('spinPad');
   function moveSpinDot(){const dot=$('spinDot');dot.style.left=`${50+state.spinX*36}%`;dot.style.top=`${50-state.spinY*36}%`;if($('strokeReadout'))$('strokeReadout').textContent=strokeName(state);}
@@ -1641,7 +1703,7 @@
   });
   angleRuler.addEventListener('pointermove',e=>{
     if(!angleDrag||angleDrag.id!==e.pointerId)return;
-    state.aim=angleDrag.aim+(rulerAxis(e)-angleDrag.start)*.001*Math.PI/180;
+    state.aim=angleDrag.aim+(rulerAxis(e)-angleDrag.start)*.0005*Math.PI/180;
     requestAimFrame();
   });
   const stopAngleDrag=()=>{angleDrag=null;};
@@ -1727,14 +1789,23 @@
     if(e.key==='ArrowLeft'||e.key==='ArrowRight'){if(e.target===angleRuler)return;e.preventDefault();if(state.opponent==='ai'&&state.turn===1)return;const step=e.shiftKey?.0001:.001;state.aim+=(e.key==='ArrowLeft'?-1:1)*step*Math.PI/180;updateUI();render();}
     if(e.key===' '){e.preventDefault();fire(false,true);}
   });
-  const TARGET_RENDER_INTERVAL=MOBILE_RENDER?1000/120:0;
-  let last=performance.now(),acc=0,manualTime=false,lastRender=0;
-  function frame(now){const elapsed=Math.min(.05,(now-last)/1000);last=now;const active=state.phase==='moving'||state.pocketAnimations.length>0;if(!manualTime){acc+=elapsed;while(acc>=STEP){update(STEP);acc-=STEP;}}if(active&&(!MOBILE_RENDER||now-lastRender>=TARGET_RENDER_INTERVAL-.75)){render();lastRender=now;}requestAnimationFrame(frame);}
+  let last=performance.now(),acc=0,manualTime=false;
+  function frame(now){
+    const elapsed=Math.min(.05,(now-last)/1000);last=now;
+    const active=state.phase==='moving'||state.pocketAnimations.length>0||!!state.stroke;
+    if(!manualTime&&active){acc+=elapsed;while(acc>=STEP){update(STEP);acc-=STEP;}}else acc=0;
+    // Match the display's native refresh; a fixed 120-Hz gate skips alternate
+    // frames on 144-Hz displays. Idle pages need neither physics nor paint.
+    if(active)render();requestAnimationFrame(frame);
+  }
+  window.addEventListener?.('resize',()=>requestAnimationFrame(resizeRenderBuffer));
+  if(window.ResizeObserver)new window.ResizeObserver(()=>requestAnimationFrame(resizeRenderBuffer)).observe(canvas);
+  requestAnimationFrame(resizeRenderBuffer);
   window.advanceTime=ms=>{manualTime=true;acc=0;const steps=Math.ceil(ms/1000/STEP);for(let i=0;i<steps;i++)update(STEP);render();};
   window.render_game_to_text=()=>JSON.stringify({coordinates:`world inches, origin at top-left cushion nose; +x right, +y down; table 100x50; ball diameter ${(2*R).toFixed(4)}; corner mouth ${CORNER_MOUTH}; side mouth ${SIDE_MOUTH}`,mode:state.mode,opponent:state.opponent,aiDifficulty:state.aiDifficulty,aiThinking:state.aiThinking,aiPlan:state.aiPlan?{target:state.aiPlan.target,pocket:state.aiPlan.pocket,type:state.aiPlan.type,spinX:state.aiPlan.spinX||0,spinY:state.aiPlan.spinY||0,snookerPlanned:!!state.aiPlan.snookerPlanned,power:+state.aiPlan.power.toFixed(1),description:state.aiPlan.description}:null,phase:state.phase,turn:state.turn+1,groups:state.groups,scores:state.scores,matchScores:state.matchScores,returnPage:state.returnPage,breaking:state.breaking,rackSeed:state.rackSeed,ballInHand:state.ballInHand,repositionAllowed:state.repositionAllowed,aimDegrees:+(state.aim*180/Math.PI).toFixed(2),power:state.power,spin:[+state.spinX.toFixed(2),+state.spinY.toFixed(2)],balls:state.balls.map(b=>({n:b.n,x:+b.x.toFixed(2),y:+b.y.toFixed(2),vx:+b.vx.toFixed(2),vy:+b.vy.toFixed(2),rollVx:+b.rollVx.toFixed(2),rollVy:+b.rollVy.toFixed(2),sideSpin:+b.spin.toFixed(2),roll:+b.roll.toFixed(2),pocketed:b.pocketed})),status:state.status,winner:state.winner});
   if(new URLSearchParams(location.search).has('test')){
     $('startOverlay').classList.add('hidden');$('menuOverlay').classList.remove('hidden');
-    window.__poolTest={getPocketGeometry(){return POCKET_GEOMETRY.map(p=>({...p,well:{...p.well}}));},getShotSummary(){return {firstHit:state.shot?.firstHit??null,pocketed:state.shot?.pocketed||[]};},getFallAnimations(){return state.pocketAnimations.map(a=>({n:a.visual.n,pocket:a.pocket,age:a.age,duration:a.duration,entryX:a.entryX,entryY:a.entryY,vx:a.vx,vy:a.vy,...pocketAnimationPose(a),q:[...a.visual.q]}));},pocketRollingTest(index=1,angleDegrees=0,speed=6,offMouth=false){
+    window.__poolTest={assessAttack:attackRisk,simulateShot:simulateAIShot,masterStrokeCost,getRenderInfo(){return {ratio:PIXEL_RATIO,textureSize:BALL_SPRITE_SIZE,width:canvas.width,height:canvas.height};},getPocketGeometry(){return POCKET_GEOMETRY.map(p=>({...p,well:{...p.well}}));},getShotSummary(){return {firstHit:state.shot?.firstHit??null,pocketed:state.shot?.pocketed||[]};},getFallAnimations(){return state.pocketAnimations.map(a=>({n:a.visual.n,pocket:a.pocket,age:a.age,duration:a.duration,entryX:a.entryX,entryY:a.entryY,vx:a.vx,vy:a.vy,...pocketAnimationPose(a),q:[...a.visual.q]}));},pocketRollingTest(index=1,angleDegrees=0,speed=6,offMouth=false){
       const p=POCKET_GEOMETRY[index],angle=angleDegrees*Math.PI/180;
       const dx=p.nx*Math.cos(angle)+p.tx*Math.sin(angle),dy=p.ny*Math.cos(angle)+p.ty*Math.sin(angle);
       const distance=Math.min(8,speed*speed/(2*ROLL_DECEL)*.7),offset=offMouth?p.radius+1.4:0;
