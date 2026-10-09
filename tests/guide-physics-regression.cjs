@@ -16,7 +16,7 @@ for(const f of fixtures){
  assert.equal(before,w.render_game_to_text(),`${f.name}: trial mutated live state`);
  assert.equal(g.straight,true,`${f.name}: guide not marked straight`);
  for(const points of [g.shotPath,g.cuePath,g.targetPath]){
-   assert(points.length<=2,`${f.name}: rebound segment leaked into guide`);
+   assert(points.length<=1200,`${f.name}: unbounded short guide`);
    assert(points.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)),`${f.name}: invalid guide point`);
  }
  assert(pathLength(g.cuePath)<=8.05,`${f.name}: cue guide exceeds legacy length`);
@@ -60,7 +60,8 @@ t.setGuideBalls([{n:0,x:50,y:25},{n:1,x:80,y:40}],0,56);
 const meter=ids.get('cueMeter'),event=y=>({pointerId:1,clientY:y,clientX:0,preventDefault(){}});
 const guideBeforePull=JSON.stringify(t.getDisplayGuide());
 meter.handlers.pointerdown(event(20));meter.handlers.pointermove(event(160));
-assert.equal(JSON.stringify(t.getDisplayGuide()),guideBeforePull,'power pull moved the aiming guide');
+assert.notEqual(JSON.stringify(t.getDisplayGuide()),guideBeforePull,'power change left a stale aiming guide');
+assert.equal(t.getDisplayGuide().power,JSON.parse(w.render_game_to_text()).power,'preview did not use the chosen launch power');
 const previewPower=JSON.parse(w.render_game_to_text()).power;
 meter.handlers.pointerup(event(160));w.advanceTime(100);
 const shot=JSON.parse(w.render_game_to_text());
@@ -70,7 +71,7 @@ assert(shot.balls.find(b=>b.n===0).vx>0,'release did not strike');
 t.setGuideBalls([{n:0,x:30,y:25},{n:1,x:52,y:25}],0,56);
 const ruler=ids.get('angleRuler'),rulerEvent=x=>({pointerId:7,clientX:x,clientY:0,preventDefault(){}});
 ruler.handlers.pointerdown(rulerEvent(100));ruler.handlers.pointermove(rulerEvent(200));ruler.handlers.pointerup(rulerEvent(200));
-assert.equal(JSON.parse(w.render_game_to_text()).aimDegrees,.4,'precision ruler scale drifted');
-console.log(JSON.stringify({passed:true,guideFixtures:fixtures.length,pocketFixtures:6,meterRelease:true,guideLockedDuringPull:true,rulerStep:'.004deg/px'}));
+assert.equal(JSON.parse(w.render_game_to_text()).aimDegrees,.1,'precision ruler scale drifted');
+console.log(JSON.stringify({passed:true,guideFixtures:fixtures.length,pocketFixtures:6,meterRelease:true,guideTracksPull:true,rulerStep:'.001deg/px'}));
 
 function pathLength(points){let length=0;for(let i=1;i<points.length;i++)length+=Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y);return length;}

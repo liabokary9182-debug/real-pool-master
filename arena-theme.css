@@ -91,3 +91,109 @@ button:focus-visible{outline:2px solid #e0f7ff;outline-offset:5px}
 @media(prefers-reduced-motion:reduce){
   #mobile-pool-preview .overlay *,#mobile-pool-preview[data-screen="match"] .arena{animation:none!important}
 }
+
+/* A centred stage, with quiet motion around the main invitation. */
+.welcome-shade{background:radial-gradient(ellipse at 50% 43%,#031024ba 0%,#030d218a 35%,#030b2140 65%),linear-gradient(0deg,#03091fe6,transparent 40%,#030a1e55)}
+#mobile-pool-preview #startOverlay.arena-welcome .welcome-copy{inset:0;left:0;top:0;width:100%;max-width:none;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px 70px;text-align:center;z-index:2;animation:welcome-title-in .8s cubic-bezier(.2,.7,.2,1) both;transform-origin:center}
+.welcome-eyebrow{font-size:12px;letter-spacing:5px;color:#b7d9ed;margin:0 0 23px}
+#mobile-pool-preview #welcomeTitle{font-size:clamp(58px,6.6vw,100px)!important;line-height:1.12;letter-spacing:8px;text-shadow:0 4px 28px #001022cc,0 0 55px #8cd5ff24}
+#welcomeTitle small{display:block;font-size:24px;font-weight:500;letter-spacing:12px;margin:0 0 13px;color:#e2eff9}
+#welcomeTitle span{display:block;color:#e4f5ff}
+.welcome-description{font-size:19px;letter-spacing:4px;line-height:1.7;margin:22px 0 0;color:#d1e5f1}
+.welcome-divider{display:flex;gap:15px;align-items:center;margin:21px 0;color:#a1e5fa;font-size:6px;filter:drop-shadow(0 0 5px #6ae6ff)}
+.welcome-divider i{display:block;height:1px;width:58px;background:linear-gradient(90deg,transparent,#a1e5fa)}
+.welcome-divider i:last-child{transform:rotate(180deg)}
+.welcome-enter{position:relative;min-width:256px;min-height:60px;padding:15px 25px;font-size:18px;letter-spacing:4px;box-shadow:0 8px 45px #51cfff26,inset 0 1px #fff9;overflow:hidden}
+.welcome-enter:before{content:'';position:absolute;inset:0;background:linear-gradient(100deg,transparent 35%,#fff8 50%,transparent 65%);transform:translateX(-130%);animation:welcome-button-glint 6s ease-in-out infinite;pointer-events:none}
+.welcome-modes{margin-top:22px;font-size:13px;letter-spacing:1.5px;color:#c3d7e7}
+.welcome-bottom{font-size:11px;letter-spacing:3px;color:#b5cbe1}
+.welcome-atmosphere{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1}
+.welcome-beam{position:absolute;top:-50%;width:19%;height:140%;background:linear-gradient(180deg,#b3eaff23,transparent 90%);clip-path:polygon(47% 0,53% 0,100% 100%,0 100%);transform-origin:50% 0;animation:welcome-light-sway 12s ease-in-out infinite alternate}
+.beam-left{left:24%;--beam-start:20deg;--beam-end:35deg}.beam-right{right:24%;--beam-start:-20deg;--beam-end:-35deg;animation-delay:-6s}
+.welcome-orbit{position:absolute;top:52%;width:190px;height:190px;transform:translateY(-50%)}
+.orbit-left{left:6%}.orbit-right{right:6%}
+.orbit-ring{position:absolute;inset:0;border:1px solid #a0d7ee33;border-radius:50%;transform:rotate(-25deg);animation:welcome-orbit-turn 26s linear infinite}
+.orbit-ring:before{content:'';position:absolute;inset:17px;border:1px dashed #a0d7ee25;border-radius:50%}
+.orbit-ring:after{content:'';position:absolute;top:19px;right:23px;width:7px;height:7px;border-radius:50%;background:#b4e9f5;box-shadow:0 0 13px #65ceff}
+.orbit-right .orbit-ring{animation-direction:reverse;animation-duration:32s}
+.welcome-ball{position:absolute;left:50%;top:50%;width:63px;height:63px;margin:-32px;display:grid;place-items:center;border-radius:50%;font:700 23px Georgia,serif;box-shadow:inset -12px -12px 19px #000c,0 16px 27px #0008;animation:welcome-ball-float 5s ease-in-out infinite}
+.ball-eight{color:#203044;background:radial-gradient(circle at 50% 48%,#f4f1d6 0 22%,transparent 23%),radial-gradient(circle at 29% 22%,#647582,#131b26 52%,#03080e)}
+.ball-nine{color:#3f3012;background:radial-gradient(circle at 50% 48%,#f4efda 0 22%,transparent 23%),linear-gradient(0deg,#ebe8d8 0 19%,transparent 20% 80%,#ebe8d8 81%),radial-gradient(circle at 29% 22%,#ffe3a0,#b18332 62%,#392615);animation-delay:-2.5s}
+.orbit-caption{position:absolute;top:calc(100% + 20px);left:0;width:100%;font-size:12px;letter-spacing:5px;color:#bad5e3;text-align:center}
+.welcome-dust{position:absolute;inset:0}
+.welcome-dust i{position:absolute;width:3px;height:3px;border-radius:50%;background:#c9eeff;opacity:0;box-shadow:0 0 9px #8cdeff;animation:welcome-dust-drift 9s ease-in-out infinite}
+.welcome-dust i:nth-child(1){left:12%;top:67%;animation-delay:-0.0s}
+.welcome-dust i:nth-child(2){left:24%;top:82%;animation-delay:-0.8s}
+.welcome-dust i:nth-child(3){left:38%;top:74%;animation-delay:-1.7s}
+.welcome-dust i:nth-child(4){left:62%;top:81%;animation-delay:-2.5s}
+.welcome-dust i:nth-child(5){left:74%;top:63%;animation-delay:-3.4s}
+.welcome-dust i:nth-child(6){left:88%;top:77%;animation-delay:-4.2s}
+.welcome-dust i:nth-child(7){left:18%;top:36%;animation-delay:-5.1s}
+.welcome-dust i:nth-child(8){left:82%;top:31%;animation-delay:-6.0s}
+.welcome-dust i:nth-child(9){left:32%;top:21%;animation-delay:-6.8s}
+.welcome-dust i:nth-child(10){left:68%;top:17%;animation-delay:-7.6s}
+
+@keyframes welcome-title-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes welcome-light-sway{from{transform:rotate(var(--beam-start));opacity:.45}to{transform:rotate(var(--beam-end));opacity:1}}
+@keyframes welcome-orbit-turn{to{transform:rotate(335deg)}}
+@keyframes welcome-ball-float{0%,100%{transform:translateY(5px) rotate(-7deg)}50%{transform:translateY(-6px) rotate(7deg)}}
+@keyframes welcome-dust-drift{0%,100%{opacity:0;transform:translateY(12px)}40%{opacity:.45}75%{opacity:.12;transform:translateY(-32px)}}
+@keyframes welcome-button-glint{0%,72%{transform:translateX(-130%)}90%,100%{transform:translateX(130%)}}
+#startOverlay.hidden .welcome-atmosphere *,#startOverlay.hidden .welcome-enter:before{animation-play-state:paused}
+@media(max-width:1000px){.welcome-orbit{width:135px;height:135px}.orbit-left{left:3%}.orbit-right{right:3%}.welcome-ball{width:48px;height:48px;margin:-24px;font-size:18px}.orbit-caption{letter-spacing:2px;font-size:10px}}
+@media(max-height:550px){
+  #mobile-pool-preview #startOverlay.arena-welcome .welcome-copy{padding:44px 16px 36px}
+  #mobile-pool-preview #welcomeTitle{font-size:clamp(42px,6.5vw,64px)!important;letter-spacing:5px}
+  #welcomeTitle small{font-size:16px;letter-spacing:8px;margin-bottom:8px}
+  .welcome-top{top:5%}.welcome-brand{font-size:17px}.welcome-brand small{font-size:8px;margin-top:4px}
+  .welcome-eyebrow{font-size:9px;letter-spacing:3px;margin-bottom:12px}
+  .welcome-description{font-size:14px;line-height:1.5;letter-spacing:2px;margin:12px 0 0}
+  .welcome-divider{margin:12px 0}.welcome-enter{min-width:218px;min-height:46px;font-size:16px;padding:10px 20px}
+  .welcome-modes{font-size:10px;margin-top:13px;letter-spacing:.5px}.welcome-bottom{bottom:4%;padding-top:9px;font-size:9px}
+  .welcome-orbit{width:110px;height:110px;top:51%}.orbit-caption{top:calc(100% + 12px)}
+}
+@media(max-height:365px){.welcome-description{display:none}.welcome-eyebrow{margin-bottom:8px}.welcome-modes{margin-top:8px}.welcome-divider{margin:10px 0}.welcome-top{top:4%}.welcome-bottom{bottom:3%}.welcome-orbit{width:88px;height:88px}}
+@media(prefers-reduced-motion:reduce){#mobile-pool-preview #startOverlay.arena-welcome *,#mobile-pool-preview #startOverlay.arena-welcome .welcome-enter:before{animation:none!important;transition:none!important}}
+
+/* The enlarged cue-ball editor uses the same landscape surface as the table. */
+#mobile-pool-preview #spinOverlay{z-index:230;display:flex;align-items:center;justify-content:center;padding:12px;height:100%;max-height:100%;background:#030a18e8;overflow:auto;backdrop-filter:blur(8px)}
+#mobile-pool-preview #spinOverlay.hidden{display:none}
+.spin-editor-card{position:relative;display:flex;align-items:center;flex-direction:column;width:min(480px,96%);padding:20px 40px 18px;border:1px solid #8dcbd754;border-radius:20px;background:radial-gradient(ellipse at 50% 35%,#193c4f,#071826 72%);box-shadow:0 24px 80px #0009;text-align:center;color:#dbeff4;--editor-ball-size:clamp(150px,calc(var(--landscape-height,100svh) - 210px),280px)}
+.spin-editor-card h2{margin:0;font-size:23px;letter-spacing:3px}.spin-editor-hint{margin:7px 0 19px;font-size:12px;color:#a8c7d6;letter-spacing:1px}
+.spin-editor-close{position:absolute;top:9px;right:12px;width:32px;height:32px;border:0;border-radius:50%;background:transparent;color:#bbd0dc;font-size:25px}
+.spin-editor-field{position:relative;margin:6px 30px 22px}
+#mobile-pool-preview .spin-editor-ball{position:relative;width:var(--editor-ball-size);height:var(--editor-ball-size);border-radius:50%;border:1px solid #e7f4f3;background:radial-gradient(circle at 34% 25%,#fffef5,#f0eee0 44%,#c5d3d4 74%,#759da7);box-shadow:inset -15px -18px 26px #244c5759,0 17px 28px #0009,0 0 30px #77d2df22;cursor:crosshair;touch-action:none;outline:none}
+.spin-editor-ball:focus-visible{outline:2px solid #d9fbff!important;outline-offset:6px}
+.spin-safe-zone{position:absolute;inset:14%;border:1px dashed #49697054;border-radius:50%;pointer-events:none}
+#mobile-pool-preview .spin-editor-ball .spin-cross{position:absolute;inset:0;pointer-events:none;opacity:.55}
+#mobile-pool-preview .spin-editor-ball .spin-cross:before{content:'';position:absolute;top:50%;left:17%;width:66%;height:1px;background:#47687169}
+#mobile-pool-preview .spin-editor-ball .spin-cross:after{content:'';position:absolute;left:50%;top:17%;height:66%;width:1px;background:#47687169}
+#mobile-pool-preview #spinEditorDot{position:absolute;left:50%;top:50%;width:18px;height:18px;border:2px solid #effdff;border-radius:50%;transform:translate(-50%,-50%);background:#2e7489;box-shadow:0 0 0 4px #56bbcb33,0 2px 8px #14222c66;pointer-events:none}
+.spin-label{position:absolute;color:#b0ccda;font-size:12px;letter-spacing:2px;white-space:nowrap}.spin-high{bottom:calc(100% + 7px);left:50%;transform:translateX(-50%)}.spin-low{top:calc(100% + 7px);left:50%;transform:translateX(-50%)}.spin-left{right:calc(100% + 12px);top:50%;transform:translateY(-50%)}.spin-right{left:calc(100% + 12px);top:50%;transform:translateY(-50%)}
+.spin-editor-readout b{display:block;color:#e5fbff;font-size:16px;letter-spacing:1px}.spin-editor-readout small{display:block;margin:5px 0 12px;color:#94b5c7;font-size:11px}
+.spin-editor-actions{display:flex;align-items:center;justify-content:center;gap:12px;width:100%}.spin-editor-actions button{height:44px;border-radius:9px;min-width:74px;border:1px solid #98c8d642;background:#d1eef508;color:#a7c6d1;font-size:14px}
+#confirmSpin{min-width:164px;background:linear-gradient(115deg,#d8f7f2,#8bd5de);border:1px solid #c5f8f5;color:#10303d;font-size:16px;font-weight:700;letter-spacing:3px}#confirmSpin span{font-size:23px;vertical-align:-2px}
+@media(max-height:500px){.spin-editor-card{padding:13px 38px 12px}.spin-editor-card h2{font-size:18px}.spin-editor-hint{font-size:10px;margin:4px 0 14px}.spin-editor-field{margin-bottom:18px}.spin-label{font-size:10px}.spin-editor-readout b{font-size:13px}.spin-editor-readout small{font-size:10px;margin:3px 0 9px}.spin-editor-actions button{height:40px}}
+
+/* Phone browsers can keep a portrait viewport while the surface is rotated. */
+#mobile-pool-preview.phone-landscape #startOverlay.arena-welcome .welcome-copy{padding:44px 16px 36px}
+#mobile-pool-preview.phone-landscape #welcomeTitle{font-size:clamp(42px,calc(var(--landscape-width,100vw) * .065),64px)!important;letter-spacing:5px}
+#mobile-pool-preview.phone-landscape #welcomeTitle small{font-size:16px;letter-spacing:8px;margin-bottom:8px}
+#mobile-pool-preview.phone-landscape .welcome-top{top:5%}
+#mobile-pool-preview.phone-landscape .welcome-eyebrow{font-size:9px;letter-spacing:3px;margin-bottom:12px}
+#mobile-pool-preview.phone-landscape .welcome-description{font-size:14px;line-height:1.5;letter-spacing:2px;margin:12px 0 0}
+#mobile-pool-preview.phone-landscape .welcome-divider{margin:12px 0}
+#mobile-pool-preview.phone-landscape .welcome-enter{min-width:218px;min-height:46px;font-size:16px;padding:10px 20px}
+#mobile-pool-preview.phone-landscape .welcome-modes{font-size:10px;margin-top:13px;letter-spacing:.5px}
+#mobile-pool-preview.phone-landscape .welcome-bottom{bottom:4%;padding-top:9px;font-size:9px}
+#mobile-pool-preview.phone-landscape .welcome-orbit{width:110px;height:110px;top:51%}
+#mobile-pool-preview.phone-landscape .orbit-caption{top:calc(100% + 12px);font-size:10px;letter-spacing:2px}
+#mobile-pool-preview.phone-landscape .welcome-ball{width:48px;height:48px;margin:-24px;font-size:18px}
+#mobile-pool-preview.phone-landscape .spin-editor-card{padding:13px 38px 12px}
+#mobile-pool-preview.phone-landscape .spin-editor-card h2{font-size:18px}
+#mobile-pool-preview.phone-landscape .spin-editor-hint{font-size:10px;margin:4px 0 14px}
+#mobile-pool-preview.phone-landscape .spin-editor-field{margin-bottom:18px}
+#mobile-pool-preview.phone-landscape .spin-label{font-size:10px}
+#mobile-pool-preview.phone-landscape .spin-editor-readout b{font-size:13px}
+#mobile-pool-preview.phone-landscape .spin-editor-readout small{font-size:10px;margin:3px 0 9px}
+#mobile-pool-preview.phone-landscape .spin-editor-actions button{height:40px}

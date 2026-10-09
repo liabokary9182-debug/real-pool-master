@@ -7,6 +7,7 @@
   let context=null,effects=null,limiter=null,meter=null,recordings=[],loading=null,effectLoading=null;
   let lastBall=0,noiseBuffer=null;
   let nativeUnlocked=false,nativeWarning=false;
+  const nativeTickets=new WeakMap();
   let introWanted=true,introFadeTicket=0;
   let gameMusicBuffer=null,gameMusicLoading=null,gameMusicWanted=false,gameMusicMaster=null,gameMusicTimer=null,gameMusicNextStart=0;
   const gameMusicSources=new Set();
@@ -17,7 +18,7 @@
     cue:['./sounds/cue-soft.wav'],
     ball:['./sounds/ball-soft-1.wav','./sounds/ball-soft-2.wav','./sounds/ball-soft-3.wav'],
     rail:['./sounds/rail-soft.wav'],
-    pocket:['./sounds/pocket-crisp.wav']
+    pocket:['./sounds/pocket-leather.wav']
   };
   const nativePools={},nativeCursor={cue:0,ball:0,rail:0,pocket:0};
   const decodedPools={cue:[],ball:[],rail:[],pocket:[]},decodedCursor={cue:0,ball:0,rail:0,pocket:0};
@@ -31,9 +32,10 @@
     if(nativeUnlocked)return;
     nativeUnlocked=true;
     for(const pool of Object.values(nativePools))for(const channel of pool){
+      const ticket=(nativeTickets.get(channel)||0)+1;nativeTickets.set(channel,ticket);
       channel.muted=true;channel.currentTime=0;
       const started=channel.play();
-      if(started?.then)started.then(()=>{channel.pause();channel.currentTime=0;channel.muted=false;}).catch(()=>{channel.muted=false;nativeUnlocked=false;});
+      if(started?.then)started.then(()=>{if(nativeTickets.get(channel)!==ticket)return;channel.pause();channel.currentTime=0;channel.muted=false;}).catch(()=>{if(nativeTickets.get(channel)!==ticket)return;channel.muted=false;nativeUnlocked=false;});
       else{channel.pause();channel.currentTime=0;channel.muted=false;}
     }
   }
@@ -98,8 +100,9 @@
   function nativeEffect(kind,weight,delay=0,tail=false){
     const run=()=>{
       const pool=nativePools[kind],channel=pool[nativeCursor[kind]++%pool.length];
+      nativeTickets.set(channel,(nativeTickets.get(channel)||0)+1);
       channel.pause();channel.currentTime=0;channel.muted=false;
-      channel.playbackRate=kind==='cue'?.98:kind==='rail'?.94:kind==='pocket'?.96:.97+.06*weight;
+      channel.playbackRate=kind==='cue'?.98:kind==='rail'?.94:kind==='pocket'?1:.97+.06*weight;
       channel.volume=(kind==='cue'?.65:kind==='ball'?.78:kind==='rail'?.55:.80)*weight*(tail?.24:1);
       const started=channel.play();
       if(started?.catch)return started.catch(error=>{if(!nativeWarning){nativeWarning=true;console.warn('本地碰撞音效未能播放，改用合成备用音。',error);}throw error;});
@@ -115,11 +118,17 @@
     const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
     const at=context.currentTime+delay;
     source.buffer=pool[decodedCursor[kind]++%pool.length];
-    source.playbackRate.value=kind==='cue'?.98:kind==='rail'?.94:kind==='pocket'?.96:.97+.06*weight;
-    filter.type='lowpass';filter.frequency.value=kind==='ball'?5800:kind==='cue'?4200:kind==='rail'?2400:7800;
+    source.playbackRate.value=kind==='cue'?.98:kind==='rail'?.94:kind==='pocket'?1:.97+.06*weight;
+    filter.type='lowpass';filter.frequency.value=kind==='ball'?5800:kind==='cue'?4200:kind==='rail'?2400:3400;
     const volume=(kind==='cue'?.65:kind==='ball'?.78:kind==='rail'?.55:.80)*weight*(tail?.24:1);
     gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),at+.0008);
-    gain.gain.exponentialRampToValueAtTime(.0001,at+Math.min(.14,source.buffer.duration/source.playbackRate.value));
+    if(kind==='pocket'){
+      // The recording already contains its natural decay. Preserve the body
+      // and fabric tail instead of applying a second steep exponential fade.
+      const length=source.buffer.duration/source.playbackRate.value;
+      gain.gain.setValueAtTime(Math.max(.0002,volume),at+Math.max(.002,length-.018));
+      gain.gain.linearRampToValueAtTime(.0001,at+length);
+    }else gain.gain.exponentialRampToValueAtTime(.0001,at+Math.min(.14,source.buffer.duration/source.playbackRate.value));
     source.connect(filter);filter.connect(gain);gain.connect(effects);
     source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect();};source.start(at);
     return true;
@@ -149,7 +158,7 @@
         if(!response.ok)throw Error(`Game music: HTTP ${response.status}`);return response.arrayBuffer();
       }).then(data=>context.decodeAudioData(data)).then(buffer=>{gameMusicBuffer=buffer;}).catch(error=>console.warn('对局背景音乐未加载。',error));
     }
-    if(context.state==='suspended')context.resume().catch(()=>{});
+    if(context.state==='suspended'||context.state==='interrupted')context.resume().catch(()=>{});
     return true;
   }
   function prepareClack(buffer){
@@ -208,14 +217,14 @@
     if(kind==='cue'){softImpact(at,weight,.035,3000,.13);tone(at,620,310,.04,.065*weight);tone(at,150,85,.05,.02*weight);}
     else if(kind==='ball'){softImpact(at,weight,.018,3000+1800*weight,.13);tone(at,720,560,.02,.018*weight,'sine');}
   }
-  function duckMusic(){
-    if(gameMusicMaster&&gameMusicWanted&&context){const now=context.currentTime;gameMusicMaster.gain.cancelScheduledValues(now);gameMusicMaster.gain.setTargetAtTime(.10,now,.018);gameMusicMaster.gain.setTargetAtTime(.20,now+.22,.055);}
+  function duckMusic(pocket=false){
+    if(gameMusicMaster&&gameMusicWanted&&context){const now=context.currentTime;gameMusicMaster.gain.cancelScheduledValues(now);gameMusicMaster.gain.setTargetAtTime(pocket?.055:.10,now,.012);gameMusicMaster.gain.setTargetAtTime(.20,now+(pocket?.32:.22),.055);}
   }
   function play(kind,impact=20){
     if(!(kind in effectStats))return;
     effectStats[kind]++;
     const hasContext=ensureContext();
-    const weight=Math.pow(Math.max(0,Math.min(1,impact/90)),.65);
+    const weight=kind==='pocket'?.68+.32*Math.sqrt(Math.max(0,Math.min(1,impact/140))):Math.pow(Math.max(0,Math.min(1,impact/90)),.65);
     if(weight<.025)return;
     const at=hasContext?context.currentTime:performance.now()/1000,gap=kind==='ball'?.009:kind==='rail'?.025:kind==='pocket'?0:.02;
     // A soft contact must not suppress a much harder rack collision.
@@ -230,7 +239,12 @@
     }else if(kind==='rail'){
       if(hasContext){softImpact(at,weight,.06,650,.065);tone(at,145,70,.07,.045*weight);}
     }else{
-      native.catch(()=>{if(hasContext)softImpact(at,weight,.075,5200,.22);});
+      duckMusic(true);
+      native.catch(async()=>{
+        if(!hasContext)return;
+        try{await context.resume();}catch{}
+        if(!bufferedEffect(kind,weight))softImpact(context.currentTime,weight,.16,1800,.34);
+      });
     }
   }
   function unlockAudio(){unlockNative();return ensureContext();}

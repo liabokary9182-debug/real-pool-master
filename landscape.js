@@ -14,7 +14,7 @@
     // Orientation APIs never decide whether the game is visible or playable.
     const sideways = phone && width < height;
     if (sideways !== root.classList.contains('is-landscape')) {
-      for (const id of ['game', 'cueMeter', 'angleRuler']) document.getElementById(id)?.dispatchEvent(new Event('pointercancel'));
+      for (const id of ['game', 'cueMeter', 'angleRuler', 'spinEditorBall']) document.getElementById(id)?.dispatchEvent(new Event('pointercancel'));
     }
     root.classList.remove('orientation-blocked');
     root.classList.toggle('phone-landscape', phone);

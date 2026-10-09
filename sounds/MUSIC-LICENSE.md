@@ -20,3 +20,7 @@ https://enzalla.bandcamp.com/track/lullaby
 ## Pocket impact update (2026-10-09)
 
 `pocket-crisp.wav` is a 125 ms mono 44.1 kHz derivative of the existing public-domain `ball-clack-2.wav` collision recording: onset trimming, short exponential decay, and original damped 235/670 Hz body resonances. No new third-party recording was added. The game plays this single impact when the falling ball reaches the modeled bottom, without the old duplicate delayed synthetic impact. Existing collision provenance is documented in README.md (Dsw4, Pool Sounds.ogg, Wikimedia Commons).
+
+## Leather pocket update (2026-10-09)
+
+`pocket-leather.wav` is a 300 ms mono 44.1 kHz derivative of the existing `pocket-soft.wav` (collision recording provenance: README.md). A 2.9 kHz low-pass and a restrained original broad-band fabric tail replace the sharp, short ringing impression. No new third-party recording is added; the old crisp file remains an unused revision asset. Runtime playback preserves the authored decay and uses a minimum pocket gain plus brief music ducking.
