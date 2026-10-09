@@ -8,7 +8,7 @@
   // collision solver still runs at 180 Hz, so rendering gains do not alter play.
   const MOBILE_RENDER=window.matchMedia?.('(pointer:coarse)').matches??false;
   const deviceScale=window.devicePixelRatio||1;
-  let PIXEL_RATIO=Math.min(MOBILE_RENDER?1.8:2,Math.max(MOBILE_RENDER?1.35:1.5,deviceScale*.65));
+  let PIXEL_RATIO=Math.min(MOBILE_RENDER?2:2.25,Math.max(MOBILE_RENDER?1.5:1.75,deviceScale*.65));
   canvas.width=Math.round(VIEW_W*PIXEL_RATIO);canvas.height=Math.round(VIEW_H*PIXEL_RATIO);
   ctx.setTransform(PIXEL_RATIO,0,0,PIXEL_RATIO,0,0);
   const W = 100, H = 50, HEAD_LINE = W/4, R = 1.125*1.05*1.05, DISPLAY_R = R;
@@ -1350,21 +1350,22 @@
   }
   // 80 texels cover a phone ball even at high DPR; shading far more texels
   // than the displayed diameter was the dominant moving-frame cost.
-  const BALL_SPRITE_SIZE=MOBILE_RENDER?80:112,BALL_SPRITE_MID=BALL_SPRITE_SIZE/2,BALL_SPRITE_RADIUS=BALL_SPRITE_SIZE*.476;
+  const BALL_SPRITE_SIZE=MOBILE_RENDER?96:128,BALL_SPRITE_MID=BALL_SPRITE_SIZE/2,BALL_SPRITE_RADIUS=BALL_SPRITE_SIZE*.476;
   const ballPixelMap=(()=>{
     const cells=[];
     for(let py=0;py<BALL_SPRITE_SIZE;py++)for(let px=0;px<BALL_SPRITE_SIZE;px++){
       const u=(px+.5-BALL_SPRITE_MID)/BALL_SPRITE_RADIUS,v=(py+.5-BALL_SPRITE_MID)/BALL_SPRITE_RADIUS,r2=u*u+v*v;
       if(r2>=1)continue;
       const z=Math.sqrt(1-r2),diffuse=Math.max(0,-u*.39-v*.5+z*.79),light=.49+.55*diffuse;
-      const highlight=Math.pow(Math.max(0,-u*.45-v*.59+z*.68),98)*.72;
-      const broadHighlight=Math.pow(Math.max(0,-u*.48-v*.57+z*.66),14)*.12;
+      const highlight=Math.pow(Math.max(0,-u*.45-v*.59+z*.68),112)*.88;
+      const broadHighlight=Math.pow(Math.max(0,-u*.48-v*.57+z*.66),18)*.17;
       // Small overhead reflections make the resin read as polished and dense.
       const pinLight=Math.exp(-(((u+.36)/.065)**2+((v+.43)/.08)**2))*.38;
       const rimBounce=Math.pow(Math.max(0,u*.47+v*.31+z*.26),9)*.095;
-      const grain=1+((((px*37+py*71)%17)-8)*.0012);
+      const panelLight=Math.exp(-(((u+.22)/.17)**8+((v+.48)/.035)**4))*.28;
+      const grain=1+((((px*37+py*71)%17)-8)*.00035);
       const shade=(1-.36*Math.pow(1-z,1.25))*light*grain;
-      cells.push([(py*BALL_SPRITE_SIZE+px)*4,u,v,z,shade,255*(highlight+broadHighlight+pinLight+rimBounce),Math.round(255*clamp((1-r2)*BALL_SPRITE_RADIUS*.75,0,1))]);
+      cells.push([(py*BALL_SPRITE_SIZE+px)*4,u,v,z,shade,255*(highlight+broadHighlight+pinLight+rimBounce+panelLight),Math.round(255*clamp((1-r2)*BALL_SPRITE_RADIUS*.75,0,1))]);
     }
     return new Float32Array(cells.flat());
   })();
@@ -1427,10 +1428,29 @@
     sc.putImageData(pixels,0,0);
     b.sprite=sprite;b.spritePixels=pixels;b.spriteDirty=false;
   }
+  function traceBallSupport(){
+    const points=[[CUT,0],[W-CUT,0],[W,CUT],[W,H-CUT],[W-CUT,H],[CUT,H],[0,H-CUT],[0,CUT]];
+    ctx.beginPath();points.forEach(([x,y],i)=>{const q=worldToScreen(x,y);i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y);});ctx.closePath();
+    for(const p of POCKET_GEOMETRY){const q=worldToScreen(p.well.x,p.well.y);ctx.moveTo(q.x+(p.radius*SCALE+3.5),q.y);ctx.arc(q.x,q.y,p.radius*SCALE+3.5,0,Math.PI*2);}
+  }
+  function drawPocketForeground(){
+    const affected=POCKET_GEOMETRY.filter(p=>live().some(b=>Math.hypot(b.x-p.mx,b.y-p.my)<p.radius+R+1.1)||state.pocketAnimations.some(a=>a.pocket===p.index));
+    if(!affected.length)return;
+    ctx.save();ctx.beginPath();
+    for(const p of affected)for(const face of p.faces){
+      const a=worldToScreen(face.ax,face.ay),b=worldToScreen(face.bx,face.by);
+      const horizontalFace=Math.abs(face.ay)<1e-6||Math.abs(face.ay-H)<1e-6;
+      const offsetX=horizontalFace?(face.ax>p.mx?-17:17):(face.ax<W/2?-27:27);
+      const offsetY=horizontalFace?(face.ay<H/2?-27:27):(face.ay>p.my?-17:17);
+      ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.quadraticCurveTo(b.x-p.nx*5,b.y-p.ny*5,b.x-p.nx*10,b.y-p.ny*10);ctx.lineTo(a.x+offsetX,a.y+offsetY);ctx.closePath();
+    }
+    ctx.clip();blitTable();ctx.restore();
+  }
   function drawBall(b,scale=1,worldX=b.x,worldY=b.y,alpha=1,shadow=true){
     if(!b.sprite)renderBallSprite(b);
     const {x,y}=worldToScreen(worldX,worldY),rr=DISPLAY_R*SCALE*scale;
     ctx.save();ctx.globalAlpha=alpha;
+    if(scale===1&&POCKET_GEOMETRY.some(p=>Math.hypot(worldX-p.mx,worldY-p.my)<p.radius+R+1.1)){traceBallSupport();ctx.clip();}
     const speed=Math.hypot(b.vx,b.vy);
     if(!MOBILE_RENDER&&state.phase==='moving'&&scale===1&&speed>28){
       const trail=Math.min(7,speed*.048),weight=Math.min(.16,speed/900);
@@ -1591,24 +1611,29 @@
     ctx.beginPath();ctx.arc(mouth.well.x,mouth.well.y,mouth.radius,mouth.start,mouth.end);ctx.stroke();ctx.restore();
   }
   let tableSurface=null;
-  let textureCursor=0;
+  let textureCursor=0,textureBudget=MOBILE_RENDER?2:6;
   function refreshBallTextures(){
     const models=[...live(),...state.pocketAnimations.map(a=>a.visual)];
-    let budget=state.phase==='moving'?(MOBILE_RENDER?4:8):models.length;
+    let budget=state.phase==='moving'?textureBudget:models.length;
     for(let i=0;i<models.length;i++){
       const b=models[(textureCursor+i)%models.length];
       if(!b.sprite||(b.spriteDirty&&budget>0)){renderBallSprite(b);budget--;}
     }
-    if(models.length)textureCursor=(textureCursor+(MOBILE_RENDER?4:8))%models.length;
+    if(models.length)textureCursor=(textureCursor+textureBudget)%models.length;
   }
   function resizeRenderBuffer(){
     const rect=canvas.getBoundingClientRect();
     const cssWidth=sideways()?rect.height:rect.width,cssHeight=sideways()?rect.width:rect.height;
     if(!cssWidth||!cssHeight)return;
-    const ratio=clamp(Math.max(cssWidth/VIEW_W,cssHeight/VIEW_H)*deviceScale,MOBILE_RENDER?1.35:1.5,MOBILE_RENDER?1.8:2);
+    const ratio=clamp(Math.max(cssWidth/VIEW_W,cssHeight/VIEW_H)*deviceScale,MOBILE_RENDER?1.5:1.75,MOBILE_RENDER?2:2.25);
     if(Math.abs(ratio-PIXEL_RATIO)<.04)return;
     PIXEL_RATIO=ratio;canvas.width=Math.round(VIEW_W*ratio);canvas.height=Math.round(VIEW_H*ratio);
     ctx.setTransform(ratio,0,0,ratio,0,0);tableSurface=null;tableBackdrop=null;render();
+  }
+  function blitTable(){
+    // Copy the cached backing buffer at integer device pixels. Mapping it
+    // through rounded CSS dimensions needlessly resamples millions of pixels.
+    ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(tableSurface,0,0);ctx.restore();
   }
   function render() {
     refreshBallTextures();
@@ -1616,11 +1641,12 @@
       drawTable();
       tableSurface=document.createElement('canvas');tableSurface.width=canvas.width;tableSurface.height=canvas.height;
       tableSurface.getContext('2d').drawImage(canvas,0,0);
-    }else ctx.drawImage(tableSurface,0,0,VIEW_W,VIEW_H);
+    }else blitTable();
     drawAim();for(const b of live())drawBall(b);drawStroke();
     for(const a of state.pocketAnimations){
       drawPocketEffect(a);
     }
+    drawPocketForeground();
     if(state.ballInHand){const c=cue(),p=worldToScreen(c.x,c.y);ctx.strokeStyle='#fff4a3';ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.beginPath();ctx.arc(p.x,p.y,24,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);}
     if(state.aiThinking&&state.phase==='aim'&&!state.aiPlan){
       ctx.save();ctx.fillStyle='rgba(5,20,30,.85)';ctx.strokeStyle='rgba(130,234,255,.62)';ctx.lineWidth=1.5;
@@ -1877,7 +1903,10 @@
     if(!manualTime&&active){acc+=elapsed;while(acc>=STEP){update(STEP);acc-=STEP;}}else acc=0;
     // Match the display's native refresh; a fixed 120-Hz gate skips alternate
     // frames on 144-Hz displays. Idle pages need neither physics nor paint.
-    if(active)render();requestAnimationFrame(frame);
+    if(active){const started=performance.now();render();const paintTime=performance.now()-started;
+      if(paintTime>10)textureBudget=Math.max(1,textureBudget-1);
+      else if(paintTime<4)textureBudget=Math.min(MOBILE_RENDER?4:8,textureBudget+1);
+    }requestAnimationFrame(frame);
   }
   window.addEventListener?.('resize',()=>requestAnimationFrame(resizeRenderBuffer));
   if(window.ResizeObserver)new window.ResizeObserver(()=>requestAnimationFrame(resizeRenderBuffer)).observe(canvas);
@@ -1933,16 +1962,6 @@
     state.aiTicket++;state.aiThinking=false;state.aiPlan=null;state.mode='nine';state.opponent='local';state.phase='aim';state.turn=0;state.breaking=false;state.ballInHand=false;state.groups=[null,null];state.scores=[8,0];state.balls=[ball(0,50,22),ball(9,50,8)];state.aim=-Math.PI/2;state.power=56;state.shot=null;
     state.spinX=0;state.spinY=-.85;$('player2Name').textContent='玩家 2';syncPowerUI();moveSpinDot();$('menuOverlay').classList.add('hidden');updateUI();render();
   }};}
-  const boot=$('boot'),bootStarted=performance.now(),bootDuration=window.matchMedia('(prefers-reduced-motion: reduce)').matches?100:1900;
-  let bootDone=false;
-  function dismissBoot(){if(bootDone)return;bootDone=true;boot.classList.add('done');setTimeout(()=>boot.remove(),600);}
-  $('skipBoot').addEventListener('click',dismissBoot);
-  function animateBoot(now){
-    if(bootDone)return;
-    const pct=clamp((now-bootStarted)/bootDuration,0,1);
-    $('bootProgress').style.width=`${Math.round(pct*100)}%`;$('bootPercent').textContent=`${Math.round(pct*100)}%`;
-    if(pct>=1)dismissBoot();else requestAnimationFrame(animateBoot);
-  }
   cueTexture=buildCueTexture();
-  syncPowerUI();render();requestAnimationFrame(frame);requestAnimationFrame(animateBoot);
+  syncPowerUI();render();requestAnimationFrame(frame);window.PoolStartup?.ready('game');
 })();

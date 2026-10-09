@@ -7,7 +7,7 @@ for(const rotated of [false,true]){
   const event=(x,y)=>({pointerId:1,clientX:rotated?395-y/2:x/2,clientY:rotated?x/2:y/2,preventDefault(){}});
   const aim=()=>Number(g.ids.get('angleReadout').textContent.replace('°',''));
   const flush=()=>{const pending=queue.splice(0);for(const fn of pending)fn(performance.now());};
-  const initial=t.getRenderInfo();assert(initial.width>=1890);assert(initial.width<=2520);assert.equal(initial.textureSize,80);
+  const initial=t.getRenderInfo();assert(initial.width>=2100);assert(initial.width<=2800);assert.equal(initial.textureSize,96);
   for(const distance of [3,50]){
     t.setGuideBalls([{n:0,x:30,y:25},{n:1,x:80,y:40}],0);
     const x=60+(30+distance)*12.8,y=75+25*12.8;

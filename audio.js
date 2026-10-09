@@ -4,8 +4,8 @@
   const introMusic=new Audio('./sounds/xiaotang-intro.mp3');
   introMusic.preload='auto';introMusic.loop=true;introMusic.playsInline=true;introMusic.volume=.32;
   const AudioEngine=window.AudioContext||window.webkitAudioContext;
-  let context=null,effects=null,limiter=null,meter=null,recordings=[],loading=null,effectLoading=null;
-  let lastBall=0,noiseBuffer=null;
+  let context=null,effects=null,limiter=null,meter=null,effectLoading=null;
+  let noiseBuffer=null;
   let nativeUnlocked=false,nativeWarning=false;
   const nativeTickets=new WeakMap();
   let introWanted=true,introFadeTicket=0;
@@ -40,11 +40,14 @@
     }
   }
 
+  function introStatus(blocked){
+    const hint=document.getElementById('introStatus');if(hint){hint.hidden=!blocked;hint.textContent=blocked?'轻触页面，开启入场音乐':'';}
+  }
   function startIntroMusic(){
     introWanted=true;introFadeTicket++;introMusic.volume=.32;
-    if(!introMusic.paused)return Promise.resolve();
+    if(!introMusic.paused){introStatus(false);return Promise.resolve();}
     const started=introMusic.play();
-    if(started?.catch)started.catch(()=>{});
+    if(started?.then)started.then(()=>introStatus(false)).catch(()=>introStatus(true));
     return started||Promise.resolve();
   }
   function stopIntroMusic(fade=true){
@@ -119,10 +122,10 @@
     const at=context.currentTime+delay;
     source.buffer=pool[decodedCursor[kind]++%pool.length];
     source.playbackRate.value=kind==='cue'?.98:kind==='rail'?.94:kind==='pocket'?1:.97+.06*weight;
-    filter.type='lowpass';filter.frequency.value=kind==='ball'?5800:kind==='cue'?4200:kind==='rail'?2400:3400;
+    filter.type='lowpass';filter.frequency.value=kind==='ball'?3300+1100*weight:kind==='cue'?4200:kind==='rail'?2400:3400;
     const volume=(kind==='cue'?.65:kind==='ball'?.78:kind==='rail'?.55:.80)*weight*(tail?.24:1);
     gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),at+.0008);
-    if(kind==='pocket'){
+    if(kind==='pocket'||kind==='ball'){
       // The recording already contains its natural decay. Preserve the body
       // and fabric tail instead of applying a second steep exponential fade.
       const length=source.buffer.duration/source.playbackRate.value;
@@ -137,22 +140,17 @@
   function ensureContext(){
     if(!AudioEngine)return false;
     if(!context){
-      try{context=new AudioEngine({latencyHint:'interactive'});}catch{context=new AudioEngine();}
+      try{context=new AudioEngine({latencyHint:'interactive'});}catch{try{context=new AudioEngine();}catch{return false;}}
       limiter=context.createDynamicsCompressor();limiter.threshold.value=-7;limiter.knee.value=4;
       limiter.ratio.value=5;limiter.attack.value=.004;limiter.release.value=.09;
       meter=context.createAnalyser();meter.fftSize=1024;limiter.connect(meter);meter.connect(context.destination);
       effects=context.createGain();effects.gain.value=.66;effects.connect(limiter);
-      loading=Promise.all([1,2,3].map(async i=>{
-        const response=await fetch(`./sounds/ball-clack-${i}.wav`);
-        if(!response.ok)throw Error(`Pool sound ${i}: HTTP ${response.status}`);
-        return context.decodeAudioData(await response.arrayBuffer());
-      })).then(values=>{recordings=values.map(prepareClack);}).catch(error=>console.warn('台球录音未加载，使用柔和的合成回退音效。',error));
       effectLoading=Promise.all(Object.entries(effectSources).map(async([kind,urls])=>{
         const buffers=await Promise.all(urls.map(async url=>{
           const response=await fetch(url);if(!response.ok)throw Error(`${kind}: HTTP ${response.status}`);
           return context.decodeAudioData(await response.arrayBuffer());
         }));
-        decodedPools[kind]=buffers;
+        decodedPools[kind]=kind==='ball'?buffers.map(prepareClack):buffers;
       })).catch(error=>console.warn('低延迟音效未完成预热，暂用原生音频回退。',error));
       gameMusicLoading=fetch('./sounds/xiaotang-game-loop.m4a').then(response=>{
         if(!response.ok)throw Error(`Game music: HTTP ${response.status}`);return response.arrayBuffer();
@@ -198,20 +196,6 @@
     source.connect(filter);filter.connect(gain);gain.connect(effects);
     source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect();};source.start(at);source.stop(at+length+.005);
   }
-  function recordedClack(at,weight,kind){
-    if(!recordings.length)return false;
-    const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
-    source.buffer=recordings[lastBall++%recordings.length];
-    const length=kind==='cue'?.065:.085;
-    source.playbackRate.value=kind==='cue'?.98:.98+.04*weight;
-    filter.type='lowpass';filter.frequency.value=kind==='cue'?3600:4300+5000*weight;
-    gain.gain.setValueAtTime(.0001,at);
-    gain.gain.exponentialRampToValueAtTime((kind==='cue'?.44:.7)*weight,at+.00055);
-    gain.gain.exponentialRampToValueAtTime(.0001,at+length);
-    source.connect(filter);filter.connect(gain);gain.connect(effects);
-    source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect();};source.start(at);source.stop(at+length+.005);
-    return true;
-  }
   function fallbackImpact(kind,at,weight){
     if(!context)return;
     if(kind==='cue'){softImpact(at,weight,.035,3000,.13);tone(at,620,310,.04,.065*weight);tone(at,150,85,.05,.02*weight);}
@@ -226,16 +210,16 @@
     const hasContext=ensureContext();
     const weight=kind==='pocket'?.68+.32*Math.sqrt(Math.max(0,Math.min(1,impact/140))):Math.pow(Math.max(0,Math.min(1,impact/90)),.65);
     if(weight<.025)return;
+    const audibleWeight=kind==='ball'?.15+.85*weight:weight;
     const at=hasContext?context.currentTime:performance.now()/1000,gap=kind==='ball'?.009:kind==='rail'?.025:kind==='pocket'?0:.02;
     // A soft contact must not suppress a much harder rack collision.
     if(at-lastEffect[kind]<gap&&weight<=lastWeight[kind]*1.4)return;
     lastEffect[kind]=at;lastWeight[kind]=weight;
-    const recorded=kind==='ball'&&hasContext&&context.state==='running'&&recordedClack(at,weight,kind);
-    const native=recorded||bufferedEffect(kind,weight)?Promise.resolve():nativeEffect(kind,weight);
+    const native=bufferedEffect(kind,audibleWeight)?Promise.resolve():nativeEffect(kind,audibleWeight);
     if(kind==='cue'){
       native.catch(()=>fallbackImpact(kind,at,weight));duckMusic();
     }else if(kind==='ball'){
-      native.catch(()=>fallbackImpact(kind,at,weight));
+      native.catch(()=>fallbackImpact(kind,at,audibleWeight));if(weight>.15)duckMusic();
     }else if(kind==='rail'){
       if(hasContext){softImpact(at,weight,.06,650,.065);tone(at,145,70,.07,.045*weight);}
     }else{
@@ -256,9 +240,13 @@
     if(document.hidden){context?.suspend();introMusic.pause();}
     else{context?.resume().catch(()=>{});if(introWanted)startIntroMusic();}
   });
-  window.addEventListener?.('load',()=>{ensureContext();startIntroMusic();});
+  introMusic.addEventListener?.('loadeddata',()=>window.PoolStartup?.ready('audio'));
+  introMusic.addEventListener?.('error',()=>window.PoolStartup?.ready('audio'));
+  // Start before window.load, which can wait indefinitely for unrelated assets.
+  ensureContext();startIntroMusic();
+  window.addEventListener?.('load',()=>{if(introWanted)startIntroMusic();});
   window.PoolAudio={play,unlock:unlockAudio,stats:effectStats,contextState:()=>context?.state||'native-html-audio',
-    samplesReady:()=>recordings.length===3,effectsReady:()=>Object.values(decodedPools).every(pool=>pool.length),waitForSamples:()=>Promise.all([loading,effectLoading].filter(Boolean)),
+    samplesReady:()=>decodedPools.ball.length===3,effectsReady:()=>Object.values(decodedPools).every(pool=>pool.length),waitForSamples:()=>Promise.all([effectLoading].filter(Boolean)),
     outputLevel:()=>{if(!meter)return 0;const samples=new Float32Array(meter.fftSize);meter.getFloatTimeDomainData(samples);return Math.sqrt(samples.reduce((sum,v)=>sum+v*v,0)/samples.length);},
     startIntro:startIntroMusic,stopIntro:stopIntroMusic,introPlaying:()=>!introMusic.paused,
     startGameMusic,stopGameMusic,gameMusicPlaying:()=>gameMusicWanted&&!!gameMusicMaster,

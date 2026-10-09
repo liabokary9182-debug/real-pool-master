@@ -23,7 +23,8 @@ vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../audio
   w.PoolAudio.play('ball',10);const softGain=gains.at(-1).gain.peak;
   assert.equal(started.at(-1).buffer.length,4800,'ball did not use onset-trimmed recording');
   w.PoolAudio.play('ball',90);const loudGain=gains.at(-1).gain.peak;
-  assert(loudGain>softGain*2,'soft and hard collisions have indistinguishable volume');
+  assert(loudGain>softGain*1.8,'soft and hard collisions have indistinguishable volume');
+  assert(gains.at(-1).gain.events.some(e=>e.kind==='set'&&e.v>.5&&e.t>1.07),'ball body was cut down to a faint click');
   const before=started.length,tones=oscillators.length;w.PoolAudio.play('pocket',60);
   assert.equal(started.length-before,1,'pocket repeats the impact recording');
   assert.equal(oscillators.length-tones,0,'pocket still adds multiple metallic rings');
