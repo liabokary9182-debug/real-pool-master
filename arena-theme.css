@@ -76,17 +76,17 @@ button:focus-visible{outline:2px solid #e0f7ff;outline-offset:5px}
 @media(prefers-reduced-motion:reduce){.welcome-enter{transition:none}}
 
 /* Short compositor-only page flips; no layout animation on the aiming canvas. */
-@keyframes sapphire-page-in{
+@keyframes fuguang-page-in{
   from{opacity:0;transform:perspective(1000px) rotateY(-7deg) translate3d(18px,0,0)}
   to{opacity:1;transform:perspective(1000px) rotateY(0) translate3d(0,0,0)}
 }
-@keyframes sapphire-table-in{from{opacity:0}to{opacity:1}}
+@keyframes fuguang-table-in{from{opacity:0}to{opacity:1}}
 #mobile-pool-preview #startOverlay:not(.hidden) .welcome-copy,
 #mobile-pool-preview #resultOverlay:not(.hidden) .result-card,
 #mobile-pool-preview #practiceOverlay:not(.hidden) .menu-card,
 #mobile-pool-preview #rulesOverlay:not(.hidden) .menu-card,
-#mobile-pool-preview #menuOverlay:not(.hidden) .setup-step:not(.hidden){animation:sapphire-page-in .32s cubic-bezier(.2,.7,.2,1) both;transform-origin:25% 50%}
-#mobile-pool-preview[data-screen="match"] .arena{animation:sapphire-table-in .28s ease-out}
+#mobile-pool-preview #menuOverlay:not(.hidden) .setup-step:not(.hidden){animation:fuguang-page-in .32s cubic-bezier(.2,.7,.2,1) both;transform-origin:25% 50%}
+#mobile-pool-preview[data-screen="match"] .arena{animation:fuguang-table-in .28s ease-out}
 @media(pointer:coarse){#mobile-pool-preview .overlay{backdrop-filter:none}}
 @media(prefers-reduced-motion:reduce){
   #mobile-pool-preview .overlay *,#mobile-pool-preview[data-screen="match"] .arena{animation:none!important}

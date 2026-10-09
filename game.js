@@ -567,13 +567,18 @@
     const balls=live().map(b=>({...b,q:[...b.q]})),c=balls.find(b=>b.n===0);
     const allowed=aiTargets().map(b=>b.n),approachTargets=balls.filter(b=>allowed.includes(b.n));
     const events={firstHit:null,pocketed:[],railAfterHit:false,breakRails:new Set()};
-    let stopTime=0,settled=false,closestApproach=Infinity;
+    let stopTime=0,settled=false,closestApproach=Infinity,potApproach=Infinity;
+    const attackTarget=balls.find(b=>b.n===plan.target);
+    const aimPocket=plan.trackPotApproach&&Number.isInteger(plan.pocket)?pocketAim(plan.pocket):null;
     const previous=physicsContext;physicsContext=events;
     try{
       applyCueImpulse(c,plan.power,plan.aim,plan.spinX||0,plan.spinY||0,state.breaking);
       // Use the same 30 s limit and 0.3 s settling interval as a live shot.
       for(let frame=0;frame<5401;frame++){
         physicsStep(balls,STEP);
+        if(aimPocket&&attackTarget&&!attackTarget.pocketed&&events.firstHit===plan.target){
+          potApproach=Math.min(potApproach,Math.hypot(attackTarget.x-aimPocket.x,attackTarget.y-aimPocket.y));
+        }
         if(plan.trackApproach&&events.firstHit===null&&!c.pocketed){
           for(const target of approachTargets)closestApproach=Math.min(closestApproach,(c.x-target.x)**2+(c.y-target.y)**2);
         }
@@ -585,7 +590,7 @@
     const earlyEight=state.mode==='eight'&&events.pocketed.some(b=>b.n===8)&&!allowed.includes(8);
     const safe=settled&&legal&&!scratch&&!earlyEight&&(events.railAfterHit||events.pocketed.some(b=>b.n!==0));
     const winning=safe&&events.pocketed.some(b=>b.n===(state.mode==='nine'?9:8));
-    return {...events,balls,legal,scratch,settled,closestApproach,winning,safe,potted:events.pocketed.some(b=>b.n===plan.target&&b.pocket===plan.pocket)};
+    return {...events,balls,legal,scratch,settled,closestApproach,potApproach,winning,safe,potted:events.pocketed.some(b=>b.n===plan.target&&b.pocket===plan.pocket)};
   }
   function powerForSpeed(speed){
     let low=0,high=100;
@@ -742,7 +747,14 @@
     if((plan.type==='bank'||plan.type==='kick')&&!result.potted)return false;
     return plan.type==='bank'?hits.some(h=>h.n===plan.target&&!h.jaw):plan.type==='kick'?hits.some(h=>h.n===0&&h.beforeFirstHit&&!h.jaw):true;
   }
-  async function searchMasterAttacks(targets,isCurrent,kind=null){
+  function plausibleAttackAttempt(plan,result){
+    // Accept a genuine attacking miss close to the intended mouth when no
+    // nominal pot exists. A legal nudge that never approaches a bag is safety.
+    if(!result.safe||result.firstHit!==plan.target||result.potApproach>4.5||plan.pd-result.potApproach<1)return false;
+    const hits=result.cushionHits||[];
+    return plan.type==='bank'?hits.some(h=>h.n===plan.target&&!h.jaw):plan.type==='kick'?hits.some(h=>h.n===0&&h.beforeFirstHit&&!h.jaw):true;
+  }
+  async function searchMasterAttacks(targets,isCurrent,kind=null,attempts=null){
     const options=masterAttackOptions(targets,kind),success=[];let trials=0;
     const selected=diverseAIOptions(options,kind?12:10);
     for(const option of selected){
@@ -751,9 +763,10 @@
       // Geometry only proposes a route: search rail loss/throw/English corrections.
       for(const factor of [.95,1.15,1.4])for(const offset of [-.03,-.015,-.005,0,.005,.015,.03]){
         if(!isCurrent())return null;
-        const plan={...option,aim:option.aim+offset,power:powerForSpeed(desired*factor),spinX:0,spinY:0};
+        const plan={...option,aim:option.aim+offset,power:powerForSpeed(desired*factor),spinX:0,spinY:0,trackPotApproach:!!attempts};
         const result=simulateAIShot(plan);
         if(result.safe&&(result.potted||result.winning)&&validTacticalRoute(plan,result))success.push({...plan,winning:result.winning,positionCost:aiPositionScore(result),score:option.score+aiPositionScore(result)+plan.power*.08,tacticalVerified:true});
+        else if(attempts&&plausibleAttackAttempt(plan,result))attempts.push({...plan,score:option.score+result.potApproach*18,attackAttempt:true});
         if(++trials%4===0)await new Promise(resolve=>setTimeout(resolve,0));
       }
       if(success.length>=8)break;
@@ -926,7 +939,7 @@
   async function chooseAIPlan(isCurrent=()=>true){
     const targets=aiTargets();if(!targets.length||!isCurrent())return null;
     if(state.ballInHand)placeAICue(targets);
-    const successful=[];let attackTrials=0;
+    const successful=[],attempts=[];let attackTrials=0;
     for(const option of diverseAIOptions(aiOptions(targets),aiLevel().options)){
       if(!isCurrent())return null;
       const contact=Math.sqrt(2*ROLL_DECEL*(option.pd+7))/.72/(.97*option.cos);
@@ -934,16 +947,17 @@
       const correction=.055*2*R/(Math.max(option.cd,4)*option.cos);
       for(const factor of [.88,1,1.15])for(const offset of [0,-correction*.5,correction*.5,-correction,correction]){
         if(!isCurrent())return null;
-        const plan={...option,aim:option.aim+offset,power:powerForSpeed(desired*factor),spinY:0,type:'attack'};
+        const plan={...option,aim:option.aim+offset,power:powerForSpeed(desired*factor),spinY:0,type:'attack',trackPotApproach:state.aiDifficulty==='hard'};
         let result=simulateAIShot(plan);
         if((result.potted||result.winning)&&!result.safe){plan.spinY=-.65;result=simulateAIShot(plan);}
         if(result.safe&&(result.potted||result.winning))successful.push({...plan,winning:result.winning,score:option.score+aiPositionScore(result)+plan.power*.08,positionCost:aiPositionScore(result)});
+        else if(state.aiDifficulty==='hard'&&plausibleAttackAttempt(plan,result))attempts.push({...plan,score:option.score+result.potApproach*18,attackAttempt:true});
         if(++attackTrials%2===0)await new Promise(resolve=>setTimeout(resolve,0));
       }
       await new Promise(resolve=>setTimeout(resolve,0));
     }
     if(state.aiDifficulty==='hard'&&(!successful.length||Math.min(...successful.map(p=>p.score))>60||Math.min(...successful.map(p=>p.realismRisk||0))>12)){
-      const tactical=await searchMasterAttacks(targets,isCurrent);if(!isCurrent())return null;successful.push(...tactical);
+      const tactical=await searchMasterAttacks(targets,isCurrent,null,attempts);if(!isCurrent())return null;successful.push(...tactical);
     }
     successful.sort((a,b)=>a.score-b.score);
     if(successful.length){
@@ -967,11 +981,14 @@
       const margin=state.aiDifficulty==='easy'?20:state.aiDifficulty==='normal'?5:0;
       const pool=finalists.filter(p=>p.score<=finalists[0].score+margin);
       const best=pool[Math.floor(Math.random()*pool.length)];
-      if(state.aiDifficulty==='hard'&&best.robustness<.5&&!best.winning){
-        const defence=await chooseAIDefence(targets,isCurrent);if(!isCurrent())return null;
-        if(defence?.snookerPlanned)return executeAIPlan(defence);
-      }
+      // Stability ranks attacks; it never replaces an available pot with a
+      // snooker. Master keeps its offensive intent on difficult opportunities.
       best.description=best.winning?'决胜出杆 · 尝试打进决胜球':`${best.target} 号 → ${POCKETS[best.pocket].name} · ${best.type==='bank'?'翻袋 · ':best.type==='kick'?'碰库勾球 · ':''}${strokeName(best)}${best.positionPlanned?' · 留下一杆角度':''}`;
+      return executeAIPlan(best);
+    }
+    if(state.aiDifficulty==='hard'&&attempts.length){
+      const best=attempts.sort((a,b)=>a.score-b.score)[0];
+      best.description=`主动尝试进攻 · ${best.target} 号 → ${POCKETS[best.pocket].name} · ${best.type==='bank'?'翻袋 · ':best.type==='kick'?'碰库勾球 · ':''}${strokeName(best)}`;
       return executeAIPlan(best);
     }
     return executeAIPlan(await chooseAIDefence(targets,isCurrent));
@@ -1171,13 +1188,13 @@
     ctx.fillStyle='#090e17';ctx.fillRect(0,0,VIEW_W,VIEW_H);
     ctx.shadowColor='#000b';ctx.shadowBlur=30;ctx.shadowOffsetY=12;
     const frame=ctx.createLinearGradient(0,t-48,0,b+48);
-    frame.addColorStop(0,'#5a646a');frame.addColorStop(.08,'#20262c');frame.addColorStop(.48,'#0c1016');frame.addColorStop(.94,'#20262c');frame.addColorStop(1,'#56616a');
+    frame.addColorStop(0,'#8b7962');frame.addColorStop(.08,'#20262c');frame.addColorStop(.48,'#0c1016');frame.addColorStop(.94,'#20262c');frame.addColorStop(1,'#7a6958');
     fillRect(l-50,t-50,W*SCALE+100,H*SCALE+100,30,frame);
     ctx.shadowBlur=0;ctx.shadowOffsetY=0;
-    ctx.strokeStyle='#a6b2b879';ctx.lineWidth=2;roundedRect(l-48,t-48,W*SCALE+96,H*SCALE+96,29);ctx.stroke();
+    ctx.strokeStyle='#c6a98579';ctx.lineWidth=2;roundedRect(l-48,t-48,W*SCALE+96,H*SCALE+96,29);ctx.stroke();
     fillRect(l-37,t-37,W*SCALE+74,H*SCALE+74,22,'#092c3b');
     const felt=ctx.createRadialGradient(l+W*SCALE*.45,t+H*SCALE*.35,10,l+W*SCALE*.5,t+H*SCALE*.5,690);
-    felt.addColorStop(0,'#239bbe');felt.addColorStop(.65,'#157e9e');felt.addColorStop(1,'#09617f');
+    felt.addColorStop(0,'#208b9d');felt.addColorStop(.65,'#147286');felt.addColorStop(1,'#0b5265');
     ctx.fillStyle=felt;ctx.fillRect(l-5,t-5,W*SCALE+10,H*SCALE+10);
     ctx.save();ctx.strokeStyle='#c9eef060';ctx.lineWidth=1.2;ctx.setLineDash([8,7]);
     ctx.beginPath();ctx.moveTo(l+HEAD_LINE*SCALE,t+2);ctx.lineTo(l+HEAD_LINE*SCALE,b-2);ctx.stroke();ctx.restore();
@@ -1186,9 +1203,9 @@
     const brandX=l+W*SCALE/2,brandY=t+H*SCALE/2;
     ctx.save();ctx.translate(brandX,brandY);ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.save();ctx.scale(.9,1);ctx.fillStyle='#dcebe052';
-    ctx.font='italic 800 68px Arial, sans-serif';ctx.fillText('S800',0,-18);ctx.restore();
+    ctx.font='500 43px Arial, sans-serif';ctx.fillText('C1 / CHENGYU',0,-15);ctx.restore();
     ctx.fillStyle='#dcebe068';ctx.font='600 27px "PingFang SC", "Microsoft YaHei", sans-serif';
-    ctx.fillText('利',-40,30);ctx.fillText('百',0,30);ctx.fillText('文',40,30);ctx.restore();
+    ctx.fillText('澄 域',0,27);ctx.restore();
     // Sparse fibres are cached, rather than repainting 56,000 per frame.
     let seed=19327;
     for(let i=0;i<9500;i++){
@@ -1261,9 +1278,9 @@
     ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
     const nameplateX=l+W*SCALE*.3125,nameplateY=b+40;
     ctx.fillStyle='#d8ca91';ctx.font='italic 700 18px Georgia, "Times New Roman", serif';
-    ctx.fillText('S800',nameplateX-27,nameplateY+.5);
+    ctx.fillText('C1',nameplateX-25,nameplateY+.5);
     ctx.font='600 12px "Songti SC", SimSun, serif';ctx.fillStyle='#c9bd91';
-    ctx.fillText('利百文',nameplateX+27,nameplateY+.5);ctx.restore();
+    ctx.fillText('澄域',nameplateX+21,nameplateY+.5);ctx.restore();
   }
   function drawPocketFallPath(p){
     const profile=pocketFallProfile(p),q=worldToScreen(profile.x,profile.y);
@@ -1436,58 +1453,36 @@
   }
   let cueTexture=null;
   function buildCueTexture(){
+    // Original HUYING 01: warm maple shaft, graphite butt and two offset
+    // copper arcs. No borrowed star/diamond inlays or maker's seal.
     const length=1400,texture=document.createElement('canvas');texture.width=length;texture.height=56;
     const g=texture.getContext('2d'),mid=28;
-    const body=()=>{g.beginPath();g.moveTo(7,mid-3);g.lineTo(963,mid-9.2);g.lineTo(1390,mid-15.5);g.quadraticCurveTo(1399,mid-15.5,1399,mid);g.quadraticCurveTo(1399,mid+15.5,1390,mid+15.5);g.lineTo(963,mid+9.2);g.lineTo(7,mid+3);g.closePath();};
-    body();g.save();g.clip();
+    g.beginPath();g.moveTo(7,mid-3);g.lineTo(963,mid-9.2);g.lineTo(1390,mid-15.5);
+    g.quadraticCurveTo(1399,mid-15.5,1399,mid);g.quadraticCurveTo(1399,mid+15.5,1390,mid+15.5);
+    g.lineTo(963,mid+9.2);g.lineTo(7,mid+3);g.closePath();g.save();g.clip();
     const wood=g.createLinearGradient(0,mid-14,0,mid+14);
-    for(const [at,color] of [[0,'#754615'],[.16,'#bd7925'],[.37,'#ffd777'],[.53,'#f6bd4e'],[.73,'#b66b1e'],[1,'#6e3d12']])wood.addColorStop(at,color);
-    g.fillStyle=wood;g.fillRect(0,0,985,56);
-    // The reference shaft has long ash flames rather than parallel painted
-    // stripes. Each grain line folds into a narrow chevron along the taper.
-    for(let x=70,k=0;x<930;x+=86,k++){
-      const spread=2.1+(x/980)*5.2,side=k%2?1:-1;
-      g.strokeStyle=k%3===0?'#6f3b12b8':'#fff0aeaf';g.lineWidth=k%3===0?1.35:.78;
-      g.beginPath();g.moveTo(Math.max(12,x-92),mid+side*spread*.2);
-      g.bezierCurveTo(x-48,mid+side*spread*1.45,x-20,mid+side*spread*1.25,x,mid);
-      g.bezierCurveTo(x+23,mid-side*spread*1.15,x+48,mid-side*spread*.9,x+77,mid-side*spread*.22);g.stroke();
-      g.strokeStyle='#4f2b0b66';g.lineWidth=.55;g.beginPath();g.moveTo(x-55,mid-side*spread*.05);g.quadraticCurveTo(x-8,mid+side*spread*.88,x+62,mid+side*spread*.15);g.stroke();
+    for(const [at,color] of [[0,'#795d35'],[.24,'#d3ad6c'],[.48,'#f5dcaa'],[.7,'#c6a065'],[1,'#72542f']])wood.addColorStop(at,color);
+    g.fillStyle=wood;g.fillRect(0,0,980,56);
+    for(let k=0;k<9;k++){
+      g.strokeStyle=k%2?'#5139212b':'#fff4d447';g.lineWidth=.6;
+      g.beginPath();g.moveTo(20,mid+(k-4)*.6);g.bezierCurveTo(260,mid+(k-4),640,mid+(k-4)*1.3,978,mid+(k-4)*1.8);g.stroke();
     }
-    const black=g.createLinearGradient(0,mid-18,0,mid+18);
-    for(const [at,color] of [[0,'#020306'],[.14,'#343a43'],[.28,'#10141a'],[.48,'#05070b'],[.72,'#1a1e25'],[1,'#000104']])black.addColorStop(at,color);
-    g.fillStyle=black;g.fillRect(970,0,430,56);
-    // Long gold splice points merge the ash shaft into the slim black butt.
-    for(const side of [-1,1]){
-      const splice=g.createLinearGradient(820,0,1008,0);splice.addColorStop(0,'#805016');splice.addColorStop(.48,'#ffd56f');splice.addColorStop(1,'#7b4711');
-      g.fillStyle=splice;g.beginPath();g.moveTo(790,mid+side*7.8);g.lineTo(1018,mid+side*7.1);g.lineTo(973,mid+side*1.1);g.closePath();g.fill();
-      g.strokeStyle='#ffe09b88';g.lineWidth=.7;g.stroke();
+    const graphite=g.createLinearGradient(0,5,0,51);
+    for(const [at,color] of [[0,'#080c13'],[.22,'#36404b'],[.48,'#101723'],[.8,'#202936'],[1,'#03070d']])graphite.addColorStop(at,color);
+    g.fillStyle=graphite;g.fillRect(978,0,422,56);
+    g.fillStyle='#b98857';g.fillRect(970,0,8,56);g.fillRect(995,0,3,56);
+    for(let k=0;k<2;k++){
+      const x=1065+k*142;g.strokeStyle=k?'#f0cf9e':'#b88452';g.lineWidth=3;
+      g.beginPath();g.ellipse(x,mid,52,10,-.16,Math.PI*.18,Math.PI*1.64);g.stroke();
+      g.fillStyle='#e5dbca';g.beginPath();g.arc(x+32,mid-6,2,0,Math.PI*2);g.fill();
     }
-    g.fillStyle='#05070a';g.fillRect(968,mid-2.3,48,4.6);
-    const diamond=(x,y,rx,ry,color)=>{g.fillStyle=color;g.beginPath();g.moveTo(x-rx,y);g.lineTo(x,y-ry);g.lineTo(x+rx,y);g.lineTo(x,y+ry);g.closePath();g.fill();};
-    const xingling=x=>{
-      const teal=g.createLinearGradient(x-58,0,x+58,0);teal.addColorStop(0,'#279aa6');teal.addColorStop(.45,'#75edf0');teal.addColorStop(1,'#1b8794');g.fillStyle=teal;
-      g.beginPath();g.moveTo(x-60,mid);g.lineTo(x-35,mid-7.4);g.lineTo(x-13,mid-5.2);g.lineTo(x-28,mid);g.lineTo(x-13,mid+5.2);g.lineTo(x-35,mid+7.4);g.closePath();g.fill();
-      g.beginPath();g.moveTo(x+60,mid);g.lineTo(x+35,mid-7.4);g.lineTo(x+13,mid-5.2);g.lineTo(x+28,mid);g.lineTo(x+13,mid+5.2);g.lineTo(x+35,mid+7.4);g.closePath();g.fill();
-      g.strokeStyle='#a4ffffaa';g.lineWidth=.75;g.beginPath();g.moveTo(x-54,mid);g.lineTo(x-33,mid-5.1);g.lineTo(x-17,mid-3.7);g.moveTo(x+54,mid);g.lineTo(x+33,mid-5.1);g.lineTo(x+17,mid-3.7);g.stroke();
-      diamond(x,mid,17,7,'#ece8db');diamond(x,mid,8.5,4.1,'#06090e');diamond(x,mid,3.1,5.4,'#5edbe0');
-      diamond(x-34,mid,6.5,2.7,'#071017');diamond(x+34,mid,6.5,2.7,'#071017');
-    };
-    xingling(1092);xingling(1244);
-    // Ivory four-point star separates the two turquoise Xingling inlays.
-    g.fillStyle='#f4ead6';g.beginPath();g.moveTo(1168,mid);g.lineTo(1174,mid-3);g.lineTo(1179,mid-10);g.lineTo(1184,mid-3);g.lineTo(1190,mid);g.lineTo(1184,mid+3);g.lineTo(1179,mid+10);g.lineTo(1174,mid+3);g.closePath();g.fill();
-    diamond(1179,mid,3.1,4.8,'#9f8d66');
-    // Small gold seal medallion and the blue ring/black bumper match the butt cap.
-    g.fillStyle='#090b0d';g.strokeStyle='#d8c078';g.lineWidth=2;g.beginPath();g.arc(1341,mid,9.5,0,Math.PI*2);g.fill();g.stroke();
-    g.strokeStyle='#d8c078';g.lineWidth=1.15;g.beginPath();g.moveTo(1335,mid-3.7);g.lineTo(1347,mid+3.7);g.moveTo(1336,mid+4);g.lineTo(1346,mid-4);g.moveTo(1341,mid-7);g.lineTo(1341,mid+7);g.stroke();
-    const ring=g.createLinearGradient(1365,0,1377,0);ring.addColorStop(0,'#0a1b66');ring.addColorStop(.45,'#315dff');ring.addColorStop(1,'#071042');g.fillStyle=ring;g.fillRect(1365,0,12,56);
-    g.fillStyle='#030407';g.fillRect(1377,0,23,56);g.fillStyle='#242a32';g.fillRect(1378,0,2,56);
-    const gloss=g.createLinearGradient(0,0,0,56);gloss.addColorStop(0,'#ffffff05');gloss.addColorStop(.22,'#ffffff24');gloss.addColorStop(.39,'#ffffff08');gloss.addColorStop(.68,'#00000008');gloss.addColorStop(1,'#00000042');g.fillStyle=gloss;g.fillRect(0,0,length,56);g.restore();
-    // Small-head cue: compact blue tip, narrow ivory ferrule.
-    g.fillStyle='#eee9da';g.fillRect(4,mid-3.05,11,6.1);g.fillStyle='#49717d';g.beginPath();g.roundRect(0,mid-3.25,4.6,6.5,1.5);g.fill();
+    g.fillStyle='#d9c3a2';g.font='600 12px Arial';g.textAlign='center';g.fillText('HUYING 01',1295,mid+4);
+    g.fillStyle='#b88452';g.fillRect(1363,0,5,56);g.fillStyle='#05090e';g.fillRect(1376,0,24,56);
+    g.restore();g.fillStyle='#f0e5ce';g.fillRect(4,mid-3.05,11,6.1);
+    g.fillStyle='#487c86';g.beginPath();g.roundRect(0,mid-3.25,4.6,6.5,1.5);g.fill();
     const vertical=document.createElement('canvas');vertical.width=56;vertical.height=length;
     const v=vertical.getContext('2d');v.translate(56,0);v.rotate(Math.PI/2);v.drawImage(texture,0,0);
-    $('cueStick').style.backgroundImage=`url(${vertical.toDataURL()})`;
-    return texture;
+    $('cueStick').style.backgroundImage=`url(${vertical.toDataURL()})`;return texture;
   }
   function drawCue(c,angle,power,tipGap=null,opacity=1){
     const p=worldToScreen(c.x,c.y);ctx.save();ctx.globalAlpha=opacity;

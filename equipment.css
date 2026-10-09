@@ -1,4 +1,4 @@
-/* Full-length pull lane and the same photographic small-tip cue as the table. */
+/* Full-length pull lane and the same original small-tip cue as the table. */
 #mobile-pool-preview .layout>.cue-meter{background:#080d13;border-radius:12px}
 #mobile-pool-preview .layout>.cue-meter .cue-track{border-radius:9px;border:1px solid #75858b55;background:linear-gradient(90deg,#050709,#192027 48%,#080b10);box-shadow:inset 0 0 9px #000,0 0 0 1px #ffffff07}
 #mobile-pool-preview .cue-track::before{left:10px;top:12px;bottom:40px;width:7px;transform:none;background:repeating-linear-gradient(to bottom,#9aadb65c 0 1px,transparent 1px 10%)}
@@ -10,7 +10,7 @@
 #mobile-pool-preview .cue-meter.dragging .cue-stick-vertical{filter:drop-shadow(2px 2px 2px #000a) brightness(1.09)}
 #mobile-pool-preview .cue-meter:focus-visible .cue-track{outline:2px solid #76ded8;outline-offset:1px}
 
-/* S800 identity: black lacquer, pale gold and restrained table-blue. */
+/* C1 identity: black lacquer, pale gold and restrained table-blue. */
 #mobile-pool-preview .boot{background:radial-gradient(circle at 50% 36%,#143b4a 0,#07141d 38%,#020407 82%)}
 #mobile-pool-preview .boot::before,#mobile-pool-preview .start-overlay::before{background:linear-gradient(120deg,transparent 0 42%,#d6b76c0b 42% 43%,transparent 43% 100%),radial-gradient(circle at 72% 21%,#3ab3c31a,transparent 32%);background-size:74px 74px,100% 100%;mask-image:none}
 #mobile-pool-preview .boot-system{color:#b8c7ca;letter-spacing:3px}#mobile-pool-preview .boot-system span{color:#d9c37d}
@@ -23,7 +23,7 @@
 #mobile-pool-preview .start-overlay{background:radial-gradient(circle at 78% 28%,#10445a8c 0,transparent 31%),linear-gradient(132deg,#020507f7,#07131bf7 55%,#020406f9);backdrop-filter:blur(10px)}
 #mobile-pool-preview .start-card{grid-template-columns:1fr .92fr;width:min(94vw,960px);min-height:500px;padding:54px 58px;border:1px solid #b9a05f7a;border-radius:16px;background:radial-gradient(circle at 83% 19%,#16455a99 0,transparent 29%),linear-gradient(145deg,#12191e 0,#070b0e 62%,#030506 100%);box-shadow:0 35px 110px #000f,0 0 0 1px #ffffff0a,inset 0 1px #f1dfaa22;overflow:hidden}
 #mobile-pool-preview .start-card::before{height:1px;background:linear-gradient(90deg,transparent,#dbc47c 22%,#f5e5ad 50%,#8fc8d2 78%,transparent)}
-#mobile-pool-preview .start-card::after{content:"S800";position:absolute;right:-24px;bottom:-66px;color:#ffffff05;font:italic 950 210px/1 Arial,sans-serif;letter-spacing:-14px;pointer-events:none}
+#mobile-pool-preview .start-card::after{content:"C1";position:absolute;right:-24px;bottom:-66px;color:#ffffff05;font:italic 950 210px/1 Arial,sans-serif;letter-spacing:-14px;pointer-events:none}
 #mobile-pool-preview .start-signal{border-color:#a9915657;border-radius:20px;background:#15191b;color:#d8ca99;letter-spacing:2px}#mobile-pool-preview .start-signal b{color:#769eaa}.signal-dot{background:#d8bc68;box-shadow:0 0 12px #d8bc68}
 #mobile-pool-preview .start-wordmark{margin:24px 0 17px;color:#f1eee4;font-family:Georgia,"Times New Roman",serif;font-size:clamp(62px,6vw,88px);font-style:italic;letter-spacing:-3px;text-shadow:0 10px 26px #000}
 #mobile-pool-preview .start-wordmark span{display:block;margin-top:3px;color:#7ed4df;font:800 .40em/1.1 Inter,"Microsoft YaHei",sans-serif;letter-spacing:9px;text-shadow:0 0 24px #31acbd55}
@@ -48,7 +48,7 @@
   #mobile-pool-preview .start-foot{font-size:9px;line-height:1.6}
 }
 
-/* V8 — Xiaotang Sapphire Arena onboarding. */
+/* V8 — Xiaotang Fuguang Arena onboarding. */
 #mobile-pool-preview .start-overlay{background:radial-gradient(circle at 50% 18%,#176a8d66 0,transparent 37%),linear-gradient(155deg,#02060cfa,#061a2afa 58%,#020812fa)}
 #mobile-pool-preview .start-card{display:block;width:min(92vw,760px);min-height:0;padding:64px 68px;border:1px solid #62c9ee66;border-radius:28px;background:linear-gradient(145deg,#0c2f49e8,#071827f2 56%,#06101cf7);box-shadow:0 38px 120px #000e,0 0 80px #167aa233,inset 0 1px #c9f4ff24;text-align:left}
 #mobile-pool-preview .start-card::before{height:2px;background:linear-gradient(90deg,transparent,#79ddff,#d8f7ff,#4eb4e4,transparent)}
