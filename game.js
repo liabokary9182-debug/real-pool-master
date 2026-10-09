@@ -21,6 +21,7 @@
   // World distances are inches.  A solid sphere has I = 2/5 mr², so cloth
   // friction changes contact slip 3.5 times as fast as centre velocity.
   const GRAVITY = 386.09, SLIDE_DECEL = .20 * GRAVITY, ROLL_DECEL = .012 * GRAVITY;
+  const POCKET_BOTTOM=8*R,POCKET_HIDE_DEPTH=10*R;
   const PALETTE=COLORS.map(hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)));
   const POCKETS = [
     {x:0,y:0,name:'左上角袋'}, {x:50,y:0,name:'上中袋'}, {x:100,y:0,name:'右上角袋'},
@@ -150,7 +151,9 @@
     $('angleReadout').textContent=degrees.toFixed(4)+'°';
     const ruler=$('angleRuler');
     ruler.setAttribute('aria-valuenow',degrees.toFixed(4));
-    ruler.style.setProperty('--tick-offset',`${(-degrees*1000)%100}px`);
+    ruler.style.setProperty('--tick-offset',`${(-degrees/rulerGain)%100}px`);
+    ruler.setAttribute('aria-valuetext',`${degrees.toFixed(4)} 度，每像素 ${rulerGain} 度`);
+    const label=$('rulerScale');if(label)label.textContent=`小格 ${(rulerGain*10).toFixed(2)}° · 拖动 ${rulerGain}°/像素`;
   }
   function aimAt(x,y) {
     const c=cue(); if(!c||state.phase!=='aim'||state.ballInHand||(state.opponent==='ai'&&state.turn===1))return;
@@ -229,7 +232,7 @@
     const pocket=pocketVisualCenter(index);
     return {visual:{...b,q:[...b.q]},entryX:b.x,entryY:b.y,vx:b.vx,vy:b.vy,
       fallX:b.x,fallY:b.y,fallVx:b.vx,fallVy:b.vy,effectX:pocket.x,effectY:pocket.y,
-      pocket:index,age:0,impact,duration:Math.sqrt(12*R/GRAVITY),sounded:false};
+      pocket:index,age:0,impact,duration:Math.sqrt(2*POCKET_HIDE_DEPTH/GRAVITY),sounded:false};
   }
   function advancePocketFall(a,dt){
     const p=POCKET_GEOMETRY[a.pocket];let remaining=dt;
@@ -415,14 +418,14 @@
     // Position still renders every frame. Rebuild the costly sphere texture
     // only after its markings rotate enough to change a visible pixel.
     b.spriteAngle+=rate*dt;
-    if(b.spriteAngle>=(MOBILE_RENDER ? .24 : .12)){b.spriteDirty=true;b.spriteAngle=0;}
+    if(b.spriteAngle>=(MOBILE_RENDER ? .075 : .045)){b.spriteDirty=true;b.spriteAngle=0;}
   }
   function update(dt) {
     if(state.stroke&&(state.stroke.age+=dt)>state.stroke.duration)state.stroke=null;
     state.pocketAnimations=state.pocketAnimations.filter(a=>{
       advancePocketFall(a,dt);
       advanceBallOrientation(a.visual,dt);
-      if(!a.sounded&&.5*GRAVITY*a.age*a.age>=2.8*R){
+      if(!a.sounded&&.5*GRAVITY*a.age*a.age>=POCKET_BOTTOM){
         a.sounded=true;window.PoolAudio?.play('pocket',Math.hypot(a.impact,GRAVITY*a.age));
       }
       return a.age<a.duration;
@@ -1270,7 +1273,7 @@
       const screenContext=ctx;ctx=layer.getContext('2d');ctx.setTransform(PIXEL_RATIO,0,0,PIXEL_RATIO,0,0);
       try{paintTable();tableBackdrop=layer;}finally{ctx=screenContext;}
     }
-    ctx.drawImage(tableBackdrop,0,0,VIEW_W,VIEW_H);
+    ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(tableBackdrop,0,0);ctx.restore();
   }
   function drawChengyuEmblem(x,y,scale=1,alpha=1){
     ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);ctx.globalAlpha=alpha;
@@ -1294,27 +1297,33 @@
     ctx.strokeStyle='#c6a98579';ctx.lineWidth=2;roundedRect(l-48,t-48,W*SCALE+96,H*SCALE+96,29);ctx.stroke();
     fillRect(l-37,t-37,W*SCALE+74,H*SCALE+74,22,'#092c3b');
     const felt=ctx.createRadialGradient(l+W*SCALE*.45,t+H*SCALE*.35,10,l+W*SCALE*.5,t+H*SCALE*.5,690);
-    felt.addColorStop(0,'#197b91');felt.addColorStop(.65,'#106277');felt.addColorStop(1,'#08485e');
+    felt.addColorStop(0,'#8bc5dd');felt.addColorStop(.65,'#7dbbd5');felt.addColorStop(1,'#68a8c4');
     ctx.fillStyle=felt;ctx.fillRect(l-5,t-5,W*SCALE+10,H*SCALE+10);
-    ctx.save();ctx.strokeStyle='#c9eef060';ctx.lineWidth=1.2;ctx.setLineDash([8,7]);
+    ctx.save();ctx.strokeStyle='#29597250';ctx.lineWidth=1.2;ctx.setLineDash([8,7]);
     ctx.beginPath();ctx.moveTo(l+HEAD_LINE*SCALE,t+2);ctx.lineTo(l+HEAD_LINE*SCALE,b-2);ctx.stroke();ctx.restore();
     // Original tide-ribbon print sits beneath the cloth fibres.
     const brandX=l+W*SCALE/2,brandY=t+H*SCALE/2;
-    drawChengyuEmblem(brandX,brandY-28,1,.25);
-    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#def4ee50';
+    drawChengyuEmblem(brandX,brandY-28,1,.09);
+    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#effaff28';
     ctx.font='500 25px "PingFang SC", "Microsoft YaHei", sans-serif';ctx.fillText('澄  域',brandX,brandY+42);
-    ctx.fillStyle='#d7efeb39';ctx.font='600 10px Arial, sans-serif';ctx.fillText('C 1   /   T I D E L I N E',brandX,brandY+66);ctx.restore();
+    ctx.fillStyle='#effaff20';ctx.font='600 10px Arial, sans-serif';ctx.fillText('C 1   /   T I D E L I N E',brandX,brandY+66);ctx.restore();
     // Sparse fibres are cached, rather than repainting 56,000 per frame.
     let seed=19327;
-    for(let i=0;i<9500;i++){
+    for(let i=0;i<18000;i++){
       seed=(seed*1664525+1013904223)>>>0;const x=l+(seed>>>8)%(r-l);
       seed=(seed*1664525+1013904223)>>>0;const y=t+(seed>>>8)%(b-t);
-      ctx.fillStyle=i%4?'#d4f5ff09':'#032d480c';ctx.fillRect(x,y,1.1,.45);
+      ctx.fillStyle=i%4?'#effaff10':'#1c536510';ctx.fillRect(x,y,1.2,.4);
     }
+    // Felt nap and a restrained cushion contact shadow, baked once at DPR.
+    ctx.save();ctx.beginPath();ctx.rect(l,t,W*SCALE,H*SCALE);ctx.clip();
+    for(const [x1,y1,x2,y2,w,h] of [[l,t,l,t+18,W*SCALE,18],[l,b,l,b-18,W*SCALE,-18],[l,t,l+18,t,18,H*SCALE],[r,t,r-18,t,-18,H*SCALE]]){
+      const shade=ctx.createLinearGradient(x1,y1,x2,y2);shade.addColorStop(0,'#19465e38');shade.addColorStop(1,'#19465e00');ctx.fillStyle=shade;ctx.fillRect(x1,y1,w,h);
+    }
+    ctx.restore();
     const railWidth=27;
     const rubberPaint=(outerX,outerY,noseX,noseY)=>{
       const paint=ctx.createLinearGradient(outerX,outerY,noseX,noseY);
-      paint.addColorStop(0,'#10516c');paint.addColorStop(.30,'#1e8da9');paint.addColorStop(.76,'#14718c');paint.addColorStop(1,'#084456');
+      paint.addColorStop(0,'#47788e');paint.addColorStop(.30,'#91c9df');paint.addColorStop(.76,'#6baac5');paint.addColorStop(1,'#3d718a');
       return paint;
     };
     function horizontal(a,z,y,sign){
@@ -1395,24 +1404,25 @@
     const tx=2*(q[1]*z-q[2]*y),ty=2*(q[2]*x-q[0]*z),tz=2*(q[0]*y-q[1]*x);
     return [x+q[3]*tx+q[1]*tz-q[2]*ty,y+q[3]*ty+q[2]*tx-q[0]*tz,z+q[3]*tz+q[0]*ty-q[1]*tx];
   }
-  // 80 texels cover a phone ball even at high DPR; shading far more texels
-  // than the displayed diameter was the dominant moving-frame cost.
+  // Sphere lighting is fixed in camera space; only pigment and markings roll.
+  // Precompute reflections once instead of evaluating them each moving frame.
   const BALL_SPRITE_SIZE=MOBILE_RENDER?96:128,BALL_SPRITE_MID=BALL_SPRITE_SIZE/2,BALL_SPRITE_RADIUS=BALL_SPRITE_SIZE*.476;
   const ballPixelMap=(()=>{
     const cells=[];
     for(let py=0;py<BALL_SPRITE_SIZE;py++)for(let px=0;px<BALL_SPRITE_SIZE;px++){
       const u=(px+.5-BALL_SPRITE_MID)/BALL_SPRITE_RADIUS,v=(py+.5-BALL_SPRITE_MID)/BALL_SPRITE_RADIUS,r2=u*u+v*v;
       if(r2>=1)continue;
-      const z=Math.sqrt(1-r2),diffuse=Math.max(0,-u*.39-v*.5+z*.79),light=.49+.55*diffuse;
-      const highlight=Math.pow(Math.max(0,-u*.45-v*.59+z*.68),132)*.72;
-      const broadHighlight=Math.pow(Math.max(0,-u*.48-v*.57+z*.66),22)*.13;
-      // Small overhead reflections make the resin read as polished and dense.
-      const pinLight=Math.exp(-(((u+.36)/.065)**2+((v+.43)/.08)**2))*.38;
-      const rimBounce=Math.pow(Math.max(0,u*.47+v*.31+z*.26),9)*.12;
-      const panelLight=Math.exp(-(((u+.22)/.17)**8+((v+.48)/.045)**4))*.24;
-      const grain=1+((((px*37+py*71)%17)-8)*.00035);
-      const shade=(1-.39*Math.pow(1-z,1.25))*light*grain;
-      cells.push([(py*BALL_SPRITE_SIZE+px)*4,u,v,z,shade,255*(highlight+broadHighlight+pinLight+rimBounce+panelLight),Math.round(255*clamp((1-r2)*BALL_SPRITE_RADIUS*.75,0,1))]);
+      const z=Math.sqrt(1-r2),diffuse=Math.max(0,-u*.39-v*.5+z*.79),light=.48+.53*diffuse;
+      const highlight=Math.pow(Math.max(0,-u*.45-v*.59+z*.68),150)*.58;
+      const broadHighlight=Math.pow(Math.max(0,-u*.48-v*.57+z*.66),24)*.09;
+      // Two rectangular ceiling softboxes, with an opposite cool reflection.
+      const panelLight=Math.exp(-(((u+.29)/.18)**8+((v+.49)/.045)**4))*.52;
+      const secondPanel=Math.exp(-(((u-.12)/.13)**8+((v+.57)/.032)**4))*.22;
+      const fresnel=.04+.30*Math.pow(1-z,5);
+      const coolBounce=(Math.pow(Math.max(0,u*.65+v*.30+z*.24),12)*.13+fresnel*.2);
+      const grain=1+((((px*37+py*71)%17)-8)*.00015);
+      const shade=(1-.31*Math.pow(1-z,1.25))*light*grain;
+      cells.push([(py*BALL_SPRITE_SIZE+px)*4,u,v,z,shade,255*(highlight+broadHighlight+panelLight+secondPanel),255*coolBounce,Math.round(255*clamp((1-r2)*BALL_SPRITE_RADIUS*.75,0,1))]);
     }
     return new Float32Array(cells.flat());
   })();
@@ -1421,23 +1431,12 @@
     if(numberBadges.has(n))return numberBadges.get(n);
     const icon=document.createElement('canvas');icon.width=icon.height=96;
     const g=icon.getContext('2d');
-    // The reference balls use an ivory, three-lobed number insert with a
-    // dark outline. It is painted in the sphere's local coordinates so both
-    // colour and number roll together instead of facing the camera forever.
-    g.beginPath();g.moveTo(48,6);
-    g.bezierCurveTo(62,6,62,26,68,37);
-    g.bezierCurveTo(75,49,91,54,88,68);
-    g.bezierCurveTo(85,84,71,88,55,82);
-    g.bezierCurveTo(49,80,46,80,41,82);
-    g.bezierCurveTo(25,89,10,84,8,69);
-    g.bezierCurveTo(6,55,20,49,27,37);
-    g.bezierCurveTo(33,26,34,6,48,6);g.closePath();
-    const shade=g.createRadialGradient(34,24,4,49,56,67);
-    shade.addColorStop(0,'#fffef4');shade.addColorStop(.57,'#f1ebd8');shade.addColorStop(1,'#c5bbab');
-    g.fillStyle=shade;g.fill();g.strokeStyle='#10151a';g.lineWidth=7;g.lineJoin='round';g.stroke();
-    g.strokeStyle='#ffffff80';g.lineWidth=1.3;g.stroke();
-    g.fillStyle='#101318';g.font=`900 ${n>9?44:59}px Arial`;
-    g.textAlign='center';g.textBaseline='middle';g.fillText(String(n),48,54);
+    // A classic circular ivory insert. Illumination is applied by the sphere
+    // shader, so the painted number does not carry a rotating fake highlight.
+    g.beginPath();g.arc(48,48,43,0,Math.PI*2);g.fillStyle='#f5f2e8';g.fill();
+    g.strokeStyle='#d8d6ca';g.lineWidth=1.5;g.stroke();
+    g.fillStyle='#121920';g.font=`700 ${n>9?43:59}px Arial`;
+    g.textAlign='center';g.textBaseline='middle';g.fillText(String(n),48,51);
     const pixels=g.getImageData(0,0,96,96).data;
     numberBadges.set(n,pixels);return pixels;
   }
@@ -1451,12 +1450,13 @@
     const cueMarks=b.n===0?[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]].map(v=>rotated(b.q,...v)):null;
     const color=PALETTE[b.n<=8?b.n:b.n-8],ivory=[247,241,229];
     // Flat typed storage avoids allocating an iterator for every shaded texel.
-    for(let i=0;i<ballPixelMap.length;i+=7){
-      const at=ballPixelMap[i],u=ballPixelMap[i+1],v=ballPixelMap[i+2],z=ballPixelMap[i+3],shade=ballPixelMap[i+4],specular=ballPixelMap[i+5],alpha=ballPixelMap[i+6];
+    for(let i=0;i<ballPixelMap.length;i+=8){
+      const at=ballPixelMap[i],u=ballPixelMap[i+1],v=ballPixelMap[i+2],z=ballPixelMap[i+3],shade=ballPixelMap[i+4],specular=ballPixelMap[i+5],bounce=ballPixelMap[i+6],alpha=ballPixelMap[i+7];
       const signedLatitude=u*pole[0]+v*pole[1]+z*pole[2],latitude=Math.abs(signedLatitude);
-      const painted=b.n!==0&&(b.n<=8?latitude<.972:latitude<.52);
-      const cueMark=cueMarks?.some(m=>u*m[0]+v*m[1]+z*m[2]>.991);
-      const base=cueMark?[184,56,50]:painted?color:ivory;
+      const painted=b.n!==0&&(b.n<=8||latitude<.52);
+      let cueMark=false;
+      if(cueMarks)for(const m of cueMarks)if(u*m[0]+v*m[1]+z*m[2]>.991){cueMark=true;break;}
+      const base=painted?color:ivory;
       let badgeAt=-1,badgeAlpha=0;
       if(badge&&latitude>.69){
         // Project the number inserts from opposite poles onto the sphere.
@@ -1467,8 +1467,9 @@
         if(tx>=0&&tx<96&&ty>=0&&ty<96){badgeAt=(ty*96+tx)*4;badgeAlpha=badge[badgeAt+3]/255;}
       }
       for(let c=0;c<3;c++){
-        const pigment=badgeAlpha?base[c]*(1-badgeAlpha)+badge[badgeAt+c]*badgeAlpha:base[c];
-        data[at+c]=Math.min(255,pigment*shade+specular);
+        const component=cueMark?(c===0?184:c===1?56:50):base[c];
+        const pigment=badgeAlpha?component*(1-badgeAlpha)+badge[badgeAt+c]*badgeAlpha:component;
+        data[at+c]=Math.min(255,pigment*shade+specular+bounce*(c===0?.55:c===1?.83:1));
       }
       data[at+3]=alpha;
     }
@@ -1505,7 +1506,7 @@
       const trail=Math.min(7,speed*.048),weight=Math.min(.16,speed/900);
       ctx.save();ctx.globalAlpha=alpha*weight;ctx.drawImage(b.sprite,x-rr-b.vx/speed*trail,y-rr-b.vy/speed*trail,rr*2,rr*2);ctx.restore();
     }
-    if(shadow){ctx.shadowColor='#00111f9e';ctx.shadowBlur=MOBILE_RENDER?0:5;ctx.fillStyle='#021b2b8a';ctx.beginPath();ctx.ellipse(x+2.3,y+rr*.69,rr*.9,rr*.35,0,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
+    if(shadow){ctx.shadowColor='#00111f70';ctx.shadowBlur=MOBILE_RENDER?1:3;ctx.fillStyle='#092d4265';ctx.beginPath();ctx.ellipse(x+1.8,y+2.8,rr*.96,rr*.86,0,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;}
     ctx.drawImage(b.sprite,x-rr,y-rr,rr*2,rr*2);
     ctx.restore();
   }
@@ -1633,9 +1634,11 @@
   }
   function pocketAnimationPose(a){
     const t=clamp(a.age/a.duration,0,1);
-    const drop=.5*GRAVITY*a.age*a.age,sink=clamp(drop/(6*R),0,1);
-    const fade=clamp((drop-2*R)/(4*R),0,1);
-    return {t,sink,x:a.fallX,y:a.fallY,scale:1/(1+drop/(6*R)),alpha:1-fade*fade*(3-2*fade),depth:0,drop};
+    const drop=.5*GRAVITY*a.age*a.age,sink=clamp(drop/POCKET_HIDE_DEPTH,0,1);
+    const fade=clamp((drop-5*R)/(POCKET_HIDE_DEPTH-5*R),0,1);
+    // A slight overhead-camera parallax makes gravity visible. The aperture
+    // and shrinking above-lip cap occlude this displacement, even at corners.
+    return {t,sink,x:a.fallX,y:a.fallY,scale:1/(1+drop/(24*R)),alpha:1-fade*fade*(3-2*fade),depth:drop*.38,drop};
   }
   function drawPocketFallMask(pocket){
     const profile=pocketFallProfile(pocket),well=worldToScreen(profile.x,profile.y);
@@ -1666,8 +1669,10 @@
   let tableSurface=null;
   let textureCursor=0,textureBudget=MOBILE_RENDER?2:6;
   function refreshBallTextures(){
-    const models=[...live(),...state.pocketAnimations.map(a=>a.visual)];
+    const falling=state.pocketAnimations.map(a=>a.visual),models=live();
     const deadline=performance.now()+(MOBILE_RENDER?3:5);
+    // The short, prominent fall must never wait behind a full moving rack.
+    for(const b of falling)if(!b.sprite||b.spriteDirty)renderBallSprite(b);
     let budget=state.phase==='moving'?textureBudget:models.length;
     for(let i=0;i<models.length;i++){
       const b=models[(textureCursor+i)%models.length];
@@ -1695,8 +1700,9 @@
     refreshBallTextures();
     if(!tableSurface){
       drawTable();
-      tableSurface=document.createElement('canvas');tableSurface.width=canvas.width;tableSurface.height=canvas.height;
-      tableSurface.getContext('2d').drawImage(canvas,0,0);
+      // The static layer already has the correct device-pixel resolution.
+      // Reuse it for restoration instead of keeping a second full-size copy.
+      tableSurface=tableBackdrop;
     }else blitTable();
     drawAim();for(const b of live())drawBall(b);drawStroke();
     for(const a of state.pocketAnimations){
@@ -1718,11 +1724,13 @@
     aimFramePending=true;
     requestAnimationFrame(()=>{aimFramePending=false;if(state.phase==='aim'){updateUI();render();}});
   }
-  let aimGain=.012;
+  let aimGain=.012,rulerGain=.004;
   const aimGains={fine:.006,balanced:.012,responsive:.024};
+  const rulerGains={fine:.001,balanced:.004,responsive:.008};
   document.querySelectorAll('[data-aim-feel]').forEach(button=>button.addEventListener('click',()=>{
-    aimGain=aimGains[button.dataset.aimFeel]||.012;state.drag=null;
+    aimGain=aimGains[button.dataset.aimFeel]||.012;rulerGain=rulerGains[button.dataset.aimFeel]||.004;state.drag=null;stopAngleDrag();
     document.querySelectorAll('[data-aim-feel]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
+    syncAngleUI();
   }));
   const sideways=()=>document.getElementById('mobile-pool-preview')?.classList.contains('is-landscape')||false;
   const aimScreenPoint=e=>sideways()?{x:e.clientY,y:-e.clientX}:{x:e.clientX,y:e.clientY};
@@ -1872,18 +1880,18 @@
   angleRuler.addEventListener('pointerdown',e=>{
     if(angleDrag)return;
     if(state.phase!=='aim'||state.ballInHand||(state.opponent==='ai'&&state.turn===1))return;
-    e.preventDefault();angleDrag={id:e.pointerId,start:rulerAxis(e),aim:state.aim};angleRuler.setPointerCapture(e.pointerId);
+    e.preventDefault();angleDrag={id:e.pointerId,start:rulerAxis(e),aim:state.aim,gain:rulerGain};angleRuler.setPointerCapture(e.pointerId);angleRuler.classList.add('dragging');
   });
   angleRuler.addEventListener('pointermove',e=>{
-    if(!angleDrag||angleDrag.id!==e.pointerId)return;
-    state.aim=angleDrag.aim+(rulerAxis(e)-angleDrag.start)*.001*Math.PI/180;
+    if(!angleDrag||angleDrag.id!==e.pointerId||!canAdjustStroke())return;
+    state.aim=angleDrag.aim+(rulerAxis(e)-angleDrag.start)*angleDrag.gain*Math.PI/180;
     requestAimFrame();
   });
-  const stopAngleDrag=()=>{angleDrag=null;};
-  angleRuler.addEventListener('pointerup',e=>{if(angleDrag&&angleDrag.id===e.pointerId){state.aim=angleDrag.aim+(rulerAxis(e)-angleDrag.start)*.001*Math.PI/180;angleDrag=null;updateUI();render();}});
+  const stopAngleDrag=()=>{angleDrag=null;angleRuler.classList.remove('dragging');};
+  angleRuler.addEventListener('pointerup',e=>{if(angleDrag&&angleDrag.id===e.pointerId){if(canAdjustStroke())state.aim=angleDrag.aim+(rulerAxis(e)-angleDrag.start)*angleDrag.gain*Math.PI/180;stopAngleDrag();updateUI();render();}});
   angleRuler.addEventListener('pointercancel',stopAngleDrag);
   angleRuler.addEventListener('keydown',e=>{
-    if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;
+    if(!canAdjustStroke()||e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;
     e.preventDefault();const step=e.shiftKey?.0001:.001;state.aim+=(e.key==='ArrowLeft'?-1:1)*step*Math.PI/180;updateUI();render();
   });
   let setupChoice='ai',setupRuleset='eight';
@@ -1902,7 +1910,7 @@
     state.aiTicket++;state.aiThinking=false;state.aiPlan=null;state.phase='menu';state.shot=null;state.stroke=null;state.windup=0;state.drag=null;
     state.pocketAnimations=[];state.ballInHand=false;state.repositionAllowed=false;
     for(const b of live())b.vx=b.vy=b.rollVx=b.rollVy=b.spin=0;
-    meterDrag=null;angleDrag=null;meter.classList.remove('dragging');meter.style.setProperty('--cue-pull','0px');
+    meterDrag=null;stopAngleDrag();meter.classList.remove('dragging');meter.style.setProperty('--cue-pull','0px');
     for(const id of ['resultOverlay','practiceOverlay','rulesOverlay'])$(id)?.classList.add('hidden');
     window.PoolAudio?.stopGameMusic?.();window.PoolAudio?.startIntro?.();
     document.body?.setAttribute('data-screen','setup');updateUI();

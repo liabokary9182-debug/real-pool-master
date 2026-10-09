@@ -12,3 +12,7 @@
 已运行 `node tests/guide-physics-regression.cjs`：16 组首碰/薄球/加塞/高低杆/遮挡/轻推用例、6 个袋口与单次计分、松手力度一致性通过。另用实际 Canvas 渲染器核对球杆外观和入袋帧。此环境限制浏览器 socket，未完成完整浏览器布局回归或 iPhone 真机测试。
 
 浏览器脚本 `tests/straight-guide-regression.cjs` 可在允许启动 Chromium 的环境检查桌面、844×390 手机布局、力度条高度和浏览器错误。它需要 Playwright 与 Chromium；运行前在仓库根目录启动 `python3 -m http.server 8765`。
+
+# 2026-10-10 · 浅蓝台呢、滚动树脂材质与入袋深度
+
+基于独立仓库 c086f8ac，在 polish/realistic-blue-20261010 分支完成；尚未部署。实际改动、22 项回归、渲染测量及未完成的浏览器/真机验收见 QUALITY-20261010.md。继续维护时保留袋口物理与视觉共同几何，不用缩小特效替代加速下坠；纹理精度优化同时保留手机预算。

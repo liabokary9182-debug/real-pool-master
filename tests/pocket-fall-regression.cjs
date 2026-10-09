@@ -16,4 +16,14 @@ for(let pocket=0;pocket<6;pocket++)for(const speed of [6,18,50,120])for(const an
   assert(found,`missing fall: ${pocket}/${speed}/${angle}`);
   w.advanceTime(1000);assert.equal(t.getFallAnimations().length,0,'fall never cleared');cases++;
 }
-console.log(JSON.stringify({passed:true,pocketCases:cases,fallSamples:samples,constrainedWell:true}));
+let rejected=0;
+// These lines deliberately graze outside the mouth. Rubber contact must
+// reject them rather than an animation or attraction pulling them into a well.
+for(let pocket=0;pocket<6;pocket++)for(const angle of [-30,0,30]){
+  const {window:w}=loadGame(),t=w.__poolTest;t.pocketRollingTest(pocket,angle,18,true);w.advanceTime(2500);
+  const b=t.getBallStates().find(b=>b.n===1);
+  assert(b.hitRail,`outside-mouth fixture ${pocket}/${angle} missed the facing`);
+  assert(!b.pocketed,`outside-mouth fixture ${pocket}/${angle} was sucked into the well`);
+  assert(Number.isFinite(b.x)&&Number.isFinite(b.y));rejected++;
+}
+console.log(JSON.stringify({passed:true,pocketCases:cases,fallSamples:samples,constrainedWell:true,outsideMouthRejections:rejected}));

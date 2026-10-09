@@ -36,9 +36,9 @@ for(const rotated of [false,true]){
   const ruler=g.ids.get('angleRuler'),tickStyles={},setStyle=ruler.style.setProperty;
   ruler.style.setProperty=(name,value)=>{tickStyles[name]=value;setStyle(name,value);};
   ruler.handlers.pointerdown(event(20,20));ruler.handlers.pointermove(event(220,20));flush();
-  assert(Math.abs(aim()-18.5349)<.0002,'ruler should move 0.1 degrees for 100 CSS pixels');
+  assert(Math.abs(aim()-18.8349)<.0002,'balanced ruler should move 0.4 degrees for 100 CSS pixels');
   const offset=parseFloat(tickStyles['--tick-offset']);
-  assert(Math.abs(offset-(-18.5349*1000)%100)<.05,'ruler ticks do not track their physical drag distance');
+  assert(Math.abs(offset-(-18.8349/.004)%100)<.05,'ruler ticks do not track their physical drag distance');
   ruler.handlers.pointercancel();
   const before=aim();ruler.handlers.pointermove(event(400,20));flush();assert.equal(aim(),before);
 }
