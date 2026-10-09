@@ -6,10 +6,10 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <meta name="theme-color" content="#050a18">
-  <meta name="description" content="小糖台球浮光竞技馆，支持八球、九球、人机对战、专项训练与双人同屏。">
+  <meta name="description" content="光域台球浮光竞技馆，支持八球、九球、人机对战、专项训练与双人同屏。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23121a20'/%3E%3Ccircle cx='16' cy='16' r='7' fill='white'/%3E%3Ctext x='16' y='20' text-anchor='middle' font-size='12'%3E8%3C/text%3E%3C/svg%3E">
   <link rel="preload" href="./assets/fuguang-arena.jpg" as="image">
-  <title>小糖台球 · 浮光竞技馆</title>
+  <title>光域台球 · 浮光竞技馆</title>
   <link rel="preload" href="./site.css?v=20261009-orbit-v9" as="style">
 <link id="siteStyle" rel="stylesheet" href="./site.css?v=20261009-orbit-v9" media="print" onload="this.media='all';window.PoolStartup?.ready('styles')" onerror="this.dataset.failed='true';window.PoolStartup?.styleFailed()">
   <!-- CRITICAL_STYLE_START -->
@@ -116,8 +116,8 @@ html,body{margin:0;background:#040b17;color:#e7f7ff;font-family:system-ui,"PingF
 <body id="mobile-pool-preview" data-screen="welcome">
 <audio id="entryMusic" src="./sounds/xiaotang-intro.mp3" autoplay loop preload="auto" playsinline hidden></audio>
   <div class="mobile-game-surface">
-  <div class="boot" id="boot" aria-label="正在启动小糖台球浮光竞技馆">
-    <div class="flight-top"><span>小糖台球 / FUGUANG</span><span>FLIGHT TO THE ARENA</span></div>
+  <div class="boot" id="boot" aria-label="正在启动光域台球浮光竞技馆">
+    <div class="flight-top"><span>光域台球 / FUGUANG</span><span>FLIGHT TO THE ARENA</span></div>
     <div class="flight-copy"><p>下一站 · 浮光竞技馆</p><h1>准备，启航。</h1><span id="bootStatus">正在连接赛场</span></div>
     <div class="flight-route" role="progressbar" aria-label="赛场启动进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="bootTrack">
       <div class="flight-grid" aria-hidden="true"></div><div class="flight-trajectory"><span id="bootProgress"></span></div>
@@ -131,7 +131,7 @@ html,body{margin:0;background:#040b17;color:#e7f7ff;font-family:system-ui,"PingF
   </div>
   <div class="app">
     <header class="topbar" id="previewTopbar">
-      <div class="brand"><span class="brand-mark">●</span><div><strong>小糖台球</strong><small>FUGUANG ARENA</small></div></div>
+      <div class="brand"><span class="brand-mark">●</span><div><strong>光域台球</strong><small>FUGUANG ARENA</small></div></div>
       <div class="top-actions"><button id="rulesBtn" class="quiet" type="button">规则</button><button id="backBtn" class="quiet" type="button" aria-label="返回上一个选择页面">← 返回</button><button id="fullBtn" class="quiet" type="button" aria-label="全屏预览游戏" aria-pressed="false">全屏 ⛶</button></div>
     <span id="fullscreenFeedback" role="status" aria-live="polite" hidden></span>
     </header>
@@ -170,7 +170,7 @@ html,body{margin:0;background:#040b17;color:#e7f7ff;font-family:system-ui,"PingF
       <div class="welcome-orbit orbit-right"><span class="orbit-ring"></span><span class="welcome-ball ball-nine">9</span><span class="orbit-caption">击打 · 回响</span></div>
       <div class="welcome-dust"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
     </div>
-    <div class="welcome-top"><span class="welcome-brand">小糖台球 <small>XIAOTANG BILLIARDS</small></span><div class="welcome-tools"><span class="welcome-tag">ORBIT / 01 <i></i></span><button id="welcomeFullscreen" class="welcome-fullscreen" type="button" aria-label="欢迎页全屏" aria-pressed="false">⛶ 全屏体验</button></div></div>
+    <div class="welcome-top"><span class="welcome-brand">光域台球 <small>XIAOTANG BILLIARDS</small></span><div class="welcome-tools"><span class="welcome-tag">ORBIT / 01 <i></i></span><button id="welcomeFullscreen" class="welcome-fullscreen" type="button" aria-label="欢迎页全屏" aria-pressed="false">⛶ 全屏体验</button></div></div>
     <div class="welcome-copy"><p class="welcome-eyebrow">WELCOME TO THE FUGUANG ARENA</p>
       <h1 id="welcomeTitle"><small>欢迎来到</small><span>浮光竞技馆</span></h1>
       <p class="welcome-description">聚光灯为你亮起。<br>这一杆，让全场听见。</p>
@@ -203,7 +203,7 @@ html,body{margin:0;background:#040b17;color:#e7f7ff;font-family:system-ui,"PingF
   <div class="overlay hidden" id="rulesOverlay"><div class="menu-card rules-card"><button id="closeRules" class="close" type="button" aria-label="关闭">×</button><div class="eyebrow">HOW TO PLAY</div><h2>玩法与操作</h2><p><b>瞄准：</b>点按球台选择大方向，再横向或纵向滑动调角度，在右侧横向拖动刻度尺作精细调整；方向键每次调整 0.001°，按住 Shift 为 0.0001°。辅助线显示当前力度与杆法的短程实际球路，碰到库边立即结束，不显示反弹后的路线。红线表示首碰球不合法。<b>力度：</b>向下拉左侧小头杆，松手击球，旁边刻度条同步显示力度；5%～25% 为细化的轻推区间。<b>旋转：</b>点右侧白球放大，点选或拖动击球点，再点白球下方的“✓ 确认”应用杆法与加塞；每次出杆后自动回到中杆。也可按空格或点击“击球”。</p><p><b>专项练球：</b>提供慢球进袋、低杆、高杆与加塞碰库；点“重摆本球”恢复相同球位与预设力度。本杆结束后显示白球落点，无胜负和换人；点顶部“返回”回到训练项目选择。</p><p><b>袋口：</b>球进入袋洞后承接入袋瞬间的速度与旋转，在袋洞内继续运动并受重力下坠，碰到袋衬后衰减；落到袋底时发出带袋衬闷响与轻微摩擦尾音的落袋声；袋沿始终覆盖球体，避免穿过胶边。六袋绘制、落袋判定与遮罩使用同一套袋口几何。</p><p><b>大师：</b>会比较高低杆、左右轻重塞与混合塞，并对候选杆法的力度作微调，规划下一球；困难球继续优先尝试直接进攻、翻袋或碰库勾球；没有合理进攻路线时才解球或防守。出杆前显示击球点和力度，选择与执行仍可能失误。</p><p><b>自由球：</b>点按或拖动台面摆放白球，点击“确认白球位置”；击球前可以点击“重新摆放白球”再次调整。</p><p><b>八球：</b>开球后先分配全色与花色；先打自己的球，清空后合法打进 8 号球即可获胜，无需指定袋口。犯规后对手自由摆放白球。</p><p><b>九球：</b>每杆先碰当前最小号球；合法打进 9 号球获胜。</p><p>第一次点按会解锁击球、球碰球、碰库和落袋四类本地音效；背景音乐不会抢占音效通道。欢迎页播放已提供的入场音乐，对局使用已提供的新音频循环播放，返回选择页面时自动切换。网页包含首球、无碰库、白球落袋及胜负判定。开球流程为适合网页对战的简化规则。</p></div></div>
   <section class="overlay hidden result-overlay" id="resultOverlay" role="dialog" aria-modal="true" aria-labelledby="resultTitle" aria-describedby="resultReason">
     <div class="result-card">
-      <div class="result-top"><span>小糖台球 / FUGUANG</span><span id="resultRack">本局结束</span></div>
+      <div class="result-top"><span>光域台球 / FUGUANG</span><span id="resultRack">本局结束</span></div>
       <p class="result-kicker" id="resultMode">八球 · 人机对战</p>
       <h1 id="resultTitle">玩家 1 获胜</h1><p id="resultReason" class="result-reason"></p>
       <div class="result-score-label">局数比分</div>
