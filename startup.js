@@ -2,7 +2,7 @@
   'use strict';
   const $=id=>document.getElementById(id),boot=$('boot'),bar=$('bootProgress'),percent=$('bootPercent'),track=$('bootTrack'),rocket=$('bootRocket'),skip=$('skipBoot'),status=$('bootStatus'),help=$('bootHelp');
   const tasks=new Set();let dismissed=false,engineFailed=false,stylesFailed=false,engineRetry=0;
-  const preview=new URLSearchParams(location.search).get('test')==='loading';
+  const preview=(!location.hostname||['localhost','127.0.0.1','[::1]'].includes(location.hostname))&&new URLSearchParams(location.search).get('test')==='loading';
   const essentialReady=()=>tasks.has('game')&&tasks.has('styles');
   const finish=()=>{if(dismissed||!essentialReady())return;dismissed=true;boot.classList.add('done');setTimeout(()=>boot.remove(),600);};
   const progress=()=>{
@@ -19,7 +19,7 @@
   const retryEngine=()=>{
     if(!engineFailed||tasks.has('game'))return;
     engineFailed=false;status.textContent='正在重新连接比赛引擎';skip.textContent='继续等待';
-    const old=$('gameEngine'),script=document.createElement('script');script.id='gameEngine';script.async=true;script.src='./game.js?v=20261009-polish-v7&retry='+String(++engineRetry);script.onerror=failEngine;old?.remove();document.body.appendChild(script);
+    const old=$('gameEngine'),script=document.createElement('script');script.id='gameEngine';script.async=true;script.src='./game.js?v=20261009-orbit-v9&retry='+String(++engineRetry);script.onerror=failEngine;old?.remove();document.body.appendChild(script);
   };
   window.PoolStartup={ready,engineFailed:failEngine,styleFailed};
   const stylesheet=$('siteStyle');if(stylesheet?.sheet)ready('styles');else if(stylesheet?.dataset?.failed==='true')styleFailed();
@@ -27,7 +27,7 @@
   skip.addEventListener('click',()=>{
     if(essentialReady()){finish();return;}
     if(engineFailed)retryEngine();
-    if(stylesFailed){stylesFailed=false;stylesheet.href='./site.css?v=20261009-flight-v6&retry='+String(Date.now());status.textContent='正在重新加载赛场画面';skip.textContent='继续等待';}
+    if(stylesFailed){stylesFailed=false;stylesheet.href='./site.css?v=20261009-orbit-v9&retry='+String(Date.now());status.textContent='正在重新加载赛场画面';skip.textContent='继续等待';}
     if(!engineFailed&&!stylesFailed)help.textContent='仍在等待网络响应，请保持此页打开，无需反复刷新';
   });
   setTimeout(()=>{if(dismissed||essentialReady())return;if(!engineFailed&&!stylesFailed){status.textContent='网络连接较慢，仍在等待';help.textContent='请保持此页打开；资源完成后会自动进入';}},12000);

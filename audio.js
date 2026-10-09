@@ -1,7 +1,8 @@
 (() => {
   'use strict';
   const startButton=document.getElementById('startBtn');
-  const introMusic=new Audio('./sounds/xiaotang-intro.mp3');
+  const entryMusic=document.getElementById('entryMusic');
+  const introMusic=typeof entryMusic?.play==='function'?entryMusic:new Audio('./sounds/xiaotang-intro.mp3');
   introMusic.preload='auto';introMusic.loop=true;introMusic.playsInline=true;introMusic.volume=.32;
   const AudioEngine=window.AudioContext||window.webkitAudioContext;
   let context=null,effects=null,limiter=null,meter=null,effectLoading=null;
@@ -84,13 +85,15 @@
     gameMusicTimer=setTimeout(fillGameMusicQueue,20000);
   }
   async function startGameMusic(){
+    if(gameMusicWanted&&gameMusicMaster)return true;
     stopGameMusic(false);const ticket=gameMusicTicket;gameMusicWanted=true;ensureContext();
     try{await gameMusicLoading;}catch{}
     if(ticket!==gameMusicTicket||!gameMusicWanted||!context||!gameMusicBuffer)return false;
     if(context.state==='suspended')try{await context.resume();}catch{}
     if(ticket!==gameMusicTicket||!gameMusicWanted||context.state!=='running')return false;
-    gameMusicMaster=context.createGain();gameMusicMaster.gain.value=.20;gameMusicMaster.connect(limiter);
-    gameMusicNextStart=context.currentTime+.025;fillGameMusicQueue();return true;
+    gameMusicMaster=context.createGain();gameMusicMaster.gain.value=.0001;gameMusicMaster.connect(limiter);
+    gameMusicMaster.gain.setValueAtTime(.0001,context.currentTime);gameMusicMaster.gain.linearRampToValueAtTime(.20,context.currentTime+.35);
+    gameMusicNextStart=context.currentTime+.005;fillGameMusicQueue();stopIntroMusic(true);return true;
   }
   function stopGameMusic(fade=true){
     gameMusicTicket++;gameMusicWanted=false;clearTimeout(gameMusicTimer);gameMusicTimer=null;
@@ -150,7 +153,7 @@
           const response=await fetch(url);if(!response.ok)throw Error(`${kind}: HTTP ${response.status}`);
           return context.decodeAudioData(await response.arrayBuffer());
         }));
-        decodedPools[kind]=kind==='ball'?buffers.map(prepareClack):buffers;
+        decodedPools[kind]=kind==='ball'?buffers.map(b=>prepareClack(b)):buffers.map(b=>prepareClack(b,b.duration,false));
       })).catch(error=>console.warn('低延迟音效未完成预热，暂用原生音频回退。',error));
       gameMusicLoading=fetch('./sounds/xiaotang-game-loop.m4a').then(response=>{
         if(!response.ok)throw Error(`Game music: HTTP ${response.status}`);return response.arrayBuffer();
@@ -159,7 +162,7 @@
     if(context.state==='suspended'||context.state==='interrupted')context.resume().catch(()=>{});
     return true;
   }
-  function prepareClack(buffer){
+  function prepareClack(buffer,maxDuration=.10,normalize=true){
     const mono=new Float32Array(buffer.length);
     for(let channel=0;channel<buffer.numberOfChannels;channel++){
       const input=buffer.getChannelData(channel);
@@ -169,10 +172,10 @@
     if(peak<.0001)return buffer;
     let onset=0;while(onset<mono.length&&Math.abs(mono[onset])<peak*.12)onset++;
     const start=Math.max(0,onset-Math.round(buffer.sampleRate*.0005));
-    const length=Math.min(mono.length-start,Math.round(buffer.sampleRate*.10));
+    const length=Math.min(mono.length-start,Math.round(buffer.sampleRate*maxDuration));
     const prepared=context.createBuffer(1,length,buffer.sampleRate),out=prepared.getChannelData(0);
     const fade=Math.max(1,Math.round(buffer.sampleRate*.004));
-    for(let i=0;i<length;i++)out[i]=mono[start+i]*(.64/peak)*Math.min(1,(i+1)/(buffer.sampleRate*.00018),(length-i)/fade);
+    for(let i=0;i<length;i++)out[i]=mono[start+i]*(normalize?.64/peak:1)*Math.min(1,(i+1)/(buffer.sampleRate*.00018),(length-i)/fade);
     return prepared;
   }
   function tone(at,f0,f1,length,volume,type='sine'){
@@ -221,6 +224,7 @@
     }else if(kind==='ball'){
       native.catch(()=>fallbackImpact(kind,at,audibleWeight));if(weight>.15)duckMusic();
     }else if(kind==='rail'){
+      native.catch(()=>{}); // The soft rail body below also covers denied native playback.
       if(hasContext){softImpact(at,weight,.06,650,.065);tone(at,145,70,.07,.045*weight);}
     }else{
       duckMusic(true);
@@ -230,6 +234,11 @@
         if(!bufferedEffect(kind,weight))softImpact(context.currentTime,weight,.16,1800,.34);
       });
     }
+  }
+  function pocketEntry(impact=20){
+    if(!ensureContext()||context.state!=='running')return;
+    // A quiet leather brush at the lip; the separate bottom impact follows gravity.
+    softImpact(context.currentTime,.18+.22*Math.min(1,impact/100),.048,1100,.11);
   }
   function unlockAudio(){unlockNative();return ensureContext();}
   startButton?.addEventListener('pointerdown',()=>{unlockAudio();startIntroMusic();},{passive:true});
@@ -247,7 +256,7 @@
   if(document.body?.getAttribute?.('data-screen')==='match'){introWanted=false;startGameMusic();}
   else startIntroMusic();
   window.addEventListener?.('load',()=>{if(introWanted)startIntroMusic();});
-  window.PoolAudio={play,unlock:unlockAudio,stats:effectStats,contextState:()=>context?.state||'native-html-audio',
+  window.PoolAudio={play,pocketEntry,unlock:unlockAudio,stats:effectStats,contextState:()=>context?.state||'native-html-audio',
     samplesReady:()=>decodedPools.ball.length===3,effectsReady:()=>Object.values(decodedPools).every(pool=>pool.length),waitForSamples:()=>Promise.all([effectLoading].filter(Boolean)),
     outputLevel:()=>{if(!meter)return 0;const samples=new Float32Array(meter.fftSize);meter.getFloatTimeDomainData(samples);return Math.sqrt(samples.reduce((sum,v)=>sum+v*v,0)/samples.length);},
     startIntro:startIntroMusic,stopIntro:stopIntroMusic,introPlaying:()=>!introMusic.paused,

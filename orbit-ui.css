@@ -1,0 +1,72 @@
+/* FUGUANG / ORBIT. Lightweight luminous geometry, original code-native UI. */
+#mobile-pool-preview{--orbit-ice:#95f4ff;--orbit-violet:#9e9aff;--orbit-ink:#050c1a;--orbit-line:#8edfff35;background:#040a15;color:#e7f5ff}
+#mobile-pool-preview .overlay:not(#startOverlay):not(#spinOverlay){background:radial-gradient(ellipse at 12% 0,#14567755,transparent 54%),radial-gradient(ellipse at 95% 100%,#423f7944,transparent 52%),linear-gradient(140deg,#030917f7,#0a1725f5);backdrop-filter:none}
+#mobile-pool-preview #menuOverlay:before,#mobile-pool-preview #practiceOverlay:before,#mobile-pool-preview #resultOverlay:before{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(#82dbff08 1px,transparent 1px),linear-gradient(90deg,#82dbff08 1px,transparent 1px);background-size:64px 64px;mask-image:linear-gradient(120deg,black,transparent 75%)}
+#mobile-pool-preview .menu-card,#mobile-pool-preview .result-card,#mobile-pool-preview .spin-editor-card{border:1px solid #8edfff42;border-radius:18px 4px 18px 4px;background:linear-gradient(135deg,#112739ee,#08131feb 55%,#101a32ed);box-shadow:0 28px 90px #0009,inset 0 1px #c1f3ff20;isolation:isolate}
+#mobile-pool-preview .menu-card:after,#mobile-pool-preview .result-card:after{content:'';position:absolute;left:24px;right:24px;top:-1px;height:2px;background:linear-gradient(90deg,#8bf0ff,transparent 35%,transparent 70%,#a5a2ff);pointer-events:none}
+#mobile-pool-preview .setup-shell{width:min(940px,92vw);padding:36px 44px 40px!important}
+#mobile-pool-preview .setup-progress{gap:8px;border-bottom:1px solid var(--orbit-line);padding-bottom:19px;margin-bottom:24px}
+#mobile-pool-preview .setup-progress span{border-radius:3px;background:#060e1a;border:1px solid #79cfe827;color:#7c9eaf;letter-spacing:2px;font-size:11px;padding:8px 14px}
+#mobile-pool-preview .setup-progress .active{background:#163847;border-color:#80e9ff99;color:#c0f8ff;box-shadow:inset 3px 0 #90efff}
+#mobile-pool-preview .setup-step .eyebrow,#mobile-pool-preview .eyebrow{color:#7ed8ed;letter-spacing:5px;font-size:10px}
+#mobile-pool-preview .setup-step h1{font-size:clamp(32px,4.3vw,58px)!important;font-weight:700;letter-spacing:3px;line-height:1.12;margin:18px 0 12px}
+#mobile-pool-preview .setup-step h1 em{font-style:normal;color:#aeedff}
+#mobile-pool-preview .setup-step>p{color:#8fa9ba!important;letter-spacing:1px}
+#mobile-pool-preview .setup-grid{gap:16px;margin-top:28px}
+#mobile-pool-preview .setup-grid>button{position:relative;min-height:174px;padding:26px 22px!important;text-align:left;align-items:flex-start;border:1px solid #81bfd13d;border-radius:12px 3px 12px 3px;background:linear-gradient(135deg,#1434478c,#091523);transition:transform .18s,border-color .18s,background .18s;overflow:hidden}
+#mobile-pool-preview .setup-grid>button:after{content:'↗';position:absolute;top:23px;right:21px;color:#67bfd0;font-size:21px}
+#mobile-pool-preview .setup-grid>button:hover,#mobile-pool-preview .setup-grid>button:focus-visible{transform:translateY(-3px);border-color:#a0f3ff;background:linear-gradient(135deg,#205268bb,#0c1b2e)}
+#mobile-pool-preview .setup-grid>button b{font-size:21px;letter-spacing:2px;margin-top:16px}
+#mobile-pool-preview .setup-grid>button small{font-size:12px;color:#8caabc;line-height:1.5}
+#mobile-pool-preview .setup-icon{background:linear-gradient(140deg,#123c50,#142037);border:1px solid #86e6ff5c;border-radius:8px;color:#a8f3ff;box-shadow:inset 0 0 20px #6edfff12;font-family:monospace;font-weight:500}
+#mobile-pool-preview .difficulty-number{font:500 35px monospace;color:#94eaff;letter-spacing:-1px}
+#mobile-pool-preview [data-flow-difficulty="hard"]{border-color:#aca2ff60;background:linear-gradient(135deg,#342d5680,#111827)}
+#mobile-pool-preview [data-flow-difficulty="hard"] .difficulty-number{color:#b9b0ff}
+#mobile-pool-preview .setup-back{color:#9cb9cd!important;border:1px solid #93d2ee30!important;background:#07131e90!important;border-radius:5px!important}
+#mobile-pool-preview .welcome-tools{display:flex;align-items:center;gap:20px}
+#mobile-pool-preview .welcome-fullscreen{min-height:42px;padding:10px 17px;border:1px solid #a1e6ff70;background:#07162899;color:#d5f6ff;letter-spacing:2px;font-size:12px;border-radius:3px;cursor:pointer}
+#mobile-pool-preview .welcome-fullscreen:hover{background:#1b4254;border-color:#b2f6ff}
+#mobile-pool-preview .welcome-grid{position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(90deg,#91dfff08 1px,transparent 1px),linear-gradient(#91dfff08 1px,transparent 1px);background-size:74px 74px;mask-image:linear-gradient(90deg,#0009,transparent 48%)}
+#mobile-pool-preview .welcome-copy:before{content:'01 / ORBIT SERIES';font:10px monospace;letter-spacing:3px;color:#89bed0;position:absolute;top:17%;left:13%}
+#mobile-pool-preview #welcomeTitle span{background:linear-gradient(115deg,#f2fcff 20%,#ade5f4 70%,#98aaf4);background-clip:text;-webkit-background-clip:text;color:transparent;text-shadow:none}
+#mobile-pool-preview .welcome-enter{border-radius:2px 14px 2px 14px;background:linear-gradient(110deg,#baf6ff,#8ec9ed);box-shadow:0 0 35px #6bccff18,inset 0 1px #fff;letter-spacing:5px}
+#mobile-pool-preview .welcome-bottom{border-top-color:#a6deef40}
+#mobile-pool-preview .welcome-fullscreen-note{font-size:11px;max-width:300px;color:#b9dbe9}
+#mobile-pool-preview .topbar{background:linear-gradient(90deg,#07101b,#11283a);border-bottom:1px solid #82d9ed38}
+#mobile-pool-preview .scorebar{background:linear-gradient(90deg,#0a1d2b,#12283a,#0a1d2b);border-color:#78c4d32b}
+#mobile-pool-preview .player.active{box-shadow:inset 0 -2px #79e7fa}
+#mobile-pool-preview .controls{background:linear-gradient(145deg,#102537,#07131f);border:1px solid #76c8e03a;border-radius:12px 3px 12px 3px;box-shadow:inset 0 1px #a7e7fa14}
+#mobile-pool-preview .shoot{background:linear-gradient(110deg,#96efff,#9bbce8);border:1px solid #caf4ff;color:#092231;border-radius:3px 12px 3px 12px}
+#mobile-pool-preview .status{background:#061723;color:#a9d6e4;border-color:#84d4e026}
+#mobile-pool-preview .aim-feel{display:flex;align-items:center;gap:5px;margin:9px 0 2px;font-size:10px;color:#8aabba}
+#mobile-pool-preview .aim-feel>span{margin-right:auto;white-space:nowrap}
+#mobile-pool-preview .aim-feel button{padding:5px 8px;border:1px solid #82c7dc2e;border-radius:3px;background:#081a27;color:#8baebb;font-size:10px;cursor:pointer}
+#mobile-pool-preview .aim-feel button[aria-pressed="true"]{color:#cafaff;background:#19414e;border-color:#6bcadc99}
+#mobile-pool-preview .practice-grid button{border:1px solid #80d9ed40;border-radius:9px 2px 9px 2px;background:linear-gradient(110deg,#193647,#101d30);padding:19px;text-align:left}
+#mobile-pool-preview .practice-grid small{color:#97b4c6}
+#mobile-pool-preview #spinOverlay{background:#03101cce;backdrop-filter:none}
+#mobile-pool-preview .spin-editor-card{box-shadow:0 30px 90px #000a,inset 0 0 55px #71dfff07}
+#mobile-pool-preview .spin-editor-ball{box-shadow:0 20px 30px #0007,0 0 0 9px #77dfff08,0 0 0 10px #88ddff22,inset -20px -22px 33px #52667d66}
+#mobile-pool-preview .result-card{position:relative;background:radial-gradient(ellipse at 50% 0,#23465b,#091421 75%);border-color:#9beaff4d}
+#mobile-pool-preview .result-player>b{color:#d8f6ff;text-shadow:0 0 30px #6ecbf333;font-family:monospace;font-weight:500}
+#mobile-pool-preview .result-card h1{background:linear-gradient(90deg,#e3faff,#a5d5f9);background-clip:text;-webkit-background-clip:text;color:transparent!important}
+@media(prefers-reduced-motion:no-preference){#mobile-pool-preview .setup-step:not(.hidden){animation:orbit-page-in .32s ease-out both}@keyframes orbit-page-in{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}}
+#mobile-pool-preview.phone-landscape .setup-shell{width:min(820px,92%)!important;padding:16px 24px!important}
+#mobile-pool-preview.phone-landscape .setup-progress{padding-bottom:8px;margin-bottom:9px;gap:5px}
+#mobile-pool-preview.phone-landscape .setup-progress span{font-size:9px;padding:4px 9px;letter-spacing:1px}
+#mobile-pool-preview.phone-landscape .setup-step h1{font-size:30px!important;margin:9px 0!important;line-height:1.1}
+#mobile-pool-preview.phone-landscape .setup-step h1 br{display:none}
+#mobile-pool-preview.phone-landscape .setup-step>p{font-size:10px;margin:6px 0}
+#mobile-pool-preview.phone-landscape .setup-grid{margin-top:12px;gap:10px}
+#mobile-pool-preview.phone-landscape .setup-grid>button{min-height:112px;padding:12px 14px!important}
+#mobile-pool-preview.phone-landscape .setup-grid>button b{font-size:16px;margin-top:7px}
+#mobile-pool-preview.phone-landscape .setup-grid>button small{font-size:9px}
+#mobile-pool-preview.phone-landscape .setup-grid>button:after{font-size:16px;top:12px;right:12px}
+#mobile-pool-preview.phone-landscape .setup-icon{height:30px;width:35px;font-size:15px}
+#mobile-pool-preview.phone-landscape .difficulty-number{font-size:25px}
+#mobile-pool-preview.phone-landscape .welcome-copy:before{display:none}
+#mobile-pool-preview.phone-landscape .welcome-fullscreen{font-size:10px;padding:6px 12px;min-height:32px}
+#mobile-pool-preview.phone-landscape .welcome-tools{gap:10px}
+#mobile-pool-preview.phone-landscape .welcome-tag{display:none}
+#mobile-pool-preview.phone-landscape .aim-feel{margin:4px 0 0;font-size:8px;gap:3px}
+#mobile-pool-preview.phone-landscape .aim-feel button{padding:3px 5px;font-size:9px}
