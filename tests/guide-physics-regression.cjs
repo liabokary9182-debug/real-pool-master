@@ -22,7 +22,7 @@ for(const f of fixtures){
  assert(pathLength(g.cuePath)<=8.05,`${f.name}: cue guide exceeds legacy length`);
  assert(pathLength(g.targetPath)<=11.05,`${f.name}: target guide exceeds legacy length`);
  if(f.expectedRails){
-   assert.equal(g.railCount,f.expectedRails,`${f.name}: missing internal cushion prediction`);
+   assert.equal(g.railCount,1,`${f.name}: preview must stop computing at its first visible cushion`);
    assert.equal(g.targetNumber,null,`${f.name}: target after cushion should stay hidden`);
    assert.equal(g.cuePath.length,0,`${f.name}: cue rebound guide should stay hidden`);
    assert.equal(g.targetPath.length,0,`${f.name}: target rebound guide should stay hidden`);

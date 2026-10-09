@@ -226,3 +226,13 @@ button:focus-visible{outline:2px solid #e0f7ff;outline-offset:5px}
 #mobile-pool-preview #welcomeTitle{font-size:clamp(96px,10.8vw,168px)!important;letter-spacing:9px}
 #mobile-pool-preview #startOverlay.arena-welcome .welcome-copy{justify-content:center;align-items:center}
 #mobile-pool-preview .welcome-enter{font-size:29px;min-width:348px;min-height:82px}
+
+/* Keep the invitation beside the photographed table, not over it. */
+#mobile-pool-preview #startOverlay.arena-welcome .welcome-copy{inset:0 auto 0 0;width:46%;max-width:660px;padding:64px 0 100px 6%;align-items:flex-start;text-align:left;transform-origin:left center}
+#mobile-pool-preview #welcomeTitle{font-size:clamp(48px,5.1vw,78px)!important;letter-spacing:4px;white-space:nowrap}
+#mobile-pool-preview #welcomeTitle small{font-size:18px;letter-spacing:8px}
+#mobile-pool-preview .welcome-description{font-size:15px;letter-spacing:2px}
+#mobile-pool-preview .welcome-enter{font-size:21px;min-width:240px;min-height:60px}
+#mobile-pool-preview .welcome-shade{background:linear-gradient(90deg,#030d21dc 0%,#030d2190 29%,#030d2110 60%),linear-gradient(0deg,#03091fa8,transparent 30%)}
+#mobile-pool-preview .orbit-left{display:none}
+#mobile-pool-preview .orbit-right{right:5%;top:25%;opacity:.5;transform:scale(.65)}

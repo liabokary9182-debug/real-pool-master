@@ -209,13 +209,15 @@
   }
   function markPocket(b,index) {
     if(b.pocketed)return;
+    let animation=null;
     if(!physicsContext&&state.phase==='moving'&&state.balls.includes(b)){
       const impact=Math.hypot(b.vx,b.vy);
-      state.pocketAnimations.push(makePocketFall(b,index,impact));
+      animation=makePocketFall(b,index,impact);state.pocketAnimations.push(animation);
     }
     b.pocketed=true;b.vx=0;b.vy=0;b.rollVx=0;b.rollVy=0;b.spin=0;
     const events=physicsContext||state.shot;
     if(events)events.pocketed.push({n:b.n,pocket:index});
+    return animation;
   }
   function pocketFallProfile(p){
     const centerDepth=(p.well.x-p.mx)*p.nx+(p.well.y-p.my)*p.ny;
@@ -257,8 +259,21 @@
     }
     a.age+=dt;
   }
-  function pocketCheck(b) {
+  function pocketEntryFraction(p,from,to){
+    const dx=to.x-from.x,dy=to.y-from.y,v2=dx*dx+dy*dy;
+    if(v2<1e-16)return pocketFallContains(p,to.x,to.y)?0:null;
+    const ox=from.x-p.well.x,oy=from.y-p.well.y,dot=ox*dx+oy*dy;
+    const disc=dot*dot-v2*(ox*ox+oy*oy-p.fallRadius*p.fallRadius);
+    if(disc<0)return null;
+    let lo=Math.max(0,(-dot-Math.sqrt(disc))/v2),hi=Math.min(1,(-dot+Math.sqrt(disc))/v2);
+    const depth=(from.x-p.mx)*p.nx+(from.y-p.my)*p.ny-p.fallFront,advance=dx*p.nx+dy*p.ny;
+    if(Math.abs(advance)<1e-12){if(depth<0)return null;}
+    else if(advance>0)lo=Math.max(lo,-depth/advance);else hi=Math.min(hi,-depth/advance);
+    return lo<=hi&&lo>=0&&lo<=1?lo:null;
+  }
+  function pocketCheck(b,from=null,dt=0) {
     b.pocketCandidate=null;
+    const travel=from?Math.hypot(b.x-from.x,b.y-from.y):0;
     for(const p of POCKET_GEOMETRY){
       const depth=(b.x-p.mx)*p.nx+(b.y-p.my)*p.ny;
       const distance2=(b.x-p.well.x)**2+(b.y-p.well.y)**2;
@@ -266,8 +281,12 @@
       // Once the centre passes the shelf edge and most of the footprint is
       // unsupported inside the visible well, gravity takes over. No minimum
       // speed and no invisible extra throat travel or attraction force.
-      if(pocketFallContains(p,b.x,b.y)){
-        b.pocketCandidate=p.index;return markPocket(b,p.index);
+      const fraction=from&&distance2<(p.fallRadius+travel)**2?pocketEntryFraction(p,from,b):null;
+      if(fraction!==null||pocketFallContains(p,b.x,b.y)){
+        if(fraction!==null){b.x=from.x+(b.x-from.x)*fraction;b.y=from.y+(b.y-from.y)*fraction;}
+        b.pocketCandidate=p.index;const fall=markPocket(b,p.index);
+        if(fall)fall.entryRemainder=fraction!==null?dt*(1-fraction):0;
+        return fall;
       }
     }
     if(b.x < -6 || b.x > W+6 || b.y < -6 || b.y > H+6){
@@ -1000,15 +1019,16 @@
       let finalists=successful.slice(0,state.aiDifficulty==='easy'?3:state.aiDifficulty==='hard'?18:6);
       if(state.aiDifficulty==='hard'){const refined=await refineMasterPosition(finalists,isCurrent);if(!refined)return null;if(refined.length)finalists=refined.slice(0,6);}
       for(const plan of finalists){
-        let robust=0;
+        let robust=0,scratchRisk=0;
         for(const sign of [-1,1])for(const powerSign of (state.aiDifficulty==='hard'?[-1,1]:[sign])){
           if(!isCurrent())return null;
           const perturbation=state.aiDifficulty==='hard'?.0021:.0015;
           const result=simulateAIShot({...plan,aim:plan.aim+sign*perturbation,power:clamp(Math.round(plan.power*(1+powerSign*.015)),8,100)});
+          if(result.scratch)scratchRisk++;
           if(result.safe&&(result.potted||result.winning)&&validTacticalRoute(plan,result))robust++;
         }
         const checks=state.aiDifficulty==='hard'?4:2;
-        plan.score+=(checks-robust)*12;plan.robustness=robust/checks;
+        plan.score+=(checks-robust)*12+scratchRisk*32;plan.robustness=robust/checks;
         await new Promise(resolve=>setTimeout(resolve,0));
       }
       finalists.sort((a,b)=>a.score-b.score);
@@ -1104,7 +1124,11 @@
       for(const b of moving){
         clothStep(b,subdt);
         if(animate){advanceBallOrientation(b,subdt);const speed=Math.hypot(b.rollVx,b.rollVy);if(speed>.01){b.roll+=speed*subdt/R;b.rollHeading=Math.atan2(b.rollVy,b.rollVx);}}
-        b.x+=b.vx*subdt;b.y+=b.vy*subdt;rails(b);pocketCheck(b);
+        const from={x:b.x,y:b.y};b.x+=b.vx*subdt;b.y+=b.vy*subdt;
+        const endX=b.x,endY=b.y;rails(b);
+        // Sweep only a free segment; a cushion correction is a different path.
+        const fall=pocketCheck(b,b.x===endX&&b.y===endY?from:null,subdt);
+        if(fall){const remaining=fall.entryRemainder+(subdivisions-sub-1)*subdt;advancePocketFall(fall,remaining);advanceBallOrientation(fall.visual,remaining);}
       }
       for(let i=0;i<moving.length;i++)for(let j=i+1;j<moving.length;j++)if(!moving[i].pocketed&&!moving[j].pocketed)ballsCollide(moving[i],moving[j]);
     }
@@ -1170,6 +1194,7 @@
         if(!target){
           preTravel+=moved(beforeCue,c);
           for(const hit of newHits.filter(h=>h.n===0)){if(!shotGuideDone)point(shotPath,hit.x,hit.y,true);shotGuideDone=true;preRails++;}
+          if(preRails)break;
           if(events.firstHit!==null){
             target=balls.find(b=>b.n===events.firstHit);contact=events.contacts.find(e=>e.a===0||e.b===0);
             const cueContact=contact?(contact.a===0?contact.afterA:contact.afterB):c;
@@ -1178,7 +1203,15 @@
             point(cuePath,cueContact.x,cueContact.y,true);
             point(targetPath,targetContact.x,targetContact.y,true);
             lastCue={x:cueContact.x,y:cueContact.y};lastTarget={x:targetContact.x,y:targetContact.y};
-            firstContacts=events.contacts.length;
+            firstContacts=events.contacts.indexOf(contact)+1;
+            // A touching cluster can have several impacts in this very tick.
+            // End each preview at its next contact, never continue through it.
+            const later=events.contacts.slice(firstContacts);
+            for(const [model,path,isCue] of [[c,cuePath,true],[target,targetPath,false]]){
+              const hit=later.find(e=>e.a===model.n||e.b===model.n);
+              if(hit){const at=hit.a===model.n?hit.afterA:hit.afterB;point(path,at.x,at.y,true);if(isCue)cueDone=true;else targetDone=true;}
+            }
+            if(cueDone&&targetDone)break;
           }else if(c.pocketed||preRails>=3||preTravel>=235||ballsSettled(balls)){
             if(!shotGuideDone)point(shotPath,c.x,c.y,true);break;
           }else if(!shotGuideDone)point(shotPath,c.x,c.y);
@@ -1191,10 +1224,10 @@
           const secondary=events.contacts.slice(firstContacts);
           const blocked=n=>secondary.some(h=>h.a===n||h.b===n);
           if(!cueDone&&(c.pocketed||blocked(0)||cueTravel>=8||Math.hypot(c.vx,c.vy)<.01&&Math.hypot(c.rollVx,c.rollVy)<.01)){
-            if(!cueGuideDone)point(cuePath,c.x,c.y,true);cueDone=true;
+            if(!cueGuideDone){const hit=secondary.find(h=>h.a===0||h.b===0),at=hit?(hit.a===0?hit.afterA:hit.afterB):c;point(cuePath,at.x,at.y,true);}cueDone=true;
           }
           if(!targetDone&&(target.pocketed||blocked(target.n)||targetTravel>=11||Math.hypot(target.vx,target.vy)<.01&&Math.hypot(target.rollVx,target.rollVy)<.01)){
-            if(!targetGuideDone)point(targetPath,target.x,target.y,true);targetDone=true;
+            if(!targetGuideDone){const hit=secondary.find(h=>h.a===target.n||h.b===target.n),at=hit?(hit.a===target.n?hit.afterA:hit.afterB):target;point(targetPath,at.x,at.y,true);}targetDone=true;
           }
           if(!cueDone&&!cueGuideDone)point(cuePath,c.x,c.y);
           if(!targetDone&&!targetGuideDone)point(targetPath,target.x,target.y);
@@ -1357,12 +1390,12 @@
       const u=(px+.5-BALL_SPRITE_MID)/BALL_SPRITE_RADIUS,v=(py+.5-BALL_SPRITE_MID)/BALL_SPRITE_RADIUS,r2=u*u+v*v;
       if(r2>=1)continue;
       const z=Math.sqrt(1-r2),diffuse=Math.max(0,-u*.39-v*.5+z*.79),light=.49+.55*diffuse;
-      const highlight=Math.pow(Math.max(0,-u*.45-v*.59+z*.68),112)*.88;
-      const broadHighlight=Math.pow(Math.max(0,-u*.48-v*.57+z*.66),18)*.17;
+      const highlight=Math.pow(Math.max(0,-u*.45-v*.59+z*.68),112)*.64;
+      const broadHighlight=Math.pow(Math.max(0,-u*.48-v*.57+z*.66),22)*.13;
       // Small overhead reflections make the resin read as polished and dense.
       const pinLight=Math.exp(-(((u+.36)/.065)**2+((v+.43)/.08)**2))*.38;
       const rimBounce=Math.pow(Math.max(0,u*.47+v*.31+z*.26),9)*.095;
-      const panelLight=Math.exp(-(((u+.22)/.17)**8+((v+.48)/.035)**4))*.28;
+      const panelLight=Math.exp(-(((u+.22)/.17)**8+((v+.48)/.045)**4))*.24;
       const grain=1+((((px*37+py*71)%17)-8)*.00035);
       const shade=(1-.36*Math.pow(1-z,1.25))*light*grain;
       cells.push([(py*BALL_SPRITE_SIZE+px)*4,u,v,z,shade,255*(highlight+broadHighlight+pinLight+rimBounce+panelLight),Math.round(255*clamp((1-r2)*BALL_SPRITE_RADIUS*.75,0,1))]);
@@ -1444,7 +1477,9 @@
       const offsetY=horizontalFace?(face.ay<H/2?-27:27):(face.ay>p.my?-17:17);
       ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.quadraticCurveTo(b.x-p.nx*5,b.y-p.ny*5,b.x-p.nx*10,b.y-p.ny*10);ctx.lineTo(a.x+offsetX,a.y+offsetY);ctx.closePath();
     }
-    ctx.clip();blitTable();ctx.restore();
+    ctx.clip();
+    for(const p of affected){const q=worldToScreen(p.mx,p.my),extent=(p.radius+R+2)*SCALE;blitTable({x:q.x-extent,y:q.y-extent,w:extent*2,h:extent*2});}
+    ctx.restore();
   }
   function drawBall(b,scale=1,worldX=b.x,worldY=b.y,alpha=1,shadow=true){
     if(!b.sprite)renderBallSprite(b);
@@ -1600,24 +1635,29 @@
   function drawPocketEffect(a){
     const pocket=POCKET_GEOMETRY[a.pocket],pose=pocketAnimationPose(a);
     const center=worldToScreen(pose.x,pose.y+pose.depth),rr=DISPLAY_R*SCALE*pose.scale;
-    ctx.save();const mouth=drawPocketFallMask(pocket);ctx.clip();
+    ctx.save();const mouth=drawPocketFallMask(pocket);
+    // At entry the entire upper hemisphere is still above the lip. Clipping
+    // the whole sprite to the aperture instantly chopped it in half.
+    if(pose.drop<R){const cap=rr*Math.sqrt(Math.max(0,1-(pose.drop/R)**2));ctx.moveTo(center.x+cap,center.y);ctx.arc(center.x,center.y,cap,0,Math.PI*2);}
+    ctx.clip();
     ctx.globalAlpha=.28*(1-pose.sink);ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(center.x,center.y,rr*1.08,rr*.5,0,0,Math.PI*2);ctx.fill();
     drawBall(a.visual,pose.scale,pose.x,pose.y+pose.depth,pose.alpha,false);
     ctx.globalAlpha=pose.alpha*(.1+.84*pose.sink);
     const shade=ctx.createRadialGradient(center.x-rr*.24,center.y-rr*.28,rr*.08,center.x,center.y,rr*1.08);
     shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(.58,`rgba(0,0,0,${.14+.32*pose.sink})`);shade.addColorStop(1,'rgba(0,0,0,.97)');
     ctx.fillStyle=shade;ctx.beginPath();ctx.arc(center.x,center.y,rr,0,Math.PI*2);ctx.fill();ctx.restore();
-    ctx.save();ctx.globalAlpha=.82*(1-pose.sink*.7);ctx.strokeStyle='#030608';ctx.lineWidth=5.2;
+    ctx.save();ctx.globalAlpha=.82*clamp(pose.drop/R,0,1)*(1-pose.sink*.7);ctx.strokeStyle='#030608';ctx.lineWidth=3;
     ctx.beginPath();ctx.arc(mouth.well.x,mouth.well.y,mouth.radius,mouth.start,mouth.end);ctx.stroke();ctx.restore();
   }
   let tableSurface=null;
   let textureCursor=0,textureBudget=MOBILE_RENDER?2:6;
   function refreshBallTextures(){
     const models=[...live(),...state.pocketAnimations.map(a=>a.visual)];
+    const deadline=performance.now()+(MOBILE_RENDER?3:5);
     let budget=state.phase==='moving'?textureBudget:models.length;
     for(let i=0;i<models.length;i++){
       const b=models[(textureCursor+i)%models.length];
-      if(!b.sprite||(b.spriteDirty&&budget>0)){renderBallSprite(b);budget--;}
+      if(!b.sprite||(b.spriteDirty&&budget>0&&(state.phase!=='moving'||performance.now()<deadline))){renderBallSprite(b);budget--;}
     }
     if(models.length)textureCursor=(textureCursor+textureBudget)%models.length;
   }
@@ -1630,10 +1670,12 @@
     PIXEL_RATIO=ratio;canvas.width=Math.round(VIEW_W*ratio);canvas.height=Math.round(VIEW_H*ratio);
     ctx.setTransform(ratio,0,0,ratio,0,0);tableSurface=null;tableBackdrop=null;render();
   }
-  function blitTable(){
+  function blitTable(region=null){
     // Copy the cached backing buffer at integer device pixels. Mapping it
     // through rounded CSS dimensions needlessly resamples millions of pixels.
-    ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(tableSurface,0,0);ctx.restore();
+    ctx.save();ctx.setTransform(1,0,0,1,0,0);
+    if(region){const x=Math.max(0,Math.floor(region.x*PIXEL_RATIO)),y=Math.max(0,Math.floor(region.y*PIXEL_RATIO)),w=Math.min(canvas.width-x,Math.ceil(region.w*PIXEL_RATIO)+2),h=Math.min(canvas.height-y,Math.ceil(region.h*PIXEL_RATIO)+2);if(w>0&&h>0)ctx.drawImage(tableSurface,x,y,w,h,x,y,w,h);}
+    else ctx.drawImage(tableSurface,0,0);ctx.restore();
   }
   function render() {
     refreshBallTextures();

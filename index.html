@@ -8,7 +8,8 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23121a20'/%3E%3Ccircle cx='16' cy='16' r='7' fill='white'/%3E%3Ctext x='16' y='20' text-anchor='middle' font-size='12'%3E8%3C/text%3E%3C/svg%3E">
   <link rel="preload" href="./assets/fuguang-arena.jpg" as="image">
   <title>小糖台球 · 浮光竞技馆</title>
-  <link id="siteStyle" rel="stylesheet" href="./site.css?v=20261009-flight-v6" media="print" onload="this.media='all';window.PoolStartup?.ready('styles')" onerror="this.dataset.failed='true';window.PoolStartup?.styleFailed()">
+  <link rel="preload" href="./site.css?v=20261009-polish-v7" as="style">
+<link id="siteStyle" rel="stylesheet" href="./site.css?v=20261009-polish-v7" media="print" onload="this.media='all';window.PoolStartup?.ready('styles')" onerror="this.dataset.failed='true';window.PoolStartup?.styleFailed()">
   <!-- CRITICAL_STYLE_START -->
   <style>/* Always show a landscape game; no orientation gate or blocked controls. */
 #mobile-pool-preview.phone-landscape{position:relative!important;width:100%!important;height:var(--phone-height)!important;min-height:0!important;overflow:hidden!important;padding:0!important}
@@ -48,8 +49,8 @@
 #mobile-pool-preview.phone-landscape .setup-grid>button b{font-size:15px!important;margin:8px 0 0!important}
 #mobile-pool-preview.phone-landscape .setup-grid>button small{font-size:11px!important;margin:4px 0 0!important}
 #mobile-pool-preview.phone-landscape #startOverlay{padding:0!important;overflow:hidden!important}
-#mobile-pool-preview.phone-landscape .welcome-copy{inset:0!important;top:0!important;width:100%!important;left:0!important;padding:18px 16px!important}
-#mobile-pool-preview.phone-landscape #welcomeTitle{font-size:clamp(60px,calc(var(--landscape-width,100vw) * .102),100px)!important;line-height:1.06!important;letter-spacing:5px!important}
+#mobile-pool-preview.phone-landscape .welcome-copy{inset:0 auto 0 0!important;top:0!important;width:48%!important;left:0!important;padding:20px 0 28px 5%!important;align-items:flex-start!important;text-align:left!important}
+#mobile-pool-preview.phone-landscape #welcomeTitle{font-size:clamp(34px,calc(var(--landscape-width,100vw) * .056),58px)!important;line-height:1.06!important;letter-spacing:3px!important}
 #mobile-pool-preview.phone-landscape .welcome-eyebrow{font-size:8px!important;margin-bottom:10px!important}
 #mobile-pool-preview.phone-landscape .welcome-description{font-size:11px!important;margin:10px 0 12px!important}
 #mobile-pool-preview.phone-landscape .welcome-modes{font-size:9px!important;margin-top:8px!important}
@@ -65,10 +66,10 @@
 #mobile-pool-preview.phone-landscape .result-note{margin:10px 0!important}
 @media (max-height:340px){#mobile-pool-preview.phone-landscape .welcome-description,#mobile-pool-preview.phone-landscape .welcome-eyebrow{display:none!important}}
 
-#mobile-pool-preview.phone-landscape #startOverlay .welcome-enter{font-size:24px!important;min-width:286px!important;min-height:58px!important}
-#mobile-pool-preview.phone-landscape #welcomeTitle small{font-size:18px!important;margin-bottom:8px!important;letter-spacing:8px!important}
+#mobile-pool-preview.phone-landscape #startOverlay .welcome-enter{font-size:18px!important;min-width:218px!important;min-height:48px!important}
+#mobile-pool-preview.phone-landscape #welcomeTitle small{font-size:13px!important;margin-bottom:8px!important;letter-spacing:6px!important}
 #mobile-pool-preview.phone-landscape .welcome-orbit{width:88px;height:88px;top:54%}
-#mobile-pool-preview.phone-landscape .welcome-copy .welcome-description{font-size:14px!important;line-height:1.4!important;margin:10px 0 0!important}
+#mobile-pool-preview.phone-landscape .welcome-copy .welcome-description{font-size:11px!important;line-height:1.4!important;margin:10px 0 0!important}
 
 /* Critical launch scene renders before any external stylesheet arrives. */
 html,body{margin:0;background:#040b17;color:#e7f7ff;font-family:system-ui,"PingFang SC","Microsoft YaHei",sans-serif}
@@ -275,7 +276,7 @@ html,body{margin:0;background:#040b17;color:#e7f7ff;font-family:system-ui,"PingF
   const retryEngine=()=>{
     if(!engineFailed||tasks.has('game'))return;
     engineFailed=false;status.textContent='正在重新连接比赛引擎';skip.textContent='继续等待';
-    const old=$('gameEngine'),script=document.createElement('script');script.id='gameEngine';script.async=true;script.src='./game.js?v=20261009-quality-v5&retry='+String(++engineRetry);script.onerror=failEngine;old?.remove();document.body.appendChild(script);
+    const old=$('gameEngine'),script=document.createElement('script');script.id='gameEngine';script.async=true;script.src='./game.js?v=20261009-polish-v7&retry='+String(++engineRetry);script.onerror=failEngine;old?.remove();document.body.appendChild(script);
   };
   window.PoolStartup={ready,engineFailed:failEngine,styleFailed};
   const stylesheet=$('siteStyle');if(stylesheet?.sheet)ready('styles');else if(stylesheet?.dataset?.failed==='true')styleFailed();
@@ -294,7 +295,7 @@ html,body{margin:0;background:#040b17;color:#e7f7ff;font-family:system-ui,"PingF
 })();
 </script>
   <!-- STARTUP_SCRIPT_END -->
-  <script id="gameEngine" async src="./game.js?v=20261009-quality-v5" onerror="window.PoolStartup.engineFailed()"></script>
+  <script id="gameEngine" async src="./game.js?v=20261009-polish-v7" onerror="window.PoolStartup.engineFailed()"></script>
   <script async src="./audio.js?v=20261009-sound-v6"></script>
   <script async src="./mobile.js?v=20261009-landscape"></script>
 </body>

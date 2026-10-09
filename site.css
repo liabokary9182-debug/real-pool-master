@@ -753,6 +753,16 @@ button:focus-visible{outline:2px solid #e0f7ff;outline-offset:5px}
 #mobile-pool-preview #startOverlay.arena-welcome .welcome-copy{justify-content:center;align-items:center}
 #mobile-pool-preview .welcome-enter{font-size:29px;min-width:348px;min-height:82px}
 
+/* Keep the invitation beside the photographed table, not over it. */
+#mobile-pool-preview #startOverlay.arena-welcome .welcome-copy{inset:0 auto 0 0;width:46%;max-width:660px;padding:64px 0 100px 6%;align-items:flex-start;text-align:left;transform-origin:left center}
+#mobile-pool-preview #welcomeTitle{font-size:clamp(48px,5.1vw,78px)!important;letter-spacing:4px;white-space:nowrap}
+#mobile-pool-preview #welcomeTitle small{font-size:18px;letter-spacing:8px}
+#mobile-pool-preview .welcome-description{font-size:15px;letter-spacing:2px}
+#mobile-pool-preview .welcome-enter{font-size:21px;min-width:240px;min-height:60px}
+#mobile-pool-preview .welcome-shade{background:linear-gradient(90deg,#030d21dc 0%,#030d2190 29%,#030d2110 60%),linear-gradient(0deg,#03091fa8,transparent 30%)}
+#mobile-pool-preview .orbit-left{display:none}
+#mobile-pool-preview .orbit-right{right:5%;top:25%;opacity:.5;transform:scale(.65)}
+
 /* landscape.css */
 /* Always show a landscape game; no orientation gate or blocked controls. */
 #mobile-pool-preview.phone-landscape{position:relative!important;width:100%!important;height:var(--phone-height)!important;min-height:0!important;overflow:hidden!important;padding:0!important}
@@ -792,8 +802,8 @@ button:focus-visible{outline:2px solid #e0f7ff;outline-offset:5px}
 #mobile-pool-preview.phone-landscape .setup-grid>button b{font-size:15px!important;margin:8px 0 0!important}
 #mobile-pool-preview.phone-landscape .setup-grid>button small{font-size:11px!important;margin:4px 0 0!important}
 #mobile-pool-preview.phone-landscape #startOverlay{padding:0!important;overflow:hidden!important}
-#mobile-pool-preview.phone-landscape .welcome-copy{inset:0!important;top:0!important;width:100%!important;left:0!important;padding:18px 16px!important}
-#mobile-pool-preview.phone-landscape #welcomeTitle{font-size:clamp(60px,calc(var(--landscape-width,100vw) * .102),100px)!important;line-height:1.06!important;letter-spacing:5px!important}
+#mobile-pool-preview.phone-landscape .welcome-copy{inset:0 auto 0 0!important;top:0!important;width:48%!important;left:0!important;padding:20px 0 28px 5%!important;align-items:flex-start!important;text-align:left!important}
+#mobile-pool-preview.phone-landscape #welcomeTitle{font-size:clamp(34px,calc(var(--landscape-width,100vw) * .056),58px)!important;line-height:1.06!important;letter-spacing:3px!important}
 #mobile-pool-preview.phone-landscape .welcome-eyebrow{font-size:8px!important;margin-bottom:10px!important}
 #mobile-pool-preview.phone-landscape .welcome-description{font-size:11px!important;margin:10px 0 12px!important}
 #mobile-pool-preview.phone-landscape .welcome-modes{font-size:9px!important;margin-top:8px!important}
@@ -809,10 +819,10 @@ button:focus-visible{outline:2px solid #e0f7ff;outline-offset:5px}
 #mobile-pool-preview.phone-landscape .result-note{margin:10px 0!important}
 @media (max-height:340px){#mobile-pool-preview.phone-landscape .welcome-description,#mobile-pool-preview.phone-landscape .welcome-eyebrow{display:none!important}}
 
-#mobile-pool-preview.phone-landscape #startOverlay .welcome-enter{font-size:24px!important;min-width:286px!important;min-height:58px!important}
-#mobile-pool-preview.phone-landscape #welcomeTitle small{font-size:18px!important;margin-bottom:8px!important;letter-spacing:8px!important}
+#mobile-pool-preview.phone-landscape #startOverlay .welcome-enter{font-size:18px!important;min-width:218px!important;min-height:48px!important}
+#mobile-pool-preview.phone-landscape #welcomeTitle small{font-size:13px!important;margin-bottom:8px!important;letter-spacing:6px!important}
 #mobile-pool-preview.phone-landscape .welcome-orbit{width:88px;height:88px;top:54%}
-#mobile-pool-preview.phone-landscape .welcome-copy .welcome-description{font-size:14px!important;line-height:1.4!important;margin:10px 0 0!important}
+#mobile-pool-preview.phone-landscape .welcome-copy .welcome-description{font-size:11px!important;line-height:1.4!important;margin:10px 0 0!important}
 
 /* flight.css */
 /* Critical launch scene renders before any external stylesheet arrives. */
