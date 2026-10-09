@@ -152,7 +152,7 @@
     $('angleReadout').textContent=degrees.toFixed(4)+'°';
     const ruler=$('angleRuler');
     ruler.setAttribute('aria-valuenow',degrees.toFixed(4));
-    ruler.style.setProperty('--tick-offset',`${(-degrees*1000)%100}px`);
+    ruler.style.setProperty('--tick-offset',`${(-degrees*250)%100}px`);
   }
   function aimAt(x,y) {
     const c=cue(); if(!c||state.phase!=='aim'||state.ballInHand||(state.opponent==='ai'&&state.turn===1))return;

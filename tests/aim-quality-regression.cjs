@@ -29,9 +29,12 @@ for(const rotated of [false,true]){
   t.setGuideBalls([{n:0,x:30,y:25},{n:1,x:80,y:40}],0);
   const tap=event(60+60*12.8,75+35*12.8);
   g.canvas.handlers.pointerdown(tap);g.canvas.handlers.pointerup(tap);assert(Math.abs(aim()-18.4349)<.0002,'tap no longer selects a large direction');
-  const ruler=g.ids.get('angleRuler');
+  const ruler=g.ids.get('angleRuler'),tickStyles={},setStyle=ruler.style.setProperty;
+  ruler.style.setProperty=(name,value)=>{tickStyles[name]=value;setStyle(name,value);};
   ruler.handlers.pointerdown(event(20,20));ruler.handlers.pointermove(event(220,20));flush();
   assert(Math.abs(aim()-18.8349)<.0002,'ruler should move 0.4 degrees for 100 CSS pixels');
+  const offset=parseFloat(tickStyles['--tick-offset']);
+  assert(Math.abs(offset-(-18.8349*250)%100)<.05,'ruler ticks do not track their physical drag distance');
   ruler.handlers.pointercancel();
   const before=aim();ruler.handlers.pointermove(event(400,20));flush();assert.equal(aim(),before);
 }
