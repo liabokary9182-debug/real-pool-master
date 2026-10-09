@@ -1,0 +1,37 @@
+/* Critical launch scene renders before any external stylesheet arrives. */
+html,body{margin:0;background:#040b17;color:#e7f7ff;font-family:system-ui,"PingFang SC","Microsoft YaHei",sans-serif}
+.overlay.hidden,[hidden]{display:none!important}
+#mobile-pool-preview .boot{position:fixed;inset:0;z-index:300;display:flex!important;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box;width:100%;height:100%;overflow:hidden;padding:36px 8%;background:radial-gradient(ellipse at 60% 35%,#143749 0,#081622 43%,#030813 90%);transition:opacity .5s,visibility .5s;color:#dff6ff}
+#mobile-pool-preview .boot:before{content:"";position:absolute;inset:0;background-image:radial-gradient(circle,#c2f5ff8a 1px,transparent 1.5px),radial-gradient(circle,#cdf6ff44 1px,transparent 2px);background-size:109px 83px,167px 131px;background-position:22px 33px,73px 21px;opacity:.34;pointer-events:none;mask-image:linear-gradient(transparent,#000,transparent)}
+#mobile-pool-preview .boot:after{display:none}
+#mobile-pool-preview .boot.done{opacity:0;visibility:hidden;pointer-events:none}
+.flight-top{position:absolute;top:6%;left:6%;right:6%;display:flex;justify-content:space-between;font-size:10px;letter-spacing:3px;color:#87b8cc}
+.flight-copy{position:relative;text-align:center}.flight-copy p{font-size:14px;letter-spacing:5px;color:#a3d5da;margin:0 0 14px}.flight-copy h1{font-size:clamp(36px,5vw,64px);font-weight:700;letter-spacing:8px;margin:0 0 13px}.flight-copy>span{font-size:13px;color:#7eabbf}
+.flight-route{position:relative;width:min(760px,90%);height:180px;margin:16px 0 4px;isolation:isolate}
+.flight-grid{position:absolute;inset:10px 0;background:linear-gradient(transparent 49%,#8df4e414 50%,transparent 51%);border:1px solid #70bcc415;border-radius:50%;transform:perspective(300px) rotateX(65deg);opacity:.9}
+.flight-trajectory{position:absolute;top:91px;left:32px;right:32px;border-top:1px dashed #71acc455}.flight-trajectory span{position:absolute;top:-1px;left:0;height:2px;width:5%;background:linear-gradient(90deg,#20527a,#83f4dc);box-shadow:0 0 14px #9affec;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.flight-stop{position:absolute;left:32px;right:32px;top:115px;display:flex;justify-content:space-between;padding-left:23%;color:#5e859c;font-size:10px;letter-spacing:2px}
+.flight-stop span:before{content:'·';display:block;text-align:center;color:#90e4dc;margin-top:-18px;margin-bottom:9px}
+.flight-rocket{position:absolute;top:45px;left:calc(8px + (100% - 100px)*var(--flight,.05));width:100px;height:72px;transition:left .65s cubic-bezier(.2,.8,.2,1);filter:drop-shadow(0 7px 17px #66ebef33)}
+.flight-rocket svg{position:relative;z-index:2;width:100%;height:100%;animation:rocket-bob 1.7s ease-in-out infinite}
+.rocket-plume{position:absolute;right:75%;top:28px;width:68px;height:15px;border-radius:100% 0 0 100%;background:linear-gradient(90deg,transparent,#43c0fa88 32%,#8cffe9 72%,#fff8cf);filter:blur(1px);transform-origin:right center;animation:rocket-fire .2s ease-in-out infinite alternate}
+.flight-destination{position:absolute;right:-4px;top:57px;display:flex;align-items:center;flex-direction:column;color:#e6cf9e;opacity:.7}.flight-destination span{font-size:42px;line-height:1;text-shadow:0 0 22px #e8d5a955}.flight-destination small{font-size:8px;letter-spacing:2px;margin-top:9px}
+.flight-bottom{width:min(660px,80%);display:flex;align-items:center;justify-content:space-between;border-top:1px solid #789cb633;padding-top:17px;font-size:12px;letter-spacing:2px;color:#8badc1}.flight-bottom b{color:#c5fff0;font-size:28px;letter-spacing:-1px;margin-left:14px;font-variant-numeric:tabular-nums;font-weight:500}
+#mobile-pool-preview .boot button{color:#bbdce7;background:transparent;border:1px solid #8accd536;border-radius:30px;min-height:44px;padding:8px 19px;font-size:12px;margin:0;letter-spacing:1px}
+.flight-help{font-size:11px;color:#789aad;margin:15px 0 0;letter-spacing:1px;text-align:center}.boot.arrived .flight-destination{opacity:1}.boot.arrived .rocket-plume{background:linear-gradient(90deg,transparent,#8ffff188,#fff8cf);width:90px}
+@keyframes rocket-bob{0%,100%{transform:translateY(-2px)}50%{transform:translateY(2px)}}
+@keyframes rocket-fire{from{transform:scaleX(.78);opacity:.72}to{transform:scaleX(1.1);opacity:1}}
+#mobile-pool-preview.phone-landscape .boot{position:absolute;padding:20px 7%}
+#mobile-pool-preview.phone-landscape .flight-top{top:5%;font-size:8px;letter-spacing:2px}
+#mobile-pool-preview.phone-landscape .flight-copy h1{font-size:34px;letter-spacing:5px;margin-bottom:8px}
+#mobile-pool-preview.phone-landscape .flight-copy p{font-size:11px;margin-bottom:8px;letter-spacing:3px}
+#mobile-pool-preview.phone-landscape .flight-copy>span{font-size:10px}
+#mobile-pool-preview.phone-landscape .flight-route{height:119px;margin:0;width:84%}
+#mobile-pool-preview.phone-landscape .flight-rocket{top:22px;width:90px;height:65px}
+#mobile-pool-preview.phone-landscape .flight-trajectory{top:66px}
+#mobile-pool-preview.phone-landscape .flight-stop{top:90px}
+#mobile-pool-preview.phone-landscape .flight-destination{top:32px}
+#mobile-pool-preview.phone-landscape .flight-bottom{padding-top:9px;font-size:10px}
+#mobile-pool-preview.phone-landscape .flight-bottom b{font-size:23px}
+#mobile-pool-preview.phone-landscape .flight-help{margin:8px 0 0;font-size:9px}
+@media(prefers-reduced-motion:reduce){.flight-rocket,.flight-trajectory span,.flight-rocket svg,.rocket-plume{animation:none!important;transition:none!important}}

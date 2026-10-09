@@ -33,4 +33,8 @@ node tests/preview-clock-regression.cjs /workspace/pool-master-tactics-preview.h
 
 预览使用原游戏的固定步长时钟。source-mobile 和预览 smoke 使用模拟接口，不代替真机测试。大师规划会先试算，手机上可能需要等待数秒。专项测试用固定随机种子验证，实际试玩仍有执行误差。详细实现见 MASTER_TACTICS.md，物理及袋口说明见 PHYSICS_REVIEW.md。音乐沿用上一版测试曲。源码在 real-pool-web 目录启动本地静态服务即可测试。
 
-当前部署要求：本版保存到与 main 并列的 real-pool-master-20261006 分支，以 real-pool-web 为独立站点根目录；保留原网站及其发布设置，按用户此前确定的平台发布到新地址。公网部署进度以当前回复为准。
+当前部署：独立仓库 real-pool-master 的 main 分支，站点根目录为仓库根目录；源文件修改、测试和部署流程以 README 当前章节为准。上面 real-pool-web 与 20261006 分支的记录仅为历史。
+
+### 独立异步启动与火箭加载
+
+运行 `node scripts/build-entry.cjs`，再运行 `node tests/entry-loading-regression.cjs`。覆盖：音乐或背景请求挂起不阻塞入场、样式比引擎晚到、下载失败仅重试一次进行中的请求、重试不刷新整页、进度与火箭位置同步、网络慢时继续等待。`node tests/landscape-regression.cjs` 同时校验 HTML 中的横屏适配与源文件一致。

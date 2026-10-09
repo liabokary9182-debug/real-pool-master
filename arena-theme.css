@@ -222,3 +222,7 @@ button:focus-visible{outline:2px solid #e0f7ff;outline-offset:5px}
 #mobile-pool-preview.phone-landscape .boot-track{margin-top:14px}
 #mobile-pool-preview.phone-landscape .boot-percent{margin-top:6px;font-size:16px}
 @media(max-height:365px){#mobile-pool-preview.phone-landscape .welcome-description{display:none}}
+
+#mobile-pool-preview #welcomeTitle{font-size:clamp(96px,10.8vw,168px)!important;letter-spacing:9px}
+#mobile-pool-preview #startOverlay.arena-welcome .welcome-copy{justify-content:center;align-items:center}
+#mobile-pool-preview .welcome-enter{font-size:29px;min-width:348px;min-height:82px}

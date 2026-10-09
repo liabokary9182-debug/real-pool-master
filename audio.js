@@ -243,7 +243,9 @@
   introMusic.addEventListener?.('loadeddata',()=>window.PoolStartup?.ready('audio'));
   introMusic.addEventListener?.('error',()=>window.PoolStartup?.ready('audio'));
   // Start before window.load, which can wait indefinitely for unrelated assets.
-  ensureContext();startIntroMusic();
+  ensureContext();
+  if(document.body?.getAttribute?.('data-screen')==='match'){introWanted=false;startGameMusic();}
+  else startIntroMusic();
   window.addEventListener?.('load',()=>{if(introWanted)startIntroMusic();});
   window.PoolAudio={play,unlock:unlockAudio,stats:effectStats,contextState:()=>context?.state||'native-html-audio',
     samplesReady:()=>decodedPools.ball.length===3,effectsReady:()=>Object.values(decodedPools).every(pool=>pool.length),waitForSamples:()=>Promise.all([effectLoading].filter(Boolean)),

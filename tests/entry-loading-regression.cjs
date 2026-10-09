@@ -1,10 +1,12 @@
 const assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs');
-function fixture(){
-  const timers=[],ids={};for(const id of ['boot','bootProgress','bootPercent','bootTrack','skipBoot'])ids[id]={style:{},classes:new Set(),classList:{add(k){ids[id].classes.add(k)}},setAttribute(k,v){this[k]=v},addEventListener(k,v){this[k]=v},remove(){}};
-  const photo={complete:false,addEventListener(k,v){this[k]=v}},w={document:{getElementById:id=>ids[id],querySelector:()=>photo},location:{reload(){w.reloaded=true}},setTimeout:(fn,ms)=>timers.push({fn,ms}),addEventListener(){}};w.window=w;
-  vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../startup.js'),'utf8'),w);return {w,ids,photo,timers};
+function fixture(preview=false){
+ const timers=[],ids={},appended=[];for(const id of ['boot','bootProgress','bootPercent','bootTrack','bootRocket','skipBoot','bootStatus','bootHelp','siteStyle','gameEngine'])ids[id]={style:{setProperty(k,v){this[k]=v}},dataset:{},classes:new Set(),classList:{add(k){ids[id].classes.add(k)}},setAttribute(k,v){this[k]=v},addEventListener(k,v){this[k]=v},remove(){this.removed=true}};
+ const photo={complete:false,addEventListener(k,v){this[k]=v}},w={URLSearchParams,Date,document:{getElementById:id=>ids[id],querySelector:()=>photo,createElement:()=>({}),body:{appendChild:s=>appended.push(s)}},location:{search:preview?'?test=loading':'',reload(){throw Error('must not reset pending downloads')}},setTimeout:(fn,ms)=>timers.push({fn,ms}),addEventListener(){}};w.window=w;
+ vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../startup.js'),'utf8'),w);return {w,ids,photo,timers,appended};
 }
-let f=fixture();f.w.PoolStartup.ready('game');assert.equal(f.ids.bootProgress.style.width,'33%');f.photo.load();assert.equal(f.ids.bootTrack['aria-valuenow'],'67');assert(!f.ids.boot.classes.has('done'));f.w.PoolStartup.ready('audio');f.timers.find(t=>t.ms===280).fn();assert(f.ids.boot.classes.has('done'));
-f=fixture();f.w.PoolStartup.ready('game');f.timers.find(t=>t.ms===5000).fn();f.timers.find(t=>t.ms===280).fn();assert(f.ids.boot.classes.has('done'),'slow decorative resources blocked entry');
-f=fixture();f.timers.find(t=>t.ms===5000).fn();assert.equal(f.ids.skipBoot.textContent,'重新加载');assert(!f.ids.boot.classes.has('done'));f.ids.skipBoot.click();assert(f.w.reloaded);
-console.log(JSON.stringify({passed:true,realResourceProgress:true,slowResourceFallback:true,missingGameRetry:true}));
+let f=fixture();assert.equal(f.ids.bootPercent.textContent,'5%');f.w.PoolStartup.ready('styles');assert.equal(f.ids.bootTrack['aria-valuenow'],'25');f.w.PoolStartup.ready('game');assert.equal(f.ids.bootTrack['aria-valuenow'],'100');assert.equal(f.ids.bootRocket.style['--flight'],'1');f.timers.find(t=>t.ms===700).fn();assert(f.ids.boot.classes.has('done'),'missing music/photo blocked ready game');
+f=fixture();f.w.PoolStartup.ready('game');assert(!f.timers.some(t=>t.ms===700),'entered before CSS was ready');f.timers.find(t=>t.ms===12000).fn();f.ids.skipBoot.click();assert.equal(f.appended.length,0,'slow pending engine was downloaded twice');f.w.PoolStartup.ready('styles');assert.equal(f.ids.bootPercent.textContent,'100%');
+f=fixture();f.w.PoolStartup.engineFailed();assert.equal(f.ids.skipBoot.textContent,'重试加载');f.ids.skipBoot.click();assert.equal(f.appended.length,1);assert(f.appended[0].async);assert(f.appended[0].src.includes('retry=1'));f.ids.skipBoot.click();assert.equal(f.appended.length,1,'retry duplicated an in-flight engine');f.w.PoolStartup.ready('styles');f.w.PoolStartup.ready('game');assert.equal(f.ids.bootPercent.textContent,'100%');
+f=fixture();f.w.PoolStartup.styleFailed();f.ids.skipBoot.click();assert(f.ids.siteStyle.href.includes('retry='));
+f=fixture(true);f.w.PoolStartup.ready('styles');f.w.PoolStartup.ready('game');assert(!f.timers.some(t=>t.ms===700));f.ids.skipBoot.click();assert(f.ids.boot.classes.has('done'));
+console.log(JSON.stringify({passed:true,rocketTracksActualReadiness:true,musicDoesNotBlock:true,engineRetryWithoutRefresh:true,noDuplicateExecution:true,lateStylesSupported:true}));

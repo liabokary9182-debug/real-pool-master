@@ -32,7 +32,7 @@ const small=fixture({width:667,height:375});assert(!small.classes.has('is-landsc
 const desktop=fixture({phone:false});assert(!desktop.classes.has('phone-landscape'));assert.equal(desktop.surface.inert,false);
 const index=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
 assert(!index.includes('landscapeGate'));assert(!index.includes('请将手机横过来'));
-assert(index.includes('20261009-direct-landscape'));
+assert(index.includes(fs.readFileSync(path.join(__dirname,'../landscape.js'),'utf8').trim()),'inline landscape startup was not rebuilt');
 const css=fs.readFileSync(path.join(__dirname,'../landscape.css'),'utf8');
 assert(css.includes('rotate(90deg)'));assert(!css.includes('visibility:hidden'));assert(!css.includes('pointer-events:none'));
 // Exercise the real game's touch handlers after CSS rotation, not a copied mapping.

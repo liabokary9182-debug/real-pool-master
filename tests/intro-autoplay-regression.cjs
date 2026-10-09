@@ -11,5 +11,6 @@ vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../audio
 (async()=>{
   await Promise.resolve();await Promise.resolve();assert.equal(introAttempts,1,'intro waits for window.load');assert(!hint.hidden,'blocked autoplay has no welcome-page hint');
   allowed=true;handlers.pointerdown();await Promise.resolve();assert(w.PoolAudio.introPlaying(),'welcome gesture did not start music');assert(hint.hidden);
-  console.log(JSON.stringify({passed:true,immediateAutoplayAttempt:true,welcomeGestureRetry:true}));
+  const before=introAttempts,late={...w,document:{...w.document,body:{getAttribute:()=> 'match'}}};late.window=late;vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../audio.js'),'utf8'),late);await Promise.resolve();assert.equal(introAttempts,before,'late audio starts welcome music over an active match');
+  console.log(JSON.stringify({passed:true,immediateAutoplayAttempt:true,welcomeGestureRetry:true,lateAudioRespectsMatch:true}));
 })().catch(e=>{console.error(e);process.exitCode=1});
