@@ -1,19 +1,16 @@
 (() => {
   'use strict';
   const startButton=document.getElementById('startBtn');
-  const musicButton=document.getElementById('musicBtn');
-  const musicFile=document.getElementById('musicFile');
-  const musicPanel=document.getElementById('musicPanel'),musicStatus=document.getElementById('musicStatus');
-  const soundcloudFrame=document.getElementById('soundcloudPlayer');
   const introMusic=new Audio('./sounds/xiaotang-intro.mp3');
   introMusic.preload='auto';introMusic.loop=true;introMusic.playsInline=true;introMusic.volume=.32;
   const AudioEngine=window.AudioContext||window.webkitAudioContext;
   let context=null,effects=null,limiter=null,meter=null,recordings=[],loading=null,effectLoading=null;
-  let localMusic=null,musicUrl=null,enabled=false,lastBall=0,noiseBuffer=null,duckTimer=null;
-  let soundcloudWidget=null,soundcloudReady=false,nativeUnlocked=false,nativeWarning=false;
+  let lastBall=0,noiseBuffer=null;
+  let nativeUnlocked=false,nativeWarning=false;
   let introWanted=true,introFadeTicket=0;
   let gameMusicBuffer=null,gameMusicLoading=null,gameMusicWanted=false,gameMusicMaster=null,gameMusicTimer=null,gameMusicNextStart=0;
   const gameMusicSources=new Set();
+  let gameMusicTicket=0;
   const effectStats={cue:0,ball:0,rail:0,pocket:0},lastEffect={cue:-1,ball:-1,rail:-1,pocket:-1};
   const lastWeight={cue:0,ball:0,rail:0,pocket:0};
   const effectSources={
@@ -43,6 +40,7 @@
 
   function startIntroMusic(){
     introWanted=true;introFadeTicket++;introMusic.volume=.32;
+    if(!introMusic.paused)return Promise.resolve();
     const started=introMusic.play();
     if(started?.catch)started.catch(()=>{});
     return started||Promise.resolve();
@@ -81,16 +79,16 @@
     gameMusicTimer=setTimeout(fillGameMusicQueue,20000);
   }
   async function startGameMusic(){
-    stopGameMusic(false);gameMusicWanted=true;ensureContext();setMusic(false);
+    stopGameMusic(false);const ticket=gameMusicTicket;gameMusicWanted=true;ensureContext();
     try{await gameMusicLoading;}catch{}
-    if(!gameMusicWanted||!context||!gameMusicBuffer)return false;
+    if(ticket!==gameMusicTicket||!gameMusicWanted||!context||!gameMusicBuffer)return false;
     if(context.state==='suspended')try{await context.resume();}catch{}
-    if(!gameMusicWanted||context.state!=='running')return false;
+    if(ticket!==gameMusicTicket||!gameMusicWanted||context.state!=='running')return false;
     gameMusicMaster=context.createGain();gameMusicMaster.gain.value=.20;gameMusicMaster.connect(limiter);
     gameMusicNextStart=context.currentTime+.025;fillGameMusicQueue();return true;
   }
   function stopGameMusic(fade=true){
-    gameMusicWanted=false;clearTimeout(gameMusicTimer);gameMusicTimer=null;
+    gameMusicTicket++;gameMusicWanted=false;clearTimeout(gameMusicTimer);gameMusicTimer=null;
     if(!gameMusicMaster||!context||!fade){clearGameMusicSources();return;}
     const master=gameMusicMaster,now=context.currentTime;
     master.gain.cancelScheduledValues(now);master.gain.setValueAtTime(Math.max(.0001,master.gain.value),now);master.gain.linearRampToValueAtTime(.0001,now+.24);
@@ -218,10 +216,7 @@
     else if(kind==='ball'){softImpact(at,weight,.018,3000+1800*weight,.13);tone(at,720,560,.02,.018*weight,'sine');}
   }
   function duckMusic(){
-    clearTimeout(duckTimer);
     if(gameMusicMaster&&gameMusicWanted&&context){const now=context.currentTime;gameMusicMaster.gain.cancelScheduledValues(now);gameMusicMaster.gain.setTargetAtTime(.10,now,.018);gameMusicMaster.gain.setTargetAtTime(.20,now+.22,.055);}
-    if(localMusic&&enabled){localMusic.volume=.08;duckTimer=setTimeout(()=>{if(localMusic)localMusic.volume=.18;},280);}
-    else if(soundcloudWidget&&enabled){try{soundcloudWidget.setVolume(30);duckTimer=setTimeout(()=>soundcloudWidget?.setVolume(52),280);}catch{}}
   }
   function play(kind,impact=20){
     if(!(kind in effectStats))return;
@@ -248,50 +243,6 @@
       }
     }
   }
-  function updateMusicButton(){
-    musicButton.textContent=enabled?'♫ Lullaby 播放中':'♫ Lullaby';
-    musicButton.setAttribute('aria-pressed',String(enabled));
-    musicButton.setAttribute('aria-label',enabled?'暂停 Lullaby':'播放 Lullaby');
-  }
-  let musicTicket=0,wanted=false,musicState='idle';
-  let musicTitle='Lullaby',musicArtist='Enzalla';
-  function message(text){if(musicStatus)musicStatus.textContent=text;updateMusicButton();}
-  function bindSoundcloud(){
-    if(soundcloudWidget||!soundcloudFrame||!window.SC?.Widget)return;
-    soundcloudWidget=window.SC.Widget(soundcloudFrame);
-    const events=window.SC.Widget.Events;
-    soundcloudWidget.bind(events.READY,()=>{soundcloudReady=true;soundcloudWidget.setVolume(52);message('Enzalla · Lullaby · 官方 SoundCloud');if(wanted&&!localMusic)soundcloudWidget.play();});
-    soundcloudWidget.bind(events.PLAY,()=>{if(localMusic)return;wanted=true;enabled=true;musicState='playing';message('Enzalla · Lullaby · 正在播放');});
-    soundcloudWidget.bind(events.PAUSE,()=>{if(localMusic)return;enabled=false;musicState='paused';message('Enzalla · Lullaby · 已暂停');});
-    soundcloudWidget.bind(events.FINISH,()=>{if(wanted&&!localMusic)soundcloudWidget.play();});
-    soundcloudWidget.bind(events.ERROR,()=>{enabled=false;musicState='error';message('播放器连接失败，可点“官方曲目”打开播放');});
-  }
-  async function setMusic(on){
-    const ticket=++musicTicket;wanted=on;
-    if(on)stopGameMusic();
-    if(musicPanel)musicPanel.hidden=false;
-    if(!on){
-      localMusic?.pause();try{soundcloudWidget?.pause();}catch{}
-      enabled=false;musicState='paused';message('背景音乐已暂停');return;
-    }
-    if(localMusic){
-      try{musicState='loading';await localMusic.play();if(ticket!==musicTicket)return;enabled=true;musicState='playing';message(`${musicArtist} · ${musicTitle} · 本机循环播放`);}
-      catch{if(ticket!==musicTicket)return;enabled=false;musicState='blocked';message('请再点一次音乐键开始播放');}
-      return;
-    }
-    bindSoundcloud();musicState='loading';message(soundcloudReady?'正在播放 Enzalla · Lullaby':'正在连接 Enzalla · Lullaby…');
-    if(soundcloudReady)soundcloudWidget.play();else message('请在播放器中点播放；加载后顶部音乐键可暂停');
-  }
-  musicFile?.addEventListener('change',async()=>{
-    const file=musicFile.files?.[0];if(!file)return;
-    musicTicket++;try{soundcloudWidget?.pause();}catch{}localMusic?.pause();
-    if(musicUrl)URL.revokeObjectURL(musicUrl);
-    musicUrl=URL.createObjectURL(file);localMusic=new Audio(musicUrl);localMusic.loop=true;localMusic.volume=.18;localMusic.preload='auto';musicTitle=file.name;musicArtist='本机音频';
-    await setMusic(true);
-  });
-  musicButton.addEventListener('click',()=>{unlockAudio();return setMusic(!wanted);});
-  document.getElementById('closeMusic')?.addEventListener('click',()=>{musicPanel.hidden=true;});
-  document.getElementById('localMusicBtn')?.addEventListener('click',()=>musicFile?.click());
   function unlockAudio(){unlockNative();return ensureContext();}
   startButton?.addEventListener('pointerdown',()=>{unlockAudio();startIntroMusic();},{passive:true});
   const firstGesture=()=>{unlockAudio();if(!document.getElementById('startOverlay')?.classList?.contains('hidden')||!document.getElementById('menuOverlay')?.classList?.contains('hidden'))startIntroMusic();};
@@ -301,12 +252,11 @@
     if(document.hidden){context?.suspend();introMusic.pause();}
     else{context?.resume().catch(()=>{});if(introWanted)startIntroMusic();}
   });
-  bindSoundcloud();window.addEventListener?.('load',()=>{bindSoundcloud();ensureContext();startIntroMusic();});
+  window.addEventListener?.('load',()=>{ensureContext();startIntroMusic();});
   window.PoolAudio={play,unlock:unlockAudio,stats:effectStats,contextState:()=>context?.state||'native-html-audio',
     samplesReady:()=>recordings.length===3,effectsReady:()=>Object.values(decodedPools).every(pool=>pool.length),waitForSamples:()=>Promise.all([loading,effectLoading].filter(Boolean)),
     outputLevel:()=>{if(!meter)return 0;const samples=new Float32Array(meter.fftSize);meter.getFloatTimeDomainData(samples);return Math.sqrt(samples.reduce((sum,v)=>sum+v*v,0)/samples.length);},
-    setMusic,startIntro:startIntroMusic,stopIntro:stopIntroMusic,introPlaying:()=>!introMusic.paused,
+    startIntro:startIntroMusic,stopIntro:stopIntroMusic,introPlaying:()=>!introMusic.paused,
     startGameMusic,stopGameMusic,gameMusicPlaying:()=>gameMusicWanted&&!!gameMusicMaster,
-    musicEnabled:()=>enabled,musicInfo:()=>({source:musicUrl?'local-import':'soundcloud-official',state:musicState,title:musicTitle,artist:musicArtist})};
-  message('Enzalla · Lullaby · 官方 SoundCloud 播放器');
+    musicInfo:()=>({source:'provided-local-audio',state:gameMusicWanted?'game':introWanted?'intro':'stopped'})};
 })();

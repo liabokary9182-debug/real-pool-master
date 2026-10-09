@@ -1,8 +1,8 @@
-# 光域台球 · 大师战术版
+# 小糖台球 · 蓝宝石赛场
 
 支持手机横屏与全屏的 Canvas 八球／九球游戏，包含分级人机对战、旋转杆法、碰库进攻和防守走位。
 
-本版源码分支为 `real-pool-master-20261006`，与 `main` 并列，不合并到原网站分支。部署时仅发布本目录到独立托管项目或独立站点目录，使用独立访问地址。原网站与旧分支保留。
+当前独立仓库为 `liabokary9182-debug/real-pool-master`，GitHub Pages 从 `main` 发布。网站：https://liabokary9182-debug.github.io/real-pool-master/ 。旧 `layertext-studio/real-pool-web` 不再是本项目的发布入口。
 
 ## 功能
 
@@ -11,10 +11,10 @@
 - 大师试算翻袋、白球碰库勾球进攻，以及遮挡对手合法首碰线的安全球。
 - 玩家和电脑使用相同的出杆、球球碰撞、库边、袋口和犯规判定。
 - 原首碰圆与两条短辅助线；拖动台面瞄准、刻度尺精调、拉杆出杆与自由摆球。
-- 可见横屏、全屏按钮，旋转后转换触控坐标；系统全屏取决于浏览器能力。
-- 本地钢琴音乐与真实台球碰撞录音，可导入本机音频。
+- 手机所有页面仅支持物理横屏；竖屏显示旋转提示并阻止操作，横屏自动恢复当前页面。系统全屏取决于浏览器能力。
+- 用户提供的本地欢迎音乐与对局循环音频；对局音乐交叉淡化循环，台球碰撞使用本地录音。旧 Lullaby 开关与导入音频界面已移除。
 - 台呢印字和库边铭牌显示“S800 利百文”；袋口使用自然暗影与深色内壁。
-- 本地待审核版本新增专项练球、力度 1% 微调、击打与随杆动画；手机首次进入默认横屏。
+- 真实赛场欢迎背景移除观众，突出独牙传奇标识和蓝色聚光灯；顶部返回上一页，结束后独立显示比分、返回主页与再来一局。
 - 袋口支撑台面保持台呢蓝，实际下沉区为黑色，阴影胶边与下沉几何保持对应；大师搜索更有力的出杆及 0.95 强高低杆，在合法进球和安全走位前提下优先选择击打。
 - 普通／进阶／大师的可进攻局面目标命中率为 40%／60%／95%，通过实际出杆输入和物理试算区分；不承诺所有布局或少量样本下的固定比例。
 
@@ -24,7 +24,7 @@
 
 普通击球 25% 及以上的速度曲线保留，5%～25% 增加轻推细分；开球软限幅至约 260 英寸／秒以内，默认 56% 力度和中杆。本轮按截图将球体和袋口在上一版基础上同增 5%，球径约 63.01 mm、六袋口径约 110.5 mm；绘制、胶边碰撞与有效下沉区域共用几何。慢球进入有效下沉区域即可落袋，不依赖额外速度，不设置吸袋力。袋角恢复系数改为 0.52，减少反复晃袋。
 
-短辅助线使用实际出杆和物理子步生成，反映当前力度及旋转，在二次碰球、碰库或短线长度上限处结束；不能当作完整旋转／多库最终轨迹。物理仍是二维近似，未完整移植商业游戏、Unity PhysX 或 Pooltool 的三维模型；手机手感及大师搜索等待需真机确认。AI 选择和执行可能失误，不保证每杆成功。本轮说明见 [截图反馈预览](../FEEDBACK_REVIEW.md)，尚未部署。
+短辅助线使用实际出杆和物理子步生成，反映当前力度及旋转，在二次碰球、碰库或短线长度上限处结束；不能当作完整旋转／多库最终轨迹。物理仍是二维近似，未完整移植商业游戏、Unity PhysX 或 Pooltool 的三维模型；手机手感及大师搜索等待需真机确认。AI 选择和执行可能失误，不保证每杆成功。本轮说明见 [欢迎页与结算流程](REVIEW-20261009.md)。
 
 ## 本地运行与部署
 
@@ -34,18 +34,20 @@
 python3 -m http.server 8765
 ```
 
-访问 `http://127.0.0.1:8765/`。全部运行资源使用相对路径，游戏无需后端、第三方脚本 CDN 或 SoundCloud 播放器。部署目录为 `real-pool-web`，入口为 `index.html`，无需构建。
+访问 `http://127.0.0.1:8765/`。全部运行资源使用相对路径，游戏无需后端、第三方脚本 CDN 或 SoundCloud 播放器。部署目录为本仓库根目录，入口为 `index.html`，无需构建。
 
-使用独立部署项目绑定此分支，不修改旧 GitHub Pages 的发布来源。实际部署平台与中国大陆访问情况需要按用户此前的部署约定核实，当前不能将 GitHub Pages 或其他托管服务视为全国可达保证。
+部署沿用独立仓库现有 GitHub Pages 配置；更新 `main` 后检查对应的 `pages build and deployment` 工作流成功，再验证线上页面与资源。具体步骤见 [发布记录](DEPLOYMENT.md)。
 
 ## 验证与说明
 
-- [手机测试步骤](../TESTING.md)
-- [大师杆法与战术实现](../MASTER_TACTICS.md)
-- [物理和袋口修正](../PHYSICS_REVIEW.md)
+- `node tests/audio-regression.cjs`
+- `node tests/guide-physics-regression.cjs`
+- `node tests/navigation-result-regression.cjs`
+- `node tests/pocket-fall-regression.cjs`
+- `node tests/landscape-regression.cjs`
 
 测试覆盖翻袋和勾球真实碰库顺序、斯诺克采样遮挡、合法首碰、试算与实打终点一致、旋转碰库能量约束、120 条入袋线路、三档 AI、手机按钮与 60／120 Hz 模拟时钟。模拟 DOM 与自动化测试不代替真机验收。
 
 ## 音频署名
 
-当前钢琴曲为 Erik Satie 作曲、Kevin MacLeod 演奏的《Gymnopedie No. 1》，CC BY 4.0，详见 [MUSIC-LICENSE.md](sounds/MUSIC-LICENSE.md)。它是测试曲，Enzalla《Lullaby》仍待替换。台球碰撞片段来自 Dsw4 录制并释放至公有领域的 [Pool Sounds.ogg](https://commons.wikimedia.org/wiki/File:Pool_Sounds.ogg)。
+背景音乐使用用户提供的 `sounds/xiaotang-intro.mp3` 与 `sounds/xiaotang-game-loop.m4a`。原测试钢琴曲已不加载，其归档许可见 [MUSIC-LICENSE.md](sounds/MUSIC-LICENSE.md)。台球碰撞片段来自 Dsw4 录制并释放至公有领域的 [Pool Sounds.ogg](https://commons.wikimedia.org/wiki/File:Pool_Sounds.ogg)。

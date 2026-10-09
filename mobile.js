@@ -1,44 +1,5 @@
 (() => {
   const root = document.getElementById('mobile-pool-preview');
-  const button = document.getElementById('landscapeBtn');
-  // CSS rotation works in mobile browsers without requiring orientation-lock.
-  let landscape = (root.clientWidth || root.getBoundingClientRect().width) <= 700;
-  function syncLayout() {
-    const viewport=window.visualViewport;
-    const availableWidth=Math.max(1,Math.min(root.clientWidth||Infinity,viewport?.width||window.innerWidth||root.clientWidth||360));
-    const availableHeight=Math.max(1,viewport?.height||window.innerHeight||availableWidth*1.85);
-    const compact=availableWidth>availableHeight&&availableHeight<=500;
-    if(availableWidth>700)landscape=false;
-    const height=landscape?availableWidth:availableHeight;
-    const width=landscape?availableHeight:availableWidth;
-    root.style.setProperty('--landscape-height', `${height}px`);
-    root.style.setProperty('--landscape-width', `${width}px`);
-    root.style.setProperty('--visible-height', `${availableHeight}px`);
-    root.classList.toggle('is-landscape', landscape);
-    root.classList.toggle('is-compact',compact&&!landscape);
-    const chromeHeight=(root.querySelector('.topbar')?.offsetHeight||48)+(root.querySelector('.scorebar')?.offsetHeight||28)+(root.querySelector('.status')?.offsetHeight||22);
-    root.style.setProperty('--landscape-table-width', `${Math.max(1, height - chromeHeight) * 1400 / 790}px`);
-    root.style.setProperty('--preview-header-height', `${document.getElementById('previewTopbar').offsetHeight || 124}px`);
-    button.textContent = landscape ? '竖屏 ↶' : '横屏 ↷';
-    button.setAttribute('aria-pressed', String(landscape));
-    button.setAttribute('aria-label', landscape ? '返回竖屏显示' : '切换横屏显示');
-  }
-  button.addEventListener('click', () => { landscape = !landscape; syncLayout(); });
-  window.addEventListener('resize', syncLayout);
-  window.visualViewport?.addEventListener('resize',syncLayout);
-  window.visualViewport?.addEventListener('scroll',syncLayout);
-  if (typeof ResizeObserver !== 'undefined') {
-    let lastWidth = -1;
-    new ResizeObserver(() => {
-      const width = root.clientWidth;
-      if (width !== lastWidth) { lastWidth = width; syncLayout(); }
-    }).observe(root);
-  }
-  syncLayout();
-})();
-
-(() => {
-  const root = document.getElementById('mobile-pool-preview');
   const button = document.getElementById('fullBtn');
   const feedback = document.getElementById('fullscreenFeedback');
   let busy = false;

@@ -1,0 +1,62 @@
+/* Mobile play requires physical landscape orientation on every screen. */
+#mobile-pool-preview #landscapeGate{display:none}
+#mobile-pool-preview.orientation-blocked{position:relative!important;min-height:320px!important;height:var(--visible-height,100svh)!important;overflow:hidden!important}
+#mobile-pool-preview.orientation-blocked .mobile-game-surface{visibility:hidden;pointer-events:none}
+#mobile-pool-preview.orientation-blocked #landscapeGate{position:absolute;inset:0;z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:32px;text-align:center;background:radial-gradient(ellipse at 50% 35%,#113f72,#050d20 70%);color:#e2f3ff;font-family:system-ui,sans-serif}
+#mobile-pool-preview #landscapeGate[hidden]{display:none!important}
+#mobile-pool-preview .rotate-phone{width:74px;height:42px;border:3px solid #9dd9ff;border-radius:8px;box-shadow:0 0 36px #399fe14d;position:relative}
+#mobile-pool-preview .rotate-phone::after{content:'↻';position:absolute;right:-28px;top:-22px;font-size:34px;line-height:1;color:#9dd9ff}
+#mobile-pool-preview #landscapeGate h2{font-size:22px;margin:12px 0 0;letter-spacing:2px;color:#e2f3ff}
+#mobile-pool-preview #landscapeGate p{font-size:14px;line-height:1.7;margin:0;color:#99b8d8}
+#mobile-pool-preview.phone-landscape{position:relative!important;width:100%!important;height:var(--phone-height)!important;min-height:0!important;overflow:hidden!important;padding:0!important}
+#mobile-pool-preview.phone-landscape .mobile-game-surface{position:relative!important;width:100%!important;height:100%!important;transform:none!important;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+#mobile-pool-preview.phone-landscape .app{display:flex!important;flex-direction:column!important;height:100%!important;min-height:0!important;overflow:hidden!important}
+#mobile-pool-preview.phone-landscape .topbar{position:relative!important;flex:0 0 44px!important;min-height:44px!important;height:44px!important;padding:2px 8px!important}
+#mobile-pool-preview.phone-landscape .brand{display:none!important}
+#mobile-pool-preview.phone-landscape .top-actions{display:flex!important;width:100%!important;justify-content:space-between!important;flex-wrap:nowrap!important}
+#mobile-pool-preview.phone-landscape .layout{display:grid!important;flex:1!important;height:auto!important;min-height:0!important;grid-template-columns:52px minmax(0,1fr) 84px!important;grid-template-rows:minmax(0,1fr)!important;gap:0!important;padding:0!important}
+#mobile-pool-preview.phone-landscape .layout>.cue-meter{grid-column:1!important;grid-row:1!important;width:52px!important;height:100%!important;min-height:0!important;padding:2px!important}
+#mobile-pool-preview.phone-landscape .cue-track{width:44px!important;height:100%!important}
+#mobile-pool-preview.phone-landscape .arena{grid-column:2!important;grid-row:1!important;display:flex!important;flex-direction:column!important;min-height:0!important}
+#mobile-pool-preview.phone-landscape .layout>.controls{grid-column:3!important;grid-row:1!important;display:block!important;min-width:0!important;width:auto!important;min-height:0!important;height:100%!important;padding:4px!important;overflow-y:auto!important}
+#mobile-pool-preview.phone-landscape .stroke-controls{display:block!important}
+#mobile-pool-preview.phone-landscape .stroke-controls>*{width:100%!important;margin:0 0 6px!important;min-width:0!important}
+#mobile-pool-preview.phone-landscape .scorebar{position:relative!important;inset:auto!important;flex:0 0 28px!important;height:28px!important;padding:0 3px!important}
+#mobile-pool-preview.phone-landscape .table-wrap{display:flex!important;flex:1!important;min-height:0!important;align-items:center!important;justify-content:center!important;padding:0!important}
+#mobile-pool-preview.phone-landscape #game{width:100%!important;height:auto!important;max-width:100%!important;max-height:100%!important;object-fit:contain!important}
+#mobile-pool-preview.phone-landscape .status{position:relative!important;inset:auto!important;flex:0 0 22px!important;min-height:22px!important;max-height:22px!important;padding:2px 4px!important;font-size:11px!important;white-space:nowrap!important;overflow:auto!important}
+#mobile-pool-preview.phone-landscape .angle-head,#mobile-pool-preview.phone-landscape .control-line{flex-direction:column!important;align-items:flex-start!important;gap:2px!important}
+#mobile-pool-preview.phone-landscape .angle-head b,#mobile-pool-preview.phone-landscape .power-group b{font-size:12px!important}
+#mobile-pool-preview.phone-landscape .spin-group{display:flex!important;flex-direction:column!important;align-items:center!important;border:0!important;padding:0!important;gap:4px!important}
+#mobile-pool-preview.phone-landscape .spin-pad{width:52px!important;height:52px!important}
+#mobile-pool-preview.phone-landscape button,#mobile-pool-preview.phone-landscape #power{min-height:44px!important}
+#mobile-pool-preview.phone-landscape .shoot,#mobile-pool-preview.phone-landscape .small-button{font-size:12px!important;padding:4px!important;letter-spacing:0!important}
+#mobile-pool-preview.phone-landscape .practice-actions{display:flex!important;flex-direction:column!important;gap:4px!important}
+#mobile-pool-preview.phone-landscape .control-head,#mobile-pool-preview.phone-landscape .tip,#mobile-pool-preview.phone-landscape .spec,#mobile-pool-preview.phone-landscape footer,#mobile-pool-preview.phone-landscape .angle-foot,#mobile-pool-preview.phone-landscape .power-ends,#mobile-pool-preview.phone-landscape .shoot span{display:none!important}
+#mobile-pool-preview.phone-landscape .overlay{height:100%!important;max-height:100%!important;min-height:0!important;padding:48px 12px 8px!important;overflow:auto!important}
+#mobile-pool-preview.phone-landscape .setup-shell{width:min(100%,720px)!important;max-height:none!important;padding:12px 20px!important}
+#mobile-pool-preview.phone-landscape .setup-step h1{font-size:26px!important;margin:8px 0!important}
+#mobile-pool-preview.phone-landscape .setup-step>p{font-size:12px!important;margin:0 0 12px!important}
+#mobile-pool-preview.phone-landscape .setup-progress{margin-bottom:12px!important}
+#mobile-pool-preview.phone-landscape .setup-grid-three{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+#mobile-pool-preview.phone-landscape .setup-grid-two{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+#mobile-pool-preview.phone-landscape .setup-grid>button{display:block!important;min-height:96px!important;padding:10px!important}
+#mobile-pool-preview.phone-landscape .setup-grid>button b{font-size:15px!important;margin:8px 0 0!important}
+#mobile-pool-preview.phone-landscape .setup-grid>button small{font-size:11px!important;margin:4px 0 0!important}
+#mobile-pool-preview.phone-landscape #startOverlay{padding:0!important;overflow:hidden!important}
+#mobile-pool-preview.phone-landscape .welcome-copy{top:22%!important;width:62%!important;left:6%!important}
+#mobile-pool-preview.phone-landscape #welcomeTitle{font-size:32px!important}
+#mobile-pool-preview.phone-landscape .welcome-eyebrow{font-size:8px!important;margin-bottom:10px!important}
+#mobile-pool-preview.phone-landscape .welcome-description{font-size:11px!important;margin:10px 0 12px!important}
+#mobile-pool-preview.phone-landscape .welcome-modes{font-size:9px!important;margin-top:8px!important}
+#mobile-pool-preview.phone-landscape .welcome-top{top:5%!important}
+#mobile-pool-preview.phone-landscape .welcome-bottom{font-size:8px!important;bottom:3%!important;padding-top:8px!important}
+#mobile-pool-preview.phone-landscape #resultOverlay{padding:12px!important;align-items:center!important}
+#mobile-pool-preview.phone-landscape .result-card{padding:12px 24px!important;max-width:600px!important}
+#mobile-pool-preview.phone-landscape .result-top{padding-bottom:8px!important}
+#mobile-pool-preview.phone-landscape .result-kicker{margin:10px 0 6px!important}
+#mobile-pool-preview.phone-landscape #resultTitle{font-size:24px!important}
+#mobile-pool-preview.phone-landscape .result-reason{margin:6px 0 10px!important}
+#mobile-pool-preview.phone-landscape .result-player>b{font-size:42px!important;margin:2px 0 4px!important}
+#mobile-pool-preview.phone-landscape .result-note{margin:10px 0!important}
+@media (max-height:340px){#mobile-pool-preview.phone-landscape .welcome-description,#mobile-pool-preview.phone-landscape .welcome-eyebrow{display:none!important}}

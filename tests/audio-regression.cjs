@@ -34,7 +34,9 @@ vm.runInContext(fs.readFileSync(path.join(__dirname,'../audio.js'),'utf8'),sandb
   await Promise.resolve();
   assert(MockAudio.playCount-afterUnlock>=5,'effect calls did not reach native audio channels');
   assert.deepEqual({...sandbox.PoolAudio.stats},{cue:1,ball:1,rail:1,pocket:1});
-  assert.equal(sandbox.PoolAudio.musicInfo().source,'soundcloud-official');
+  assert.equal(sandbox.PoolAudio.musicInfo().source,'provided-local-audio');
+  assert.equal(typeof sandbox.PoolAudio.setMusic,'undefined','obsolete remote music controller still exposed');
+  assert(instances.every(a=>!a.src.startsWith('https:')),'external music source remained');
   assert(instances.length>=16,'not enough reusable audio channels for rack collisions');
   await sandbox.PoolAudio.startIntro();
   assert.equal(sandbox.PoolAudio.introPlaying(),true,'loading music did not start');

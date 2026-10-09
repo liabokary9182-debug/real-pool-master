@@ -37,7 +37,7 @@
     }));
     return {index,mx,my,nx,ny,tx,ty,radius,jawRadius,well,faces,fallRadius:radius-R*.45,fallFront:-R*.35};
   });
-  const state = {mode:null,opponent:'ai',aiDifficulty:'normal',aiTicket:0,aiThinking:false,phase:'menu',balls:[],pocketAnimations:[],turn:0,groups:[null,null],scores:[0,0],breaking:true,rackSeed:0,ballInHand:false,repositionAllowed:false,aim:-0.02,power:56,guidePowerLock:null,spinX:0,spinY:0,shot:null,stopTime:0,shotTime:0,status:'启动球场，选择对局',winner:null,drag:null};
+  const state = {mode:null,opponent:'ai',aiDifficulty:'normal',aiTicket:0,aiThinking:false,phase:'menu',balls:[],pocketAnimations:[],turn:0,groups:[null,null],scores:[0,0],matchScores:[0,0],returnPage:'difficulty',breaking:true,rackSeed:0,ballInHand:false,repositionAllowed:false,aim:-0.02,power:56,guidePowerLock:null,spinX:0,spinY:0,shot:null,stopTime:0,shotTime:0,status:'启动球场，选择对局',winner:null,drag:null};
   // Trial shots use the live collision/cloth functions, with isolated events.
   // Never play sounds, emit pocket flashes, or edit the real shot during trials.
   let physicsContext=null;
@@ -70,12 +70,13 @@
     window.PoolAudio?.stopIntro?.();
     window.PoolAudio?.startGameMusic?.();
     if(!state.practice)state.practiceOpponent=state.opponent;
-    state.aiTicket++;state.aiThinking=false;state.aiPlan=null;state.practice=key;
+    state.aiTicket++;state.aiThinking=false;state.aiPlan=null;state.practice=key;state.returnPage='practice';
     state.mode=state.practiceRuleset||'nine';state.opponent='local';state.phase='aim';state.turn=0;state.groups=[null,null];state.scores=[0,0];
     state.breaking=false;state.ballInHand=false;state.repositionAllowed=false;state.shot=null;state.stopTime=0;state.shotTime=0;state.winner=null;
     state.balls=layout.balls.map(([n,x,y])=>ball(n,x,y));state.pocketAnimations=[];state.stroke=null;state.windup=0;
     state.aim=layout.aim;state.power=layout.power;state.spinX=layout.spinX;state.spinY=layout.spinY;
-    for(const id of ['startOverlay','menuOverlay','practiceOverlay'])$(id)?.classList.add('hidden');
+    for(const id of ['startOverlay','menuOverlay','practiceOverlay','resultOverlay'])$(id)?.classList.add('hidden');
+    document.body?.setAttribute('data-screen','match');
     $('player2Name').textContent='练习目标';syncPowerUI();moveSpinDot();updateUI();say(`${layout.label}：${layout.hint}`);render();
   }
   function syncPowerUI() {
@@ -85,19 +86,22 @@
     $('cueMeter').style.setProperty('--power-height',`${state.power}%`);
     $('cueMeter').style.setProperty('--power-fraction',String(state.power/100));
   }
-  function init(mode) {
+  function init(mode,{rematch=false}={}) {
     window.PoolAudio?.stopIntro?.();
     window.PoolAudio?.startGameMusic?.();
-    if(state.practice)state.opponent=state.practiceOpponent||'ai';
     state.practice=null;state.stroke=null;state.windup=0;
     state.aiTicket++;state.aiThinking=false;state.aiPlan=null;
+    if(!rematch)state.matchScores=[0,0];
+    state.returnPage=state.opponent==='ai'?'difficulty':'rules';
     state.mode=mode; state.phase='aim'; state.turn=0; state.groups=[null,null]; state.scores=[0,0];
     state.breaking=true; state.ballInHand=false; state.repositionAllowed=true; state.aim=0; state.power=56; state.spinX=0; state.spinY=0;
     state.shot=null; state.stopTime=0; state.shotTime=0; state.winner=null;
     state.balls=[ball(0,25,25)];state.pocketAnimations=[];state.rackSeed=randomSeed();
     const rackRng=seededRandom(state.rackSeed);
     if (mode==='eight') rackEight(rackRng); else rackNine(rackRng);
-    $('startOverlay').classList.add('hidden');$('menuOverlay').classList.add('hidden');$('player2Name').textContent=state.opponent==='ai'?'电脑':'玩家 2';
+    for(const id of ['startOverlay','menuOverlay','practiceOverlay','resultOverlay'])$(id)?.classList.add('hidden');
+    document.body?.setAttribute('data-screen','match');
+    $('player2Name').textContent=state.opponent==='ai'?'电脑':'玩家 2';
     syncPowerUI(); moveSpinDot();
     say('开球：可拖动白球在虚线后摆放，瞄准后拉杆出杆。'+(mode==='nine'?'先碰 1 号球。':''));
     updateUI(); render();
@@ -409,13 +413,19 @@
     const noRail=s.firstHit!==null&&!s.railAfterHit&&objectPots.length===0;
     const foul=scratch||wrongFirst||noRail;
     const foulReason=scratch?'白球落袋':wrongFirst?'未先碰合法目标球':noRail?'碰球后未碰库或落袋':'';
+    // Count the deciding shot before finish() opens the result page. A foul
+    // never earns pots; assigned eight-ball groups only credit the own group.
+    if(!foul){
+      const credited=state.mode==='nine'?objectPots.filter(n=>n!==9||!s.breaking):objectPots.filter(n=>n===8?!s.breaking&&s.eightReady:!s.groupAtStart||group(n)===s.groupAtStart);
+      state.scores[s.shooter]+=credited.length;
+    }
     if(state.mode==='nine'){
       if(nums.includes(9)){
         if(foul||s.breaking)spotBall(9);
         else return finish(s.shooter,'合法打进 9 号球');
       }
       if(foul){state.turn=1-s.shooter;resetCueForHand();say(`${foulReason}，${actor(state.turn)}自由摆球。`);}
-      else if(objectPots.length){state.scores[s.shooter]+=objectPots.filter(n=>n!==9).length;state.turn=s.shooter;say(`合法进球！${actor(state.turn)}继续。`);}
+      else if(objectPots.length){state.turn=s.shooter;say(`合法进球！${actor(state.turn)}继续。`);}
       else{state.turn=1-s.shooter;say(`未进球，轮到${actor(state.turn)}。`);}
     } else {
       const eight=s.pocketed.find(p=>p.n===8);
@@ -430,17 +440,32 @@
       }
       if(foul){state.turn=1-s.shooter;resetCueForHand();say(`${foulReason}，${actor(state.turn)}自由摆球。`);}
       else if(s.breaking&&objectPots.length){state.turn=s.shooter;say(`开球进球，${actor(state.turn)}继续。`);}
-      else if(s.groupAtStart&&groupPots.some(n=>group(n)===s.groupAtStart)){state.scores[s.shooter]+=groupPots.filter(n=>group(n)===s.groupAtStart).length;state.turn=s.shooter;say(`合法进球！${actor(state.turn)}继续。`);}
-      else if(!s.groupAtStart&&groupPots.length){state.scores[s.shooter]+=groupPots.length;state.turn=s.shooter;say(`${actor(state.turn)}继续，已分配${groupName(state.groups[s.shooter])}。`);}
+      else if(s.groupAtStart&&groupPots.some(n=>group(n)===s.groupAtStart)){state.turn=s.shooter;say(`合法进球！${actor(state.turn)}继续。`);}
+      else if(!s.groupAtStart&&groupPots.length){state.turn=s.shooter;say(`${actor(state.turn)}继续，已分配${groupName(state.groups[s.shooter])}。`);}
       else{state.turn=1-s.shooter;say(`轮到${actor(state.turn)}。`);}
     }
     if(scratch&&!state.ballInHand)resetCueForHand();
     updateUI();render();queueAI();
   }
   function finish(winner,reason) {
+    if(state.phase==='gameover')return;
     state.winner=winner;state.turn=winner;state.phase='gameover';state.ballInHand=false;state.repositionAllowed=false;
-    say(`${actor(winner)}获胜 · ${reason}。点击“新开一局”继续。`);
+    state.aiTicket++;state.aiThinking=false;state.aiPlan=null;state.matchScores[winner]++;
+    say(`${actor(winner)}获胜 · ${reason}。`);
     updateUI();render();
+    for(const id of ['startOverlay','menuOverlay','practiceOverlay','rulesOverlay'])$(id)?.classList.add('hidden');
+    $('resultTitle').textContent=`${actor(winner)}获胜`;
+    $('resultReason').textContent=reason;
+    $('resultMode').textContent=(state.mode==='nine'?'九球':'八球')+' · '+(state.opponent==='ai'?'人机对战':'双人同屏');
+    $('resultRack').textContent=`第 ${state.matchScores[0]+state.matchScores[1]} 局结束`;
+    for(let i=0;i<2;i++){
+      $('resultName'+i).textContent=actor(i);
+      $('resultWins'+i).textContent=state.matchScores[i];
+      $('resultPots'+i).textContent=state.scores[i];
+      $('resultPlayer'+i).classList.toggle('is-winner',i===winner);
+    }
+    document.body?.setAttribute('data-screen','result');
+    $('resultOverlay').classList.remove('hidden');$('resultReplay').focus?.();
   }
   function lineClear(x1,y1,x2,y2,ignored) {
     return lineClearIn(live(),x1,y1,x2,y2,ignored);
@@ -1451,15 +1476,23 @@
     drawCue(s,s.aim,s.power,gap,opacity);
   }
   function pocketAnimationPose(a){
-    const t=clamp(a.age/a.duration,0,1),fall=clamp((a.age-.035)/Math.max(.001,a.duration-.035),0,1);
-    const sink=fall*fall*(3-2*fall);
-    // A short Hermite hand-off preserves the exact entry position and velocity,
-    // then eases to rest at the protected well centre before the depth fall.
-    const settleDuration=Math.min(.11,a.duration*.24),u=clamp(a.age/settleDuration,0,1);
-    const h00=2*u*u*u-3*u*u+1,h10=u*u*u-2*u*u+u,h01=-2*u*u*u+3*u*u;
-    const x=h00*a.entryX+h10*a.vx*settleDuration+h01*a.effectX;
-    const y=h00*a.entryY+h10*a.vy*settleDuration+h01*a.effectY;
-    return {t,sink,x,y,scale:1-.76*sink,alpha:1-clamp((t-.76)/.24,0,1)};
+    const p=POCKET_GEOMETRY[a.pocket],t=clamp(a.age/a.duration,0,1);
+    const fall=clamp((a.age-.025)/Math.max(.001,a.duration-.025),0,1),sink=fall*fall;
+    const settleDuration=clamp(R/Math.max(12,a.impact)*1.5,.035,.10),u=clamp(a.age/settleDuration,0,1);
+    // Every Bezier control stays in the convex fall cap. Unlike the former
+    // velocity Hermite curve, even a fast cut cannot overshoot the well/rail.
+    const safePoint=(x,y)=>{
+      const depth=(p.well.x-p.mx)*p.nx+(p.well.y-p.my)*p.ny;
+      const d=clamp((x-p.well.x)*p.nx+(y-p.well.y)*p.ny,p.fallFront-depth,p.fallRadius);
+      const limit=Math.sqrt(Math.max(0,p.fallRadius*p.fallRadius-d*d));
+      const lateral=clamp((x-p.well.x)*p.tx+(y-p.well.y)*p.ty,-limit,limit);
+      return {x:p.well.x+d*p.nx+lateral*p.tx,y:p.well.y+d*p.ny+lateral*p.ty};
+    };
+    const travel=Math.min(settleDuration/3,R*.6/Math.max(.001,a.impact));
+    const c=safePoint(a.entryX+a.vx*travel,a.entryY+a.vy*travel),end=safePoint(a.effectX,a.effectY),v=1-u;
+    const x=v*v*v*a.entryX+3*v*v*u*c.x+(3*v*u*u+u*u*u)*end.x;
+    const y=v*v*v*a.entryY+3*v*v*u*c.y+(3*v*u*u+u*u*u)*end.y;
+    return {t,sink,x,y,scale:1-.64*sink,alpha:1-clamp((t-.84)/.16,0,1),depth:.55*R*sink};
   }
   function drawPocketFallMask(pocket){
     const profile=pocketFallProfile(pocket),well=worldToScreen(profile.x,profile.y);
@@ -1472,10 +1505,10 @@
   }
   function drawPocketEffect(a){
     const pocket=POCKET_GEOMETRY[a.pocket],pose=pocketAnimationPose(a);
-    const center=worldToScreen(pose.x,pose.y),rr=DISPLAY_R*SCALE*pose.scale;
+    const center=worldToScreen(pose.x,pose.y+pose.depth),rr=DISPLAY_R*SCALE*pose.scale;
     ctx.save();const mouth=drawPocketFallMask(pocket);ctx.clip();
     ctx.globalAlpha=.28*(1-pose.sink);ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(center.x,center.y,rr*1.08,rr*.5,0,0,Math.PI*2);ctx.fill();
-    drawBall(a.visual,pose.scale,pose.x,pose.y,pose.alpha,false);
+    drawBall(a.visual,pose.scale,pose.x,pose.y+pose.depth,pose.alpha,false);
     ctx.globalAlpha=pose.alpha*(.1+.84*pose.sink);
     const shade=ctx.createRadialGradient(center.x-rr*.24,center.y-rr*.28,rr*.08,center.x,center.y,rr*1.08);
     shade.addColorStop(0,'rgba(0,0,0,0)');shade.addColorStop(.58,`rgba(0,0,0,${.14+.32*pose.sink})`);shade.addColorStop(1,'rgba(0,0,0,.97)');
@@ -1502,7 +1535,6 @@
       ctx.fillStyle='#a8ecff';ctx.font='17px sans-serif';ctx.fillText(state.aiPlan?.description||'检查遮挡、袋口与白球落点',700,405);
       ctx.fillStyle='#86cbd5';ctx.font='13px sans-serif';ctx.fillText(state.aiPlan?'准备出杆 · 2.5 秒':'正在试算候选路线',700,433);ctx.restore();
     }
-    if(state.phase==='gameover'){ctx.fillStyle='#06181bdc';ctx.fillRect(0,0,VIEW_W,VIEW_H);ctx.fillStyle='#f4d382';ctx.font='bold 58px sans-serif';ctx.textAlign='center';ctx.fillText(`${actor(state.winner)}获胜`,700,365);ctx.fillStyle='#d9e9df';ctx.font='22px sans-serif';ctx.fillText('点击右上角「新开一局」再来一场',700,410);}
   }
   let aimFramePending=false;
   function requestAimFrame(){
@@ -1628,7 +1660,32 @@
   function openSetup(step='mode'){
     window.PoolAudio?.stopGameMusic?.();
     window.PoolAudio?.startIntro?.();
-    $('startOverlay').classList.add('hidden');$('practiceOverlay')?.classList.add('hidden');$('menuOverlay').classList.remove('hidden');showSetupStep(step);
+    document.body?.setAttribute('data-screen','setup');
+    $('resultOverlay')?.classList.add('hidden');$('startOverlay').classList.add('hidden');$('practiceOverlay')?.classList.add('hidden');$('menuOverlay').classList.remove('hidden');showSetupStep(step);
+  }
+  function leaveTable(){
+    state.aiTicket++;state.aiThinking=false;state.aiPlan=null;state.phase='menu';state.shot=null;state.stroke=null;state.windup=0;state.drag=null;
+    state.pocketAnimations=[];state.ballInHand=false;state.repositionAllowed=false;
+    for(const b of live())b.vx=b.vy=b.rollVx=b.rollVy=b.spin=0;
+    meterDrag=null;angleDrag=null;meter.classList.remove('dragging');meter.style.setProperty('--cue-pull','0px');
+    for(const id of ['resultOverlay','practiceOverlay','rulesOverlay'])$(id)?.classList.add('hidden');
+    window.PoolAudio?.stopGameMusic?.();window.PoolAudio?.startIntro?.();
+    document.body?.setAttribute('data-screen','setup');updateUI();
+  }
+  function returnHome(){
+    leaveTable();state.practice=null;state.matchScores=[0,0];
+    $('menuOverlay').classList.add('hidden');$('startOverlay').classList.remove('hidden');
+    document.body?.setAttribute('data-screen','welcome');$('startBtn').focus?.();
+  }
+  function returnPreviousPage(){
+    const previous=state.returnPage,rules=state.practiceRuleset||state.mode;
+    leaveTable();
+    if(previous==='practice'){
+      setupChoice='practice';setupRuleset=rules;
+      $('menuOverlay').classList.add('hidden');openPracticeMenu(rules);
+    }else{
+      state.practice=null;setupChoice=state.opponent;setupRuleset=state.mode;openSetup(previous);
+    }
   }
   document.querySelectorAll('[data-flow-mode]').forEach(btn=>btn.addEventListener('click',()=>{
     setupChoice=btn.dataset.flowMode;
@@ -1646,12 +1703,17 @@
   }));
   document.querySelectorAll('[data-setup-back]').forEach(btn=>btn.addEventListener('click',()=>{
     if(btn.dataset.setupBack==='welcome'){
-      $('menuOverlay').classList.add('hidden');$('startOverlay').classList.remove('hidden');window.PoolAudio?.startIntro?.();return;
+      returnHome();return;
     }
     showSetupStep(btn.dataset.setupBack);
   }));
   $('startBtn').addEventListener('click',()=>openSetup('mode'));
-  $('newBtn').addEventListener('click',()=>{state.aiTicket++;state.aiThinking=false;state.aiPlan=null;if(state.practice)state.opponent=state.practiceOpponent||'ai';state.practice=null;state.phase='menu';updateUI();openSetup('mode');});
+  $('backBtn').addEventListener('click',returnPreviousPage);
+  $('resultHome').addEventListener('click',returnHome);
+  $('resultReplay').addEventListener('click',()=>{
+    if(state.phase!=='gameover')return;
+    init(state.mode,{rematch:true});
+  });
   $('rulesBtn').addEventListener('click',()=>$('rulesOverlay').classList.remove('hidden'));
   $('closeRules').addEventListener('click',()=>$('rulesOverlay').classList.add('hidden'));
   $('rulesOverlay').addEventListener('click',e=>{if(e.target.id==='rulesOverlay')$('rulesOverlay').classList.add('hidden');});
@@ -1669,10 +1731,10 @@
   let last=performance.now(),acc=0,manualTime=false,lastRender=0;
   function frame(now){const elapsed=Math.min(.05,(now-last)/1000);last=now;const active=state.phase==='moving'||state.pocketAnimations.length>0;if(!manualTime){acc+=elapsed;while(acc>=STEP){update(STEP);acc-=STEP;}}if(active&&(!MOBILE_RENDER||now-lastRender>=TARGET_RENDER_INTERVAL-.75)){render();lastRender=now;}requestAnimationFrame(frame);}
   window.advanceTime=ms=>{manualTime=true;acc=0;const steps=Math.ceil(ms/1000/STEP);for(let i=0;i<steps;i++)update(STEP);render();};
-  window.render_game_to_text=()=>JSON.stringify({coordinates:`world inches, origin at top-left cushion nose; +x right, +y down; table 100x50; ball diameter ${(2*R).toFixed(4)}; corner mouth ${CORNER_MOUTH}; side mouth ${SIDE_MOUTH}`,mode:state.mode,opponent:state.opponent,aiDifficulty:state.aiDifficulty,aiThinking:state.aiThinking,aiPlan:state.aiPlan?{target:state.aiPlan.target,pocket:state.aiPlan.pocket,type:state.aiPlan.type,spinX:state.aiPlan.spinX||0,spinY:state.aiPlan.spinY||0,snookerPlanned:!!state.aiPlan.snookerPlanned,power:+state.aiPlan.power.toFixed(1),description:state.aiPlan.description}:null,phase:state.phase,turn:state.turn+1,groups:state.groups,scores:state.scores,breaking:state.breaking,rackSeed:state.rackSeed,ballInHand:state.ballInHand,repositionAllowed:state.repositionAllowed,aimDegrees:+(state.aim*180/Math.PI).toFixed(2),power:state.power,spin:[+state.spinX.toFixed(2),+state.spinY.toFixed(2)],balls:state.balls.map(b=>({n:b.n,x:+b.x.toFixed(2),y:+b.y.toFixed(2),vx:+b.vx.toFixed(2),vy:+b.vy.toFixed(2),rollVx:+b.rollVx.toFixed(2),rollVy:+b.rollVy.toFixed(2),sideSpin:+b.spin.toFixed(2),roll:+b.roll.toFixed(2),pocketed:b.pocketed})),status:state.status,winner:state.winner});
+  window.render_game_to_text=()=>JSON.stringify({coordinates:`world inches, origin at top-left cushion nose; +x right, +y down; table 100x50; ball diameter ${(2*R).toFixed(4)}; corner mouth ${CORNER_MOUTH}; side mouth ${SIDE_MOUTH}`,mode:state.mode,opponent:state.opponent,aiDifficulty:state.aiDifficulty,aiThinking:state.aiThinking,aiPlan:state.aiPlan?{target:state.aiPlan.target,pocket:state.aiPlan.pocket,type:state.aiPlan.type,spinX:state.aiPlan.spinX||0,spinY:state.aiPlan.spinY||0,snookerPlanned:!!state.aiPlan.snookerPlanned,power:+state.aiPlan.power.toFixed(1),description:state.aiPlan.description}:null,phase:state.phase,turn:state.turn+1,groups:state.groups,scores:state.scores,matchScores:state.matchScores,returnPage:state.returnPage,breaking:state.breaking,rackSeed:state.rackSeed,ballInHand:state.ballInHand,repositionAllowed:state.repositionAllowed,aimDegrees:+(state.aim*180/Math.PI).toFixed(2),power:state.power,spin:[+state.spinX.toFixed(2),+state.spinY.toFixed(2)],balls:state.balls.map(b=>({n:b.n,x:+b.x.toFixed(2),y:+b.y.toFixed(2),vx:+b.vx.toFixed(2),vy:+b.vy.toFixed(2),rollVx:+b.rollVx.toFixed(2),rollVy:+b.rollVy.toFixed(2),sideSpin:+b.spin.toFixed(2),roll:+b.roll.toFixed(2),pocketed:b.pocketed})),status:state.status,winner:state.winner});
   if(new URLSearchParams(location.search).has('test')){
     $('startOverlay').classList.add('hidden');$('menuOverlay').classList.remove('hidden');
-    window.__poolTest={getShotSummary(){return {firstHit:state.shot?.firstHit??null,pocketed:state.shot?.pocketed||[]};},getFallAnimations(){return state.pocketAnimations.map(a=>({n:a.visual.n,pocket:a.pocket,age:a.age,duration:a.duration,vx:a.vx,vy:a.vy,...pocketAnimationPose(a),q:[...a.visual.q]}));},pocketRollingTest(index=1,angleDegrees=0,speed=6,offMouth=false){
+    window.__poolTest={getPocketGeometry(){return POCKET_GEOMETRY.map(p=>({...p,well:{...p.well}}));},getShotSummary(){return {firstHit:state.shot?.firstHit??null,pocketed:state.shot?.pocketed||[]};},getFallAnimations(){return state.pocketAnimations.map(a=>({n:a.visual.n,pocket:a.pocket,age:a.age,duration:a.duration,entryX:a.entryX,entryY:a.entryY,vx:a.vx,vy:a.vy,...pocketAnimationPose(a),q:[...a.visual.q]}));},pocketRollingTest(index=1,angleDegrees=0,speed=6,offMouth=false){
       const p=POCKET_GEOMETRY[index],angle=angleDegrees*Math.PI/180;
       const dx=p.nx*Math.cos(angle)+p.tx*Math.sin(angle),dy=p.ny*Math.cos(angle)+p.ty*Math.sin(angle);
       const distance=Math.min(8,speed*speed/(2*ROLL_DECEL)*.7),offset=offMouth?p.radius+1.4:0;
@@ -1710,9 +1772,9 @@
     state.balls=[ball(0,25,25),ball(1,65,12),ball(illegal?2:1,50,25)];
     if(!illegal)state.balls.splice(1,1);
     state.aim=0;state.shot=null;$('menuOverlay').classList.add('hidden');updateUI();render();
-  },setEightFinal(){
+  },setEightFinal(ready=true){
     state.pocketAnimations=[];
-    state.aiTicket++;state.aiThinking=false;state.aiPlan=null;state.mode='eight';state.opponent='local';state.phase='aim';state.turn=0;state.breaking=false;state.ballInHand=false;state.groups=['solid','stripe'];state.scores=[7,0];state.balls=[ball(0,50,22),ball(8,50,8)];state.aim=-Math.PI/2;state.power=56;state.shot=null;
+    state.aiTicket++;state.aiThinking=false;state.aiPlan=null;state.mode='eight';state.opponent='local';state.phase='aim';state.turn=0;state.breaking=false;state.ballInHand=false;state.groups=['solid','stripe'];state.scores=[ready?7:0,0];state.balls=[ball(0,50,22),ball(8,50,8)];if(!ready)state.balls.push(ball(1,80,35));state.aim=-Math.PI/2;state.power=56;state.shot=null;
     state.spinX=0;state.spinY=-.85;$('player2Name').textContent='玩家 2';syncPowerUI();moveSpinDot();$('menuOverlay').classList.add('hidden');updateUI();render();
   },setNineFinal(){
     state.pocketAnimations=[];

@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#050a18">
   <meta name="description" content="小糖台球蓝宝石赛场，支持八球、九球、人机对战、专项训练与双人同屏。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23121a20'/%3E%3Ccircle cx='16' cy='16' r='7' fill='white'/%3E%3Ctext x='16' y='20' text-anchor='middle' font-size='12'%3E8%3C/text%3E%3C/svg%3E">
+  <link rel="preload" href="./assets/sapphire-arena.jpg" as="image">
   <title>小糖台球 · 蓝宝石赛场</title>
   <link rel="stylesheet" href="./style.css?v=20261007-single-segment">
   <link rel="stylesheet" href="./revamp.css?v=20261007-single-segment">
@@ -15,8 +16,11 @@
   <link rel="preload" href="./sounds/xiaotang-intro.mp3" as="audio" type="audio/mpeg">
   <link rel="preload" href="./sounds/xiaotang-game-loop.m4a" as="fetch" type="audio/mp4" crossorigin="anonymous">
   <link rel="stylesheet" href="./xingling.css?v=20261008-xiaotang-v9">
+  <link rel="stylesheet" href="./sapphire.css?v=20261009-review">
+  <link rel="stylesheet" href="./landscape.css?v=20261009-landscape">
 </head>
-<body id="mobile-pool-preview">
+<body id="mobile-pool-preview" data-screen="welcome">
+  <section id="landscapeGate" hidden role="status" aria-live="polite"><div class="rotate-phone" aria-hidden="true"></div><h2>请将手机横过来</h2><p>蓝宝石赛场仅支持横屏<br>旋转手机后自动继续</p></section>
   <div class="mobile-game-surface">
   <div class="boot" id="boot" aria-label="正在启动小糖台球蓝宝石赛场">
     <div class="boot-system">XIAOTANG / SAPPHIRE ARENA <span>● PHYSICS READY</span></div>
@@ -26,7 +30,7 @@
   <div class="app">
     <header class="topbar" id="previewTopbar">
       <div class="brand"><span class="brand-mark">●</span><div><strong>小糖台球</strong><small>SAPPHIRE ARENA</small></div></div>
-      <div class="top-actions"><button id="landscapeBtn" class="quiet" type="button" aria-label="切换横屏显示" aria-pressed="false">横屏 ↷</button><button id="musicBtn" class="quiet music-toggle" type="button" aria-label="播放 Lullaby" aria-pressed="false">♫ Lullaby</button><input id="musicFile" type="file" accept="audio/*" hidden><button id="rulesBtn" class="quiet" type="button">规则</button><button id="newBtn" class="quiet" type="button">新开一局</button><button id="fullBtn" class="quiet" type="button" aria-label="全屏预览游戏" aria-pressed="false">全屏 ⛶</button></div>
+      <div class="top-actions"><button id="rulesBtn" class="quiet" type="button">规则</button><button id="backBtn" class="quiet" type="button" aria-label="返回上一个选择页面">← 返回</button><button id="fullBtn" class="quiet" type="button" aria-label="全屏预览游戏" aria-pressed="false">全屏 ⛶</button></div>
     <span id="fullscreenFeedback" role="status" aria-live="polite" hidden></span>
     </header>
     <main class="layout">
@@ -53,7 +57,18 @@
     </main>
     <footer>桌面：拖动瞄准 / 拖动刻度尺精调 / 拉杆击球 · ← → 每次 0.001° · 辅助线碰库即止 · 空格击球 · F 全屏　/　平板：拖动瞄准 / 刻度尺精调 / 拉杆击球</footer>
   </div>
-  <div class="overlay start-overlay" id="startOverlay"><div class="start-card"><div class="start-copy"><div class="start-signal"><span class="signal-dot"></span>XIAOTANG BILLIARDS <b>08 / 09</b></div><div class="start-wordmark">小糖 <span>BILLIARDS</span><i>SAPPHIRE</i></div><h1 class="start-title">欢迎来到蓝宝石赛场<span>瞄准每一条线路，听见每一次碰撞</span></h1><p>在深蓝球台上选择你的对战方式，以直线瞄准、小头杆和真实碰撞完成这一局。</p><button id="startBtn" class="start-btn" type="button">进入蓝宝石赛场 <span>●</span></button><div class="start-foot">SAPPHIRE TABLE　·　180HZ PHYSICS　·　8 / 9 BALL</div></div><div class="start-visual" aria-hidden="true"><div class="start-table"><i class="start-ball a">8</i><i class="start-ball b">9</i><i class="start-trace"></i><i class="start-cue"></i></div><span>WELCOME TO THE SAPPHIRE ARENA</span></div></div></div>
+  <section class="overlay start-overlay arena-welcome" id="startOverlay" aria-labelledby="welcomeTitle">
+    <img class="welcome-photo" src="./assets/sapphire-arena.jpg" alt="蓝色灯光下的台球赛场" fetchpriority="high">
+    <div class="welcome-shade" aria-hidden="true"></div>
+    <div class="welcome-top"><span class="welcome-brand">小糖台球 <small>XIAOTANG BILLIARDS</small></span><span class="welcome-tag">蓝宝石赛场 <i></i></span></div>
+    <div class="welcome-copy"><p class="welcome-eyebrow">WELCOME TO THE SAPPHIRE ARENA</p>
+      <h1 id="welcomeTitle">欢迎来到<br><span>蓝宝石赛场</span></h1>
+      <p class="welcome-description">灯光已亮，球台就绪。<br>下一场精彩，由你开杆。</p>
+      <button id="startBtn" class="welcome-enter" type="button">进入赛场 <span>↗</span></button>
+      <div class="welcome-modes">八球 / 九球 <span>·</span> 人机对战 <span>·</span> 双人同屏 <span>·</span> 专项训练</div>
+    </div>
+    <div class="welcome-bottom"><span>SAPPHIRE ARENA</span><span>瞄准这一刻，打出你的下一局。</span></div>
+  </section>
   <div class="overlay hidden" id="menuOverlay"><div class="menu-card setup-shell">
     <div class="setup-progress" aria-label="开始流程"><span class="active" data-progress="mode">01 对战</span><span data-progress="rules">02 玩法</span><span data-progress="difficulty">03 难度</span></div>
     <section class="setup-step" id="setupMode"><button class="setup-back" type="button" data-setup-back="welcome">返回</button><div class="eyebrow">CHOOSE MATCH</div><h1>请选择<br><em>对战模式</em></h1><p>选择这一局的进入方式，下一步再选择八球或九球。</p><div class="setup-grid setup-grid-three"><button type="button" data-flow-mode="ai"><span class="setup-icon">AI</span><b>人机对战</b><small>挑战三档智能对手</small></button><button type="button" data-flow-mode="practice"><span class="setup-icon">练</span><b>专项训练</b><small>反复练习同一条球路</small></button><button type="button" data-flow-mode="local"><span class="setup-icon">2P</span><b>双人同屏</b><small>两位玩家轮流出杆</small></button></div></section>
@@ -61,17 +76,26 @@
     <section class="setup-step hidden" id="setupDifficulty"><button class="setup-back" type="button" data-setup-back="rules">返回</button><div class="eyebrow">CHOOSE DIFFICULTY</div><h1>选择难度</h1><p>难度只用于人机对战。</p><div class="setup-grid setup-grid-three difficulty-cards"><button type="button" data-flow-difficulty="easy"><span class="difficulty-number">40%</span><b>普通</b><small>适合熟悉操作</small></button><button type="button" data-flow-difficulty="normal"><span class="difficulty-number">60%</span><b>进阶</b><small>更稳定的进攻选择</small></button><button type="button" data-flow-difficulty="hard"><span class="difficulty-number">95%</span><b>大师</b><small>规划杆法与下一球</small></button></div></section>
   </div></div>
   <div class="overlay hidden" id="practiceOverlay"><div class="menu-card practice-card"><button id="closePractice" class="close" type="button" aria-label="关闭练球菜单">×</button><button id="backPractice" class="setup-back" type="button">返回</button><div class="eyebrow">PRACTICE TABLE</div><h2>选择专项训练</h2><p><span id="practiceRulesetLabel">九球规则</span> · 同一球位反复出杆，调整力度和击球点，观察真实落点。</p><div class="practice-grid"><button class="quiet" type="button" data-practice="pocket"><b>慢球进袋</b><small>18% 轻推 · 检查中袋</small></button><button class="quiet" type="button" data-practice="draw"><b>低杆拉回</b><small>70% 力度 · 白球回退</small></button><button class="quiet" type="button" data-practice="follow"><b>高杆跟进</b><small>相同球位 · 对比低杆</small></button><button class="quiet" type="button" data-practice="english"><b>加塞碰库</b><small>左右塞 · 对比反弹方向</small></button></div></div></div>
-  <div class="overlay hidden" id="rulesOverlay"><div class="menu-card rules-card"><button id="closeRules" class="close" type="button" aria-label="关闭">×</button><div class="eyebrow">HOW TO PLAY</div><h2>玩法与操作</h2><p><b>瞄准：</b>在球台上拖动调整方向，在右侧横向拖动刻度尺作精细调整；方向键每次调整 0.001°，按住 Shift 为 0.0001°。辅助线只显示当前直线段，碰到库边立即结束，不显示反弹后的路线。红线表示首碰球不合法。<b>力度：</b>向下拉左侧小头杆，松手击球，旁边刻度条同步显示力度；5%～25% 为细化的轻推区间。<b>旋转：</b>移动击球点，旁边显示当前杆法；每次出杆后自动回到中杆。也可按空格或点击“击球”。</p><p><b>专项练球：</b>提供慢球进袋、低杆、高杆与加塞碰库；点“重摆本球”恢复相同球位与预设力度。本杆结束后显示白球落点，无胜负和换人；点“新开一局”返回正常八球或九球。</p><p><b>袋口：</b>球进入袋洞的有效下沉区域后立刻停止平面滚动，只在袋洞遮罩内垂直下沉；袋沿始终覆盖球体，避免穿过胶边。六袋绘制、落袋判定与遮罩使用同一套袋口几何。</p><p><b>大师：</b>会比较高低杆、左右轻重塞与混合塞，并对候选杆法的力度作微调，规划下一球；直接进攻困难时尝试翻袋或碰库勾球，防守时寻找藏白球、遮住对手首碰线的落点。出杆前显示击球点和力度，选择与执行仍可能失误。</p><p><b>自由球：</b>点按或拖动台面摆放白球，点击“确认白球位置”；击球前可以点击“重新摆放白球”再次调整。</p><p><b>八球：</b>开球后先分配全色与花色；先打自己的球，清空后合法打进 8 号球即可获胜，无需指定袋口。犯规后对手自由摆放白球。</p><p><b>九球：</b>每杆先碰当前最小号球；合法打进 9 号球获胜。</p><p>第一次点按会解锁击球、球碰球、碰库和落袋四类本地音效；背景音乐不会抢占音效通道。顶部“Lullaby”使用 Enzalla 官方 SoundCloud 播放器，也可导入本机音频循环播放。本机文件只在当前浏览器里使用。网页包含首球、无碰库、白球落袋及胜负判定。开球流程为适合网页对战的简化规则。</p></div></div>
-  <aside id="musicPanel" class="music-panel" hidden aria-label="背景音乐播放器">
-    <div class="music-panel-head"><strong>Lullaby <small>ENZALLA</small></strong><button id="closeMusic" type="button" aria-label="收起音乐播放器">×</button></div>
-    <p id="musicStatus" role="status">Enzalla · Lullaby · 官方 SoundCloud 播放器</p>
-    <iframe id="soundcloudPlayer" title="Enzalla Lullaby 官方 SoundCloud 播放器" width="100%" height="118" scrolling="no" frameborder="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/enzalla/lullaby&amp;color=%2300d8ef&amp;auto_play=false&amp;hide_related=true&amp;show_comments=false&amp;show_user=true&amp;show_reposts=false&amp;show_teaser=false&amp;visual=false"></iframe>
-    <div class="music-panel-foot"><a href="https://soundcloud.com/enzalla/lullaby" target="_blank" rel="noopener noreferrer">官方曲目 ↗</a><button id="localMusicBtn" type="button">本机音频</button></div>
-  </aside>
+  <div class="overlay hidden" id="rulesOverlay"><div class="menu-card rules-card"><button id="closeRules" class="close" type="button" aria-label="关闭">×</button><div class="eyebrow">HOW TO PLAY</div><h2>玩法与操作</h2><p><b>瞄准：</b>在球台上拖动调整方向，在右侧横向拖动刻度尺作精细调整；方向键每次调整 0.001°，按住 Shift 为 0.0001°。辅助线只显示当前直线段，碰到库边立即结束，不显示反弹后的路线。红线表示首碰球不合法。<b>力度：</b>向下拉左侧小头杆，松手击球，旁边刻度条同步显示力度；5%～25% 为细化的轻推区间。<b>旋转：</b>移动击球点，旁边显示当前杆法；每次出杆后自动回到中杆。也可按空格或点击“击球”。</p><p><b>专项练球：</b>提供慢球进袋、低杆、高杆与加塞碰库；点“重摆本球”恢复相同球位与预设力度。本杆结束后显示白球落点，无胜负和换人；点顶部“返回”回到训练项目选择。</p><p><b>袋口：</b>球进入袋洞的有效下沉区域后立刻停止平面滚动，只在袋洞遮罩内垂直下沉；袋沿始终覆盖球体，避免穿过胶边。六袋绘制、落袋判定与遮罩使用同一套袋口几何。</p><p><b>大师：</b>会比较高低杆、左右轻重塞与混合塞，并对候选杆法的力度作微调，规划下一球；直接进攻困难时尝试翻袋或碰库勾球，防守时寻找藏白球、遮住对手首碰线的落点。出杆前显示击球点和力度，选择与执行仍可能失误。</p><p><b>自由球：</b>点按或拖动台面摆放白球，点击“确认白球位置”；击球前可以点击“重新摆放白球”再次调整。</p><p><b>八球：</b>开球后先分配全色与花色；先打自己的球，清空后合法打进 8 号球即可获胜，无需指定袋口。犯规后对手自由摆放白球。</p><p><b>九球：</b>每杆先碰当前最小号球；合法打进 9 号球获胜。</p><p>第一次点按会解锁击球、球碰球、碰库和落袋四类本地音效；背景音乐不会抢占音效通道。欢迎页播放已提供的入场音乐，对局使用已提供的新音频循环播放，返回选择页面时自动切换。网页包含首球、无碰库、白球落袋及胜负判定。开球流程为适合网页对战的简化规则。</p></div></div>
+  <section class="overlay hidden result-overlay" id="resultOverlay" role="dialog" aria-modal="true" aria-labelledby="resultTitle" aria-describedby="resultReason">
+    <div class="result-card">
+      <div class="result-top"><span>小糖台球 / SAPPHIRE</span><span id="resultRack">本局结束</span></div>
+      <p class="result-kicker" id="resultMode">八球 · 人机对战</p>
+      <h1 id="resultTitle">玩家 1 获胜</h1><p id="resultReason" class="result-reason"></p>
+      <div class="result-score-label">局数比分</div>
+      <div class="result-scoreboard">
+        <div class="result-player" id="resultPlayer0"><span id="resultName0">玩家 1</span><b id="resultWins0">1</b><small>本局合法进球 <strong id="resultPots0">0</strong></small></div>
+        <span class="result-divider">:</span>
+        <div class="result-player" id="resultPlayer1"><span id="resultName1">电脑</span><b id="resultWins1">0</b><small>本局合法进球 <strong id="resultPots1">0</strong></small></div>
+      </div>
+      <p class="result-note">再来一局继续累计比分，返回主页开始新的对战。</p>
+      <div class="result-actions"><button id="resultHome" class="result-secondary" type="button">返回主页</button><button id="resultReplay" class="result-primary" type="button">再来一局 <span>↗</span></button></div>
+    </div>
+  </section>
   </div>
-  <script src="./game.js?v=20261008-xiaotang-v11"></script>
-  <script src="https://w.soundcloud.com/player/api.js"></script>
-  <script src="./audio.js?v=20261008-preview-v11"></script>
-  <script src="./mobile.js?v=20261007-single-segment"></script>
+  <script src="./landscape.js?v=20261009-landscape"></script>
+  <script src="./game.js?v=20261009-sapphire-review"></script>
+  <script src="./audio.js?v=20261009-sapphire-review"></script>
+  <script src="./mobile.js?v=20261009-landscape"></script>
 </body>
 </html>
