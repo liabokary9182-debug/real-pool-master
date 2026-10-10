@@ -1275,16 +1275,16 @@
     }
     ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(tableBackdrop,0,0);ctx.restore();
   }
-  function drawChengyuEmblem(x,y,scale=1,alpha=1){
+  function drawChengyuEmblem(x,y,scale=1,alpha=1,ink=null){
     ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);ctx.globalAlpha=alpha;
-    ctx.strokeStyle='#d8efe8';ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.strokeStyle=ink||'#d8efe8';ctx.lineCap='round';ctx.lineJoin='round';
     for(let i=0;i<3;i++){
       const d=i*13;ctx.lineWidth=4-i*.55;ctx.beginPath();ctx.moveTo(42-d,-38+d*.28);
       ctx.bezierCurveTo(-5-d,-67+d*.4,-72+d*.5,-14,-44+d*.3,23-d*.2);
       ctx.bezierCurveTo(-18,54-d*.65,29-d*.35,35-d*.5,50-d,9-d*.18);ctx.stroke();
     }
-    ctx.fillStyle='#e8f4e9';ctx.beginPath();ctx.ellipse(43,-26,4.5,7,-.5,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle='#dbb778';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(16,29);ctx.bezierCurveTo(46,49,64,28,64,6);ctx.stroke();ctx.restore();
+    ctx.fillStyle=ink||'#e8f4e9';ctx.beginPath();ctx.ellipse(43,-26,4.5,7,-.5,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=ink||'#dbb778';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(16,29);ctx.bezierCurveTo(46,49,64,28,64,6);ctx.stroke();ctx.restore();
   }
   function paintTable(){
     const l=OX,t=OY,r=OX+W*SCALE,b=OY+H*SCALE;
@@ -1303,10 +1303,10 @@
     ctx.beginPath();ctx.moveTo(l+HEAD_LINE*SCALE,t+2);ctx.lineTo(l+HEAD_LINE*SCALE,b-2);ctx.stroke();ctx.restore();
     // Original tide-ribbon print sits beneath the cloth fibres.
     const brandX=l+W*SCALE/2,brandY=t+H*SCALE/2;
-    drawChengyuEmblem(brandX,brandY-28,1,.09);
-    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#effaff28';
-    ctx.font='500 25px "PingFang SC", "Microsoft YaHei", sans-serif';ctx.fillText('澄  域',brandX,brandY+42);
-    ctx.fillStyle='#effaff20';ctx.font='600 10px Arial, sans-serif';ctx.fillText('C 1   /   T I D E L I N E',brandX,brandY+66);ctx.restore();
+    drawChengyuEmblem(brandX,brandY-28,1,.55,'#235f7c');
+    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#275b72c4';
+    ctx.font='600 25px "PingFang SC", "Microsoft YaHei", sans-serif';ctx.fillText('澄  域',brandX,brandY+42);
+    ctx.fillStyle='#275b72ad';ctx.font='600 10px Arial, sans-serif';ctx.fillText('C 1   /   T I D E L I N E',brandX,brandY+66);ctx.restore();
     // Sparse fibres are cached, rather than repainting 56,000 per frame.
     let seed=19327;
     for(let i=0;i<18000;i++){
@@ -1431,12 +1431,17 @@
     if(numberBadges.has(n))return numberBadges.get(n);
     const icon=document.createElement('canvas');icon.width=icon.height=96;
     const g=icon.getContext('2d');
-    // A classic circular ivory insert. Illumination is applied by the sphere
-    // shader, so the painted number does not carry a rotating fake highlight.
-    g.beginPath();g.arc(48,48,43,0,Math.PI*2);g.fillStyle='#f5f2e8';g.fill();
-    g.strokeStyle='#d8d6ca';g.lineWidth=1.5;g.stroke();
-    g.fillStyle='#121920';g.font=`700 ${n>9?43:59}px Arial`;
-    g.textAlign='center';g.textBaseline='middle';g.fillText(String(n),48,51);
+    // Solids carry only the numeral: transparent pixels preserve the exact
+    // underlying pigment and shading, with no circular border while rolling.
+    // The black eight uses the same pigment; only stripes keep ivory inserts.
+    const solid=n>=1&&n<=8;
+    if(!solid){
+      g.beginPath();g.arc(48,48,43,0,Math.PI*2);g.fillStyle='#f5f2e8';g.fill();
+      g.strokeStyle='#d8d6ca';g.lineWidth=1.5;g.stroke();
+    }
+    g.fillStyle=n===8?'#ffffff':solid?'#000000':'#121920';g.font=`700 ${n>9?43:59}px Arial`;
+    g.textAlign='center';g.textBaseline='middle';
+    g.fillText(String(n),48,51);
     const pixels=g.getImageData(0,0,96,96).data;
     numberBadges.set(n,pixels);return pixels;
   }
