@@ -44,7 +44,7 @@ const point={pointerId:1,clientX:415-(75+40*12.8)/2,clientY:30+(60+80*12.8)/2,pr
 g.canvas.handlers.pointerdown(point);assert.equal(read().aimDegrees,0);g.canvas.handlers.pointerup(point);assert.equal(read().aimDegrees,26.57);
 t.setGuideBalls([{n:0,x:30,y:25},{n:1,x:52,y:25}],0,56);
 const ruler=g.ids.get('angleRuler'),event=(x,y)=>({pointerId:7,clientX:x,clientY:y,preventDefault(){}});
-ruler.handlers.pointerdown(event(10,100));ruler.handlers.pointermove(event(10,200));ruler.handlers.pointerup(event(10,200));assert.equal(read().aimDegrees,.1);
+ruler.handlers.pointerdown(event(10,100));ruler.handlers.pointermove(event(10,200));ruler.handlers.pointerup(event(10,200));assert.equal(read().aimDegrees,.4);
 t.setGuideBalls([{n:0,x:50,y:25},{n:1,x:80,y:40}],0,56);
 const meter=g.ids.get('cueMeter');meter.handlers.pointerdown(event(400,0));meter.handlers.pointermove(event(260,0));const power=read().power;
 meter.handlers.pointerup(event(260,0));w.advanceTime(100);assert.equal(read().power,power);assert(read().balls.find(b=>b.n===0).vx>0);

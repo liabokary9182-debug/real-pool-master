@@ -70,3 +70,15 @@
 #mobile-pool-preview.phone-landscape .welcome-tag{display:none}
 #mobile-pool-preview.phone-landscape .aim-feel{margin:4px 0 0;font-size:8px;gap:3px}
 #mobile-pool-preview.phone-landscape .aim-feel button{padding:3px 5px;font-size:9px}
+
+/* Keep the table crisp; avoid a full-canvas CSS filter on every moving frame. */
+#mobile-pool-preview .table-wrap canvas{filter:none;image-rendering:auto}
+#mobile-pool-preview .angle-ruler{height:34px;border-color:#86cada66;background:linear-gradient(#071522,#142e41);box-shadow:inset 0 1px 5px #0007;user-select:none;-webkit-user-select:none}
+#mobile-pool-preview .angle-ruler.dragging{border-color:#b7efff;box-shadow:inset 0 1px 5px #0007,0 0 0 1px #96d9eb3b}
+#mobile-pool-preview .angle-needle{filter:none}
+#mobile-pool-preview .aim-feel button{min-height:28px;transition:background .12s,border-color .12s}
+#mobile-pool-preview button:focus-visible{outline:2px solid #b6eaff;outline-offset:3px}
+#mobile-pool-preview .angle-foot{color:#9fbaca}
+#mobile-pool-preview.phone-landscape .angle-ruler{height:28px;margin-top:3px}
+#mobile-pool-preview.phone-landscape .aim-feel button{min-height:24px;padding:3px 5px}
+@media(prefers-reduced-motion:reduce){#mobile-pool-preview .aim-feel button{transition:none}}
