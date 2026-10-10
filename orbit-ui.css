@@ -38,10 +38,6 @@
 #mobile-pool-preview .controls{background:linear-gradient(145deg,#102537,#07131f);border:1px solid #76c8e03a;border-radius:12px 3px 12px 3px;box-shadow:inset 0 1px #a7e7fa14}
 #mobile-pool-preview .shoot{background:linear-gradient(110deg,#96efff,#9bbce8);border:1px solid #caf4ff;color:#092231;border-radius:3px 12px 3px 12px}
 #mobile-pool-preview .status{background:#061723;color:#a9d6e4;border-color:#84d4e026}
-#mobile-pool-preview .aim-feel{display:flex;align-items:center;gap:5px;margin:9px 0 2px;font-size:10px;color:#8aabba}
-#mobile-pool-preview .aim-feel>span{margin-right:auto;white-space:nowrap}
-#mobile-pool-preview .aim-feel button{padding:5px 8px;border:1px solid #82c7dc2e;border-radius:3px;background:#081a27;color:#8baebb;font-size:10px;cursor:pointer}
-#mobile-pool-preview .aim-feel button[aria-pressed="true"]{color:#cafaff;background:#19414e;border-color:#6bcadc99}
 #mobile-pool-preview .practice-grid button{border:1px solid #80d9ed40;border-radius:9px 2px 9px 2px;background:linear-gradient(110deg,#193647,#101d30);padding:19px;text-align:left}
 #mobile-pool-preview .practice-grid small{color:#97b4c6}
 #mobile-pool-preview #spinOverlay{background:#03101cce;backdrop-filter:none}
@@ -68,17 +64,12 @@
 #mobile-pool-preview.phone-landscape .welcome-fullscreen{font-size:10px;padding:6px 12px;min-height:32px}
 #mobile-pool-preview.phone-landscape .welcome-tools{gap:10px}
 #mobile-pool-preview.phone-landscape .welcome-tag{display:none}
-#mobile-pool-preview.phone-landscape .aim-feel{margin:4px 0 0;font-size:8px;gap:3px}
-#mobile-pool-preview.phone-landscape .aim-feel button{padding:3px 5px;font-size:9px}
 
 /* Keep the table crisp; avoid a full-canvas CSS filter on every moving frame. */
 #mobile-pool-preview .table-wrap canvas{filter:none;image-rendering:auto}
 #mobile-pool-preview .angle-ruler{height:34px;border-color:#86cada66;background:linear-gradient(#071522,#142e41);box-shadow:inset 0 1px 5px #0007;user-select:none;-webkit-user-select:none}
 #mobile-pool-preview .angle-ruler.dragging{border-color:#b7efff;box-shadow:inset 0 1px 5px #0007,0 0 0 1px #96d9eb3b}
 #mobile-pool-preview .angle-needle{filter:none}
-#mobile-pool-preview .aim-feel button{min-height:28px;transition:background .12s,border-color .12s}
 #mobile-pool-preview button:focus-visible{outline:2px solid #b6eaff;outline-offset:3px}
 #mobile-pool-preview .angle-foot{color:#9fbaca}
 #mobile-pool-preview.phone-landscape .angle-ruler{height:28px;margin-top:3px}
-#mobile-pool-preview.phone-landscape .aim-feel button{min-height:24px;padding:3px 5px}
-@media(prefers-reduced-motion:reduce){#mobile-pool-preview .aim-feel button{transition:none}}

@@ -25,10 +25,11 @@ for(const power of [22,56,90])for(const spinY of [-.9,0,.9])for(const spinX of [
  assert(collided);fixtures++;
 }
 assert(curved>0,'follow/draw guide still flattened into a chord');
-// The displayed trial while pulling must use the same power that is released.
+// Freeze only the displayed trial during pulling; release still uses chosen power.
 t.setGuideBalls([{n:0,x:30,y:25},{n:1,x:48,y:26.4}],0,56,.9,.65);
 const meter=g.ids.get('cueMeter'),event=y=>({pointerId:3,clientX:0,clientY:y,preventDefault(){}});
+const guideBeforePull=JSON.stringify(t.getDisplayGuide());
 meter.handlers.pointerdown(event(0));meter.handlers.pointermove(event(135));
-const drawn=t.getDisplayGuide(),power=JSON.parse(w.render_game_to_text()).power;assert.equal(drawn.power,power,'pull preview kept the previous power');
+const drawn=t.getDisplayGuide(),power=JSON.parse(w.render_game_to_text()).power;assert.equal(JSON.stringify(drawn),guideBeforePull,'pull moved the guide');
 meter.handlers.pointerup(event(135));assert.equal(JSON.parse(w.render_game_to_text()).power,power);
-console.log(JSON.stringify({passed:true,fixtures,samples,maxError,curvedGuides:curved,powerPreviewMatchesRelease:true}));
+console.log(JSON.stringify({passed:true,fixtures,samples,maxError,curvedGuides:curved,pullGuideLocked:true,chosenPowerReleased:true}));

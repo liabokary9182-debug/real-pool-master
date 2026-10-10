@@ -42,6 +42,7 @@
   // Trial shots use the live collision/cloth functions, with isolated events.
   // Never play sounds, emit pocket flashes, or edit the real shot during trials.
   let physicsContext=null;
+  let cuePullActive=false,heldGuide=null;
   const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
   const randomSeed = () => (window.crypto?.getRandomValues?.(new Uint32Array(1))[0] ?? (Math.random()*0x100000000)) >>> 0;
   function seededRandom(seed){let s=seed>>>0;return () => {s=(s+0x6D2B79F5)>>>0;let t=Math.imul(s^(s>>>15),1|s);t^=t+Math.imul(t^(t>>>7),61|t);return ((t^(t>>>14))>>>0)/4294967296;};}
@@ -59,7 +60,7 @@
   const allGroupGone = g => g && !activeBalls().some(b => group(b.n) === g);
   const lowestNine = () => Math.min(...activeBalls().map(b => b.n));
   const say = text => {state.status=text; $('statusText').textContent=text;};
-  const canAdjustStroke=()=>state.phase==='aim'&&!state.ballInHand&&!(state.opponent==='ai'&&state.turn===1);
+  const canAdjustStroke=()=>state.phase==='aim'&&!cuePullActive&&!state.ballInHand&&!(state.opponent==='ai'&&state.turn===1);
   const PRACTICE_LAYOUTS={
     pocket:{label:'慢球进中袋',hint:'先试 18% 轻推，再调力度观察袋口；打偏会碰胶边。',balls:[[0,50,12],[1,50,5]],aim:-Math.PI/2,power:18,spinX:0,spinY:0},
     draw:{label:'低杆拉回',hint:'白球正碰目标球后拉回；与高杆使用同一球位和力度。',balls:[[0,40,25],[1,55,25]],aim:0,power:70,spinX:0,spinY:-.85},
@@ -68,6 +69,7 @@
   };
   function startPractice(key){
     const layout=PRACTICE_LAYOUTS[key];if(!layout)return;
+    clearCuePull();
     window.PoolAudio?.startGameMusic?.();
     if(!state.practice)state.practiceOpponent=state.opponent;
     state.aiTicket++;state.aiThinking=false;state.aiPlan=null;state.practice=key;state.returnPage='practice';
@@ -87,6 +89,7 @@
     $('cueMeter').style.setProperty('--power-fraction',String(state.power/100));
   }
   function init(mode,{rematch=false}={}) {
+    clearCuePull();
     window.PoolAudio?.startGameMusic?.();
     state.practice=null;state.stroke=null;state.windup=0;
     state.aiTicket++;state.aiThinking=false;state.aiPlan=null;
@@ -162,7 +165,7 @@
     state.aim=Math.atan2(dy,dx); updateUI(); render();
   }
   function fire(byAI=false,withWindup=false) {
-    if(state.phase!=='aim'||state.ballInHand||!$('spinOverlay').classList.contains('hidden')||(state.opponent==='ai'&&state.turn===1&&!byAI))return;
+    if(state.phase!=='aim'||cuePullActive||state.ballInHand||!$('spinOverlay').classList.contains('hidden')||(state.opponent==='ai'&&state.turn===1&&!byAI))return;
     const c=cue(); if(!c||c.pocketed)return;
 
     // Flush pending aim changes before freezing the exact stroke inputs.
@@ -1172,6 +1175,7 @@
     return trimmed;
   }
   function displayGuide(){
+    if(heldGuide)return heldGuide;
     const guidePower=state.power;
     const key=[state.aim,guidePower,state.spinX,state.spinY,state.breaking,...state.balls.flatMap(b=>[b.n,b.x,b.y,b.vx,b.vy,b.rollVx,b.rollVy,b.spin,b.pocketed?1:0])].join(',');
     if(key===displayGuideKey)return displayGuideCache;
@@ -1439,7 +1443,7 @@
       g.beginPath();g.arc(48,48,43,0,Math.PI*2);g.fillStyle='#f5f2e8';g.fill();
       g.strokeStyle='#d8d6ca';g.lineWidth=1.5;g.stroke();
     }
-    g.fillStyle=n===8?'#ffffff':solid?'#000000':'#121920';g.font=`700 ${n>9?43:59}px Arial`;
+    g.fillStyle=solid?'#ffffff':'#121920';g.font=`700 ${n>9?47:64}px Arial`;
     g.textAlign='center';g.textBaseline='middle';
     g.fillText(String(n),48,51);
     const pixels=g.getImageData(0,0,96,96).data;
@@ -1729,14 +1733,7 @@
     aimFramePending=true;
     requestAnimationFrame(()=>{aimFramePending=false;if(state.phase==='aim'){updateUI();render();}});
   }
-  let aimGain=.012,rulerGain=.004;
-  const aimGains={fine:.006,balanced:.012,responsive:.024};
-  const rulerGains={fine:.001,balanced:.004,responsive:.008};
-  document.querySelectorAll('[data-aim-feel]').forEach(button=>button.addEventListener('click',()=>{
-    aimGain=aimGains[button.dataset.aimFeel]||.012;rulerGain=rulerGains[button.dataset.aimFeel]||.004;state.drag=null;stopAngleDrag();
-    document.querySelectorAll('[data-aim-feel]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
-    syncAngleUI();
-  }));
+  const aimGain=.008,rulerGain=.002;
   const sideways=()=>document.getElementById('mobile-pool-preview')?.classList.contains('is-landscape')||false;
   const aimScreenPoint=e=>sideways()?{x:e.clientY,y:-e.clientX}:{x:e.clientX,y:e.clientY};
   function pointerWorld(e){
@@ -1746,7 +1743,7 @@
       :screenToWorld((e.clientX-rect.left)/rect.width*VIEW_W,(e.clientY-rect.top)/rect.height*VIEW_H);
   }
   canvas.addEventListener('pointerdown',e=>{
-    if(state.phase!=='aim'||(state.opponent==='ai'&&state.turn===1)||state.drag)return;
+    if(state.phase!=='aim'||cuePullActive||angleDrag||(state.opponent==='ai'&&state.turn===1)||state.drag)return;
     canvas.setPointerCapture(e.pointerId);const p=pointerWorld(e);
     if(state.ballInHand){state.drag='place';placeCue(p.x,p.y,false);return;}
     const c=cue(),dx=p.x-c.x,dy=p.y-c.y;
@@ -1840,6 +1837,7 @@
   $('repeatPractice')?.addEventListener('click',()=>startPractice(state.practice));
   document.querySelectorAll('[data-practice]').forEach(btn=>btn.addEventListener('click',()=>startPractice(btn.dataset.practice)));
   const meter=$('cueMeter');let meterDrag=null;
+  function clearCuePull(){cuePullActive=false;heldGuide=null;meterDrag=null;meter.classList.remove('dragging');meter.style.setProperty('--cue-pull','0px');}
   const meterAxis=e=>sideways()?-e.clientX:e.clientY;
   function updateMeterDrag(e){
     if(!meterDrag||meterDrag.id!==e.pointerId)return;
@@ -1853,8 +1851,9 @@
     syncPowerUI();requestAimFrame();
   }
   meter.addEventListener('pointerdown',e=>{
-    if(state.phase!=='aim'||state.ballInHand||(state.opponent==='ai'&&state.turn===1))return;
-    e.preventDefault();meterDrag={id:e.pointerId,startAxis:meterAxis(e),pull:0,startingPower:state.power};meter.classList.add('dragging');meter.setPointerCapture(e.pointerId);state.power=5;syncPowerUI();render();
+    if(!canAdjustStroke()||state.drag||angleDrag||meterDrag)return;
+    e.preventDefault();heldGuide=displayGuide();cuePullActive=true;
+    meterDrag={id:e.pointerId,startAxis:meterAxis(e),pull:0,startingPower:state.power};meter.classList.add('dragging');meter.setPointerCapture(e.pointerId);state.power=5;syncPowerUI();updateUI();render();
   });
   meter.addEventListener('pointermove',e=>{
     updateMeterDrag(e);
@@ -1863,10 +1862,11 @@
     if(!meterDrag||meterDrag.id!==e.pointerId)return;
     // Release commits the last previewed strength; it does not retune the shot.
     const shoot=meterDrag.pull>=14,startingPower=meterDrag.startingPower;
-    meterDrag=null;meter.classList.remove('dragging');meter.style.setProperty('--cue-pull','0px');
-    if(shoot)fire(false,true);else{state.power=startingPower;syncPowerUI();render();}
+    meterDrag=null;cuePullActive=false;meter.classList.remove('dragging');meter.style.setProperty('--cue-pull','0px');
+    // Keep the frozen line through the launch render; moving balls hide it.
+    if(shoot){fire(false,true);heldGuide=null;}else{heldGuide=null;state.power=startingPower;syncPowerUI();updateUI();render();}
   });
-  meter.addEventListener('pointercancel',()=>{if(meterDrag){state.power=meterDrag.startingPower;syncPowerUI();render();}meterDrag=null;meter.classList.remove('dragging');meter.style.setProperty('--cue-pull','0px');});
+  meter.addEventListener('pointercancel',()=>{if(meterDrag)state.power=meterDrag.startingPower;clearCuePull();syncPowerUI();updateUI();render();});
   meter.addEventListener('keydown',e=>{
     if(!canAdjustStroke())return;
     if(e.key==='ArrowDown'||e.key==='ArrowUp'){
@@ -1883,8 +1883,7 @@
   const angleRuler=$('angleRuler');let angleDrag=null;
   const rulerAxis=e=>sideways()?e.clientY:e.clientX;
   angleRuler.addEventListener('pointerdown',e=>{
-    if(angleDrag)return;
-    if(state.phase!=='aim'||state.ballInHand||(state.opponent==='ai'&&state.turn===1))return;
+    if(angleDrag||state.drag||!canAdjustStroke())return;
     e.preventDefault();angleDrag={id:e.pointerId,start:rulerAxis(e),aim:state.aim,gain:rulerGain};angleRuler.setPointerCapture(e.pointerId);angleRuler.classList.add('dragging');
   });
   angleRuler.addEventListener('pointermove',e=>{
@@ -1915,7 +1914,7 @@
     state.aiTicket++;state.aiThinking=false;state.aiPlan=null;state.phase='menu';state.shot=null;state.stroke=null;state.windup=0;state.drag=null;
     state.pocketAnimations=[];state.ballInHand=false;state.repositionAllowed=false;
     for(const b of live())b.vx=b.vy=b.rollVx=b.rollVy=b.spin=0;
-    meterDrag=null;stopAngleDrag();meter.classList.remove('dragging');meter.style.setProperty('--cue-pull','0px');
+    clearCuePull();stopAngleDrag();
     for(const id of ['resultOverlay','practiceOverlay','rulesOverlay'])$(id)?.classList.add('hidden');
     window.PoolAudio?.stopGameMusic?.();window.PoolAudio?.startIntro?.();
     document.body?.setAttribute('data-screen','setup');updateUI();
@@ -1973,7 +1972,7 @@
     if(e.key==='f'||e.key==='F'){fullscreen();return;}
     if(e.key==='Escape'){$('rulesOverlay').classList.add('hidden');return;}
     if(state.phase!=='aim')return;
-    if(e.key==='ArrowLeft'||e.key==='ArrowRight'){if(e.target===angleRuler)return;e.preventDefault();if(state.opponent==='ai'&&state.turn===1)return;const step=e.shiftKey?.0001:.001;state.aim+=(e.key==='ArrowLeft'?-1:1)*step*Math.PI/180;updateUI();render();}
+    if(e.key==='ArrowLeft'||e.key==='ArrowRight'){if(e.target===angleRuler||!canAdjustStroke())return;e.preventDefault();const step=e.shiftKey?.0001:.001;state.aim+=(e.key==='ArrowLeft'?-1:1)*step*Math.PI/180;updateUI();render();}
     if(e.key===' '){e.preventDefault();fire(false,true);}
   });
   let last=performance.now(),acc=0,manualTime=false;

@@ -10,8 +10,8 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23121a20'/%3E%3Ccircle cx='16' cy='16' r='7' fill='white'/%3E%3Ctext x='16' y='20' text-anchor='middle' font-size='12'%3E8%3C/text%3E%3C/svg%3E">
   <link rel="preload" href="./assets/fuguang-arena.jpg" as="image">
   <title>光域台球 · 浮光竞技馆</title>
-  <link rel="preload" href="./site.css?v=20261010-solid-number-v2" as="style">
-<link id="siteStyle" rel="stylesheet" href="./site.css?v=20261010-solid-number-v2" media="print" onload="this.media='all';window.PoolStartup?.ready('styles')" onerror="this.dataset.failed='true';window.PoolStartup?.styleFailed()">
+  <link rel="preload" href="./site.css?v=20261010-cue-controls-v3" as="style">
+<link id="siteStyle" rel="stylesheet" href="./site.css?v=20261010-cue-controls-v3" media="print" onload="this.media='all';window.PoolStartup?.ready('styles')" onerror="this.dataset.failed='true';window.PoolStartup?.styleFailed()">
   <!-- CRITICAL_STYLE_START -->
   <style>/* Always show a landscape game; no orientation gate or blocked controls. */
 #mobile-pool-preview.phone-landscape{position:relative!important;width:100%!important;height:var(--phone-height)!important;min-height:0!important;overflow:hidden!important;padding:0!important}
@@ -145,8 +145,7 @@ html,body{margin:0;background:#040b17;color:#e7f7ff;font-family:system-ui,"PingF
       <aside class="controls">
 <div class="stroke-controls">
         <div class="control-head"><span>击球控制台</span><small>点按选方向 · 滑动调角度</small></div>
-        <div class="angle-panel"><div class="angle-head"><span>精密瞄准</span><b id="angleReadout">0.0000°</b></div><div id="angleRuler" class="angle-ruler" role="slider" aria-label="横向拖动刻度尺调整瞄准角" aria-valuemin="-180" aria-valuemax="180" aria-valuenow="0" tabindex="0"><span class="angle-ticks"></span><span class="angle-needle"></span></div><div class="angle-foot"><span>逆时针</span><span id="rulerScale">小格 0.04° · 拖动 0.004°/像素</span><span>顺时针</span></div></div>
-        <div class="aim-feel" role="group" aria-label="瞄准手感"><span>手感</span><button type="button" data-aim-feel="fine" aria-pressed="false">精细</button><button type="button" data-aim-feel="balanced" aria-pressed="true">均衡</button><button type="button" data-aim-feel="responsive" aria-pressed="false">灵活</button></div>
+        <div class="angle-panel"><div class="angle-head"><span>精密瞄准</span><b id="angleReadout">0.0000°</b></div><div id="angleRuler" class="angle-ruler" role="slider" aria-label="横向拖动刻度尺调整瞄准角" aria-valuemin="-180" aria-valuemax="180" aria-valuenow="0" tabindex="0"><span class="angle-ticks"></span><span class="angle-needle"></span></div><div class="angle-foot"><span>逆时针</span><span id="rulerScale">小格 0.02° · 拖动 0.002°/像素</span><span>顺时针</span></div></div>
 <div class="spin-group"><div><span>击球点</span><small id="strokeReadout" aria-live="polite">中杆</small></div><button class="spin-pad" id="spinPad" type="button" aria-label="放大白球选择杆法和加塞" aria-haspopup="dialog"><span class="spin-cross"></span><span id="spinDot" class="spin-dot"></span></button><button id="resetSpin" type="button" class="small-button">居中</button></div>
         <div class="power-group"><div class="control-line"><span>出杆力度</span><b id="powerReadout">56%</b></div><input id="power" type="range" min="5" max="100" value="56" aria-label="击球力度"><div class="power-ends"><span>轻推</span><span>强力</span></div></div>
         <button id="placeCueBtn" class="place-cue" type="button" hidden>确认白球位置</button>
@@ -282,7 +281,7 @@ html,body{margin:0;background:#040b17;color:#e7f7ff;font-family:system-ui,"PingF
   const retryEngine=()=>{
     if(!engineFailed||tasks.has('game'))return;
     engineFailed=false;status.textContent='正在重新连接比赛引擎';skip.textContent='继续等待';
-    const old=$('gameEngine'),script=document.createElement('script');script.id='gameEngine';script.async=true;script.src='./game.js?v=20261010-solid-number-v2&retry='+String(++engineRetry);script.onerror=failEngine;old?.remove();document.body.appendChild(script);
+    const old=$('gameEngine'),script=document.createElement('script');script.id='gameEngine';script.async=true;script.src='./game.js?v=20261010-cue-controls-v3&retry='+String(++engineRetry);script.onerror=failEngine;old?.remove();document.body.appendChild(script);
   };
   window.PoolStartup={ready,engineFailed:failEngine,styleFailed};
   const stylesheet=$('siteStyle');if(stylesheet?.sheet)ready('styles');else if(stylesheet?.dataset?.failed==='true')styleFailed();
@@ -290,7 +289,7 @@ html,body{margin:0;background:#040b17;color:#e7f7ff;font-family:system-ui,"PingF
   skip.addEventListener('click',()=>{
     if(essentialReady()){finish();return;}
     if(engineFailed)retryEngine();
-    if(stylesFailed){stylesFailed=false;stylesheet.href='./site.css?v=20261010-solid-number-v2&retry='+String(Date.now());status.textContent='正在重新加载赛场画面';skip.textContent='继续等待';}
+    if(stylesFailed){stylesFailed=false;stylesheet.href='./site.css?v=20261010-cue-controls-v3&retry='+String(Date.now());status.textContent='正在重新加载赛场画面';skip.textContent='继续等待';}
     if(!engineFailed&&!stylesFailed)help.textContent='仍在等待网络响应，请保持此页打开，无需反复刷新';
   });
   setTimeout(()=>{if(dismissed||essentialReady())return;if(!engineFailed&&!stylesFailed){status.textContent='网络连接较慢，仍在等待';help.textContent='请保持此页打开；资源完成后会自动进入';}},12000);
@@ -301,8 +300,8 @@ html,body{margin:0;background:#040b17;color:#e7f7ff;font-family:system-ui,"PingF
 })();
 </script>
   <!-- STARTUP_SCRIPT_END -->
-  <script id="gameEngine" async src="./game.js?v=20261010-solid-number-v2" onerror="window.PoolStartup.engineFailed()"></script>
-  <script async src="./audio.js?v=20261010-solid-number-v2"></script>
-  <script async src="./mobile.js?v=20261010-solid-number-v2"></script>
+  <script id="gameEngine" async src="./game.js?v=20261010-cue-controls-v3" onerror="window.PoolStartup.engineFailed()"></script>
+  <script async src="./audio.js?v=20261010-cue-controls-v3"></script>
+  <script async src="./mobile.js?v=20261010-cue-controls-v3"></script>
 </body>
 </html>

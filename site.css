@@ -904,10 +904,6 @@ html,body{margin:0;background:#040b17;color:#e7f7ff;font-family:system-ui,"PingF
 #mobile-pool-preview .controls{background:linear-gradient(145deg,#102537,#07131f);border:1px solid #76c8e03a;border-radius:12px 3px 12px 3px;box-shadow:inset 0 1px #a7e7fa14}
 #mobile-pool-preview .shoot{background:linear-gradient(110deg,#96efff,#9bbce8);border:1px solid #caf4ff;color:#092231;border-radius:3px 12px 3px 12px}
 #mobile-pool-preview .status{background:#061723;color:#a9d6e4;border-color:#84d4e026}
-#mobile-pool-preview .aim-feel{display:flex;align-items:center;gap:5px;margin:9px 0 2px;font-size:10px;color:#8aabba}
-#mobile-pool-preview .aim-feel>span{margin-right:auto;white-space:nowrap}
-#mobile-pool-preview .aim-feel button{padding:5px 8px;border:1px solid #82c7dc2e;border-radius:3px;background:#081a27;color:#8baebb;font-size:10px;cursor:pointer}
-#mobile-pool-preview .aim-feel button[aria-pressed="true"]{color:#cafaff;background:#19414e;border-color:#6bcadc99}
 #mobile-pool-preview .practice-grid button{border:1px solid #80d9ed40;border-radius:9px 2px 9px 2px;background:linear-gradient(110deg,#193647,#101d30);padding:19px;text-align:left}
 #mobile-pool-preview .practice-grid small{color:#97b4c6}
 #mobile-pool-preview #spinOverlay{background:#03101cce;backdrop-filter:none}
@@ -934,17 +930,53 @@ html,body{margin:0;background:#040b17;color:#e7f7ff;font-family:system-ui,"PingF
 #mobile-pool-preview.phone-landscape .welcome-fullscreen{font-size:10px;padding:6px 12px;min-height:32px}
 #mobile-pool-preview.phone-landscape .welcome-tools{gap:10px}
 #mobile-pool-preview.phone-landscape .welcome-tag{display:none}
-#mobile-pool-preview.phone-landscape .aim-feel{margin:4px 0 0;font-size:8px;gap:3px}
-#mobile-pool-preview.phone-landscape .aim-feel button{padding:3px 5px;font-size:9px}
 
 /* Keep the table crisp; avoid a full-canvas CSS filter on every moving frame. */
 #mobile-pool-preview .table-wrap canvas{filter:none;image-rendering:auto}
 #mobile-pool-preview .angle-ruler{height:34px;border-color:#86cada66;background:linear-gradient(#071522,#142e41);box-shadow:inset 0 1px 5px #0007;user-select:none;-webkit-user-select:none}
 #mobile-pool-preview .angle-ruler.dragging{border-color:#b7efff;box-shadow:inset 0 1px 5px #0007,0 0 0 1px #96d9eb3b}
 #mobile-pool-preview .angle-needle{filter:none}
-#mobile-pool-preview .aim-feel button{min-height:28px;transition:background .12s,border-color .12s}
 #mobile-pool-preview button:focus-visible{outline:2px solid #b6eaff;outline-offset:3px}
 #mobile-pool-preview .angle-foot{color:#9fbaca}
 #mobile-pool-preview.phone-landscape .angle-ruler{height:28px;margin-top:3px}
-#mobile-pool-preview.phone-landscape .aim-feel button{min-height:24px;padding:3px 5px}
-@media(prefers-reduced-motion:reduce){#mobile-pool-preview .aim-feel button{transition:none}}
+
+/* controls-ui.css */
+/* One readable control column. The cue lane remains on the left. */
+#mobile-pool-preview .layout{grid-template-columns:60px minmax(0,1fr) 152px}
+#mobile-pool-preview .layout>.controls{display:block!important;min-width:0;width:auto;height:100%;padding:12px 10px;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain}
+#mobile-pool-preview .controls .stroke-controls{display:flex!important;flex-direction:column!important;align-items:stretch;gap:12px!important;width:100%;height:auto!important;min-height:0;padding:0;overflow:visible!important}
+#mobile-pool-preview .controls .stroke-controls>*{flex:none;grid-column:auto!important;grid-row:auto!important;width:100%;max-width:100%;min-width:0;margin:0!important}
+#mobile-pool-preview .controls .control-head{padding:0 0 9px;border-bottom:1px solid #8acade24}
+#mobile-pool-preview .controls .control-head span{font-size:14px;white-space:nowrap}
+#mobile-pool-preview .controls .control-head small{display:none}
+#mobile-pool-preview .controls .angle-panel{padding:0 0 8px}
+#mobile-pool-preview .controls .angle-head{display:flex;flex-direction:column!important;align-items:flex-start!important;gap:5px;font-size:13px}
+#mobile-pool-preview .controls .angle-head b{font-size:15px!important;font-variant-numeric:tabular-nums;white-space:nowrap}
+#mobile-pool-preview .controls .angle-ruler{height:38px;margin-top:7px;touch-action:none}
+#mobile-pool-preview .controls .angle-foot{display:none}
+#mobile-pool-preview .controls .spin-group{display:flex!important;flex-direction:column!important;align-items:center!important;gap:7px!important;padding:0!important;border:0!important}
+#mobile-pool-preview .controls .spin-group>div:first-child{align-self:stretch;font-size:13px}
+#mobile-pool-preview .controls .spin-group>div:first-child span{font-size:13px}
+#mobile-pool-preview .controls .spin-pad{width:58px!important;height:58px!important;margin:0!important}
+#mobile-pool-preview .controls button{min-height:42px;white-space:nowrap;font-size:14px;letter-spacing:0;line-height:1.3;max-width:100%}
+#mobile-pool-preview .controls .small-button{display:block!important;width:100%;min-height:36px!important;padding:6px!important;font-size:13px!important}
+#mobile-pool-preview .controls .power-group{padding:8px 0;border-top:1px solid #8acade24}
+#mobile-pool-preview .controls .control-line{display:flex;flex-direction:column!important;align-items:flex-start!important;gap:4px}
+#mobile-pool-preview .controls .control-line span{font-size:13px}
+#mobile-pool-preview .controls .control-line b{font-size:19px!important}
+#mobile-pool-preview .controls .shoot{height:auto!important;min-height:46px!important;padding:9px!important;font-size:15px!important}
+#mobile-pool-preview .controls .shoot span{display:none}
+#mobile-pool-preview .controls .practice-actions{display:flex!important;flex-direction:column!important;gap:8px!important}
+#mobile-pool-preview .controls .practice-actions button{width:100%;padding:9px 4px;font-size:13px}
+#mobile-pool-preview .controls [hidden]{display:none!important}
+@media(max-width:700px),(max-height:500px) and (pointer:coarse){
+  #mobile-pool-preview .layout{grid-template-columns:52px minmax(0,1fr)}
+  #mobile-pool-preview:is(.is-landscape,.is-compact,.phone-landscape) .layout{grid-template-columns:52px minmax(0,1fr) 112px!important}
+  #mobile-pool-preview .layout>.controls{padding:7px 6px!important}
+  #mobile-pool-preview .controls .stroke-controls{gap:10px!important}
+  #mobile-pool-preview .controls .control-head{display:none}
+  #mobile-pool-preview .controls .angle-ruler{height:36px!important}
+  #mobile-pool-preview .controls .spin-pad{width:52px!important;height:52px!important}
+  #mobile-pool-preview .controls button{min-height:44px!important}
+}
+#mobile-pool-preview.phone-landscape .layout{grid-template-columns:52px minmax(0,1fr) 112px!important}
