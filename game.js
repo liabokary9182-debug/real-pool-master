@@ -1433,15 +1433,18 @@
     const g=icon.getContext('2d');
     // Solids carry only the numeral: transparent pixels preserve the exact
     // underlying pigment and shading, with no circular border while rolling.
-    // The black eight and all stripes retain their classic ivory inserts.
-    const solid=n>=1&&n<=7;
+    // The black eight uses the same pigment; only stripes keep ivory inserts.
+    const solid=n>=1&&n<=8;
     if(!solid){
       g.beginPath();g.arc(48,48,43,0,Math.PI*2);g.fillStyle='#f5f2e8';g.fill();
       g.strokeStyle='#d8d6ca';g.lineWidth=1.5;g.stroke();
     }
-    const color=PALETTE[n],light=solid?color[0]*.2126+color[1]*.7152+color[2]*.0722:0;
-    g.fillStyle=solid&&light<140?'#f5f2e8':'#121920';g.font=`700 ${n>9?43:59}px Arial`;
-    g.textAlign='center';g.textBaseline='middle';g.fillText(String(n),48,51);
+    g.fillStyle=solid?'#000000':'#121920';g.font=`700 ${n>9?43:59}px Arial`;
+    g.textAlign='center';g.textBaseline='middle';
+    // A thin graphite engraving edge separates black ink from the black eight
+    // without adding a white disc or changing its underlying surface colour.
+    if(n===8){g.strokeStyle='#858a91';g.lineWidth=1.5;g.lineJoin='round';g.strokeText('8',48,51);}
+    g.fillText(String(n),48,51);
     const pixels=g.getImageData(0,0,96,96).data;
     numberBadges.set(n,pixels);return pixels;
   }
