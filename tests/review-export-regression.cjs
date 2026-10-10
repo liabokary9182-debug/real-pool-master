@@ -1,5 +1,5 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path'),load=require('./load-game.cjs');
-const html=fs.readFileSync(path.join(__dirname,'../../fuguang-orbit-review.html'),'utf8'),scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);assert.equal(scripts.length,1);new vm.Script(scripts[0]);
+const html=fs.readFileSync(process.argv[2]||path.join(__dirname,'../../fuguang-orbit-review.html'),'utf8'),scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);assert.equal(scripts.length,1);new vm.Script(scripts[0]);
 const serialized=scripts[0].match(/frame.srcdoc=("[\s\S]*");\s*$/)[1],app=JSON.parse(serialized);
 assert(!/<script[^>]+src=/.test(app),'export still needs remote code');assert(!/src="\.\//.test(app),'export still needs local assets');
 for(const s of app.matchAll(/<script>([\s\S]*?)<\/script>/g))new vm.Script(s[1]);

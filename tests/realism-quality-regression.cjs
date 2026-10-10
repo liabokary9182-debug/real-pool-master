@@ -33,17 +33,17 @@ for(let pocket=0;pocket<6;pocket++){
 }
 // Pigment/number pixels must rotate while the world-space reflection stays fixed.
 for(const n of [0,1,8,9,15])assert(!t.sphereFrame(n,0).equals(t.sphereFrame(n,.12)),`ball ${n} markings do not roll`);
-// A small actual drag works in all three settings, including rotated phones.
+// Small actual drags use one stable gain, including rotated phones.
 for(const rotated of [false,true]){
  const h=load({source,mobile:true}),w=h.window,u=w.__poolTest;
  if(rotated)h.ids.get('mobile-pool-preview').classList.add('is-landscape');
  const e=x=>({pointerId:1,clientX:rotated?0:x,clientY:rotated?x:0,preventDefault(){}}),r=h.ids.get('angleRuler');
  const read=()=>parseFloat(h.ids.get('angleReadout').textContent);
- for(const [mode,gain] of [['fine',.001],['balanced',.004],['responsive',.008]]){
-  h.elements.find(b=>b.dataset.aimFeel===mode).handlers.click();u.setGuideBalls([{n:0,x:30,y:25},{n:1,x:70,y:40}],0);
+ for(const gain of [.002]){
+  u.setGuideBalls([{n:0,x:30,y:25},{n:1,x:70,y:40}],0);
   r.handlers.pointerdown(e(100));r.handlers.pointerup(e(100.25));assert(Math.abs(read()-.25*gain)<=.0000501);
   r.handlers.pointerdown(e(100));r.handlers.pointerup(e(200));assert(Math.abs(read()-100.25*gain)<=.0000501);
  }
  u.setMovingBalls([{n:0,x:30,y:25,vx:10},{n:1,x:70,y:40}]);const before=read();r.handlers.keydown({key:'ArrowRight',preventDefault(){}});assert.equal(read(),before,'keyboard retuned a shot in motion');
 }
-console.log(JSON.stringify({passed:true,depthCases,occlusionPixels,rollingMaterials:5,rulerModes:3,rotatedInput:true,acceleratingDrop:true}));
+console.log(JSON.stringify({passed:true,depthCases,occlusionPixels,rollingMaterials:5,rulerGain:.002,rotatedInput:true,acceleratingDrop:true}));
