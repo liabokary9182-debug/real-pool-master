@@ -1,3 +1,13 @@
+## 开源与访问
+
+本项目原创代码采用 [MIT 许可证](LICENSE)。图片、音乐和音效的许可范围见 [LICENSE-SCOPE.md](LICENSE-SCOPE.md)，各素材的原有声明继续有效。
+
+- 原网站：https://liabokary9182-debug.github.io/real-pool-master/
+- 备用网站：https://guangyu-pool-web.liabokary9182.chatgpt.site
+- 源码：https://github.com/liabokary9182-debug/real-pool-master
+
+备用网站保留原版页面、操作与资源。若原网址提示无法打开网页，可尝试备用网址；各网络能否连接仍需实测。
+
 # 光域台球 · 浮光竞技馆
 
 支持手机横屏与全屏的 Canvas 八球／九球游戏，包含分级人机对战、旋转杆法、碰库进攻和防守走位。
