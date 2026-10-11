@@ -1,0 +1,39 @@
+/* One readable control column. The cue lane remains on the left. */
+#mobile-pool-preview .layout{grid-template-columns:60px minmax(0,1fr) 152px}
+#mobile-pool-preview .layout>.controls{display:block!important;min-width:0;width:auto;height:100%;padding:12px 10px;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain}
+#mobile-pool-preview .controls .stroke-controls{display:flex!important;flex-direction:column!important;align-items:stretch;gap:12px!important;width:100%;height:auto!important;min-height:0;padding:0;overflow:visible!important}
+#mobile-pool-preview .controls .stroke-controls>*{flex:none;grid-column:auto!important;grid-row:auto!important;width:100%;max-width:100%;min-width:0;margin:0!important}
+#mobile-pool-preview .controls .control-head{padding:0 0 9px;border-bottom:1px solid #8acade24}
+#mobile-pool-preview .controls .control-head span{font-size:14px;white-space:nowrap}
+#mobile-pool-preview .controls .control-head small{display:none}
+#mobile-pool-preview .controls .angle-panel{padding:0 0 8px}
+#mobile-pool-preview .controls .angle-head{display:flex;flex-direction:column!important;align-items:flex-start!important;gap:5px;font-size:13px}
+#mobile-pool-preview .controls .angle-head b{font-size:15px!important;font-variant-numeric:tabular-nums;white-space:nowrap}
+#mobile-pool-preview .controls .angle-ruler{height:38px;margin-top:7px;touch-action:none}
+#mobile-pool-preview .controls .angle-foot{display:none}
+#mobile-pool-preview .controls .spin-group{display:flex!important;flex-direction:column!important;align-items:center!important;gap:7px!important;padding:0!important;border:0!important}
+#mobile-pool-preview .controls .spin-group>div:first-child{align-self:stretch;font-size:13px}
+#mobile-pool-preview .controls .spin-group>div:first-child span{font-size:13px}
+#mobile-pool-preview .controls .spin-pad{width:58px!important;height:58px!important;margin:0!important}
+#mobile-pool-preview .controls button{min-height:42px;white-space:nowrap;font-size:14px;letter-spacing:0;line-height:1.3;max-width:100%}
+#mobile-pool-preview .controls .small-button{display:block!important;width:100%;min-height:36px!important;padding:6px!important;font-size:13px!important}
+#mobile-pool-preview .controls .power-group{padding:8px 0;border-top:1px solid #8acade24}
+#mobile-pool-preview .controls .control-line{display:flex;flex-direction:column!important;align-items:flex-start!important;gap:4px}
+#mobile-pool-preview .controls .control-line span{font-size:13px}
+#mobile-pool-preview .controls .control-line b{font-size:19px!important}
+#mobile-pool-preview .controls .shoot{height:auto!important;min-height:46px!important;padding:9px!important;font-size:15px!important}
+#mobile-pool-preview .controls .shoot span{display:none}
+#mobile-pool-preview .controls .practice-actions{display:flex!important;flex-direction:column!important;gap:8px!important}
+#mobile-pool-preview .controls .practice-actions button{width:100%;padding:9px 4px;font-size:13px}
+#mobile-pool-preview .controls [hidden]{display:none!important}
+@media(max-width:700px),(max-height:500px) and (pointer:coarse){
+  #mobile-pool-preview .layout{grid-template-columns:52px minmax(0,1fr)}
+  #mobile-pool-preview:is(.is-landscape,.is-compact,.phone-landscape) .layout{grid-template-columns:52px minmax(0,1fr) 112px!important}
+  #mobile-pool-preview .layout>.controls{padding:7px 6px!important}
+  #mobile-pool-preview .controls .stroke-controls{gap:10px!important}
+  #mobile-pool-preview .controls .control-head{display:none}
+  #mobile-pool-preview .controls .angle-ruler{height:36px!important}
+  #mobile-pool-preview .controls .spin-pad{width:52px!important;height:52px!important}
+  #mobile-pool-preview .controls button{min-height:44px!important}
+}
+#mobile-pool-preview.phone-landscape .layout{grid-template-columns:52px minmax(0,1fr) 112px!important}

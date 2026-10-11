@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#050a18">
+  <meta name="description" content="光域台球浮光竞技馆，支持八球、九球、人机对战、专项训练与双人同屏。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23121a20'/%3E%3Ccircle cx='16' cy='16' r='7' fill='white'/%3E%3Ctext x='16' y='20' text-anchor='middle' font-size='12'%3E8%3C/text%3E%3C/svg%3E">
+  <link rel="preload" href="./assets/fuguang-arena.jpg" as="image">
+  <title>光域台球 · 浮光竞技馆</title>
+  <link rel="preload" href="./site.css?v=20261010-cue-controls-v3" as="style">
+<link id="siteStyle" rel="stylesheet" href="./site.css?v=20261010-cue-controls-v3" media="print" onload="this.media='all';window.PoolStartup?.ready('styles')" onerror="this.dataset.failed='true';window.PoolStartup?.styleFailed()">
+  <!-- CRITICAL_STYLE_START -->
+  <style>/* Always show a landscape game; no orientation gate or blocked controls. */
+#mobile-pool-preview.phone-landscape{position:relative!important;width:100%!important;height:var(--phone-height)!important;min-height:0!important;overflow:hidden!important;padding:0!important}
+#mobile-pool-preview.phone-landscape .mobile-game-surface{position:relative!important;width:100%!important;height:100%!important;transform:none!important;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+#mobile-pool-preview.phone-landscape.is-landscape .mobile-game-surface{width:var(--landscape-width)!important;height:var(--landscape-height)!important;transform-origin:top left!important;transform:translateX(var(--landscape-height)) rotate(90deg)!important}
+#mobile-pool-preview.phone-landscape .app{display:flex!important;flex-direction:column!important;height:100%!important;min-height:0!important;overflow:hidden!important}
+#mobile-pool-preview.phone-landscape .topbar{position:relative!important;flex:0 0 44px!important;min-height:44px!important;height:44px!important;padding:2px 8px!important}
+#mobile-pool-preview.phone-landscape .brand{display:none!important}
+#mobile-pool-preview.phone-landscape .top-actions{display:flex!important;width:100%!important;justify-content:space-between!important;flex-wrap:nowrap!important}
+#mobile-pool-preview.phone-landscape .layout{display:grid!important;flex:1!important;height:auto!important;min-height:0!important;grid-template-columns:52px minmax(0,1fr) 84px!important;grid-template-rows:minmax(0,1fr)!important;gap:0!important;padding:0!important}
+#mobile-pool-preview.phone-landscape .layout>.cue-meter{grid-column:1!important;grid-row:1!important;width:52px!important;height:100%!important;min-height:0!important;padding:2px!important}
+#mobile-pool-preview.phone-landscape .cue-track{width:44px!important;height:100%!important}
+#mobile-pool-preview.phone-landscape .arena{grid-column:2!important;grid-row:1!important;display:flex!important;flex-direction:column!important;min-height:0!important}
+#mobile-pool-preview.phone-landscape .layout>.controls{grid-column:3!important;grid-row:1!important;display:block!important;min-width:0!important;width:auto!important;min-height:0!important;height:100%!important;padding:4px!important;overflow-y:auto!important}
+#mobile-pool-preview.phone-landscape .stroke-controls{display:block!important}
+#mobile-pool-preview.phone-landscape .stroke-controls>*{width:100%!important;margin:0 0 6px!important;min-width:0!important}
+#mobile-pool-preview.phone-landscape .scorebar{position:relative!important;inset:auto!important;flex:0 0 28px!important;height:28px!important;padding:0 3px!important}
+#mobile-pool-preview.phone-landscape .table-wrap{display:flex!important;flex:1!important;min-height:0!important;align-items:center!important;justify-content:center!important;padding:0!important}
+#mobile-pool-preview.phone-landscape #game{width:100%!important;height:auto!important;max-width:100%!important;max-height:100%!important;object-fit:contain!important}
+#mobile-pool-preview.phone-landscape .status{position:relative!important;inset:auto!important;flex:0 0 22px!important;min-height:22px!important;max-height:22px!important;padding:2px 4px!important;font-size:11px!important;white-space:nowrap!important;overflow:auto!important}
+#mobile-pool-preview.phone-landscape .angle-head,#mobile-pool-preview.phone-landscape .control-line{flex-direction:column!important;align-items:flex-start!important;gap:2px!important}
+#mobile-pool-preview.phone-landscape .angle-head b,#mobile-pool-preview.phone-landscape .power-group b{font-size:12px!important}
+#mobile-pool-preview.phone-landscape .spin-group{display:flex!important;flex-direction:column!important;align-items:center!important;border:0!important;padding:0!important;gap:4px!important}
+#mobile-pool-preview.phone-landscape .spin-pad{width:52px!important;height:52px!important}
+#mobile-pool-preview.phone-landscape button,#mobile-pool-preview.phone-landscape #power{min-height:44px!important}
+#mobile-pool-preview.phone-landscape .shoot,#mobile-pool-preview.phone-landscape .small-button{font-size:12px!important;padding:4px!important;letter-spacing:0!important}
+#mobile-pool-preview.phone-landscape .practice-actions{display:flex!important;flex-direction:column!important;gap:4px!important}
+#mobile-pool-preview.phone-landscape .control-head,#mobile-pool-preview.phone-landscape .tip,#mobile-pool-preview.phone-landscape .spec,#mobile-pool-preview.phone-landscape footer,#mobile-pool-preview.phone-landscape .angle-foot,#mobile-pool-preview.phone-landscape .power-ends,#mobile-pool-preview.phone-landscape .shoot span{display:none!important}
+#mobile-pool-preview.phone-landscape .overlay{height:100%!important;max-height:100%!important;min-height:0!important;padding:48px 12px 8px!important;overflow:auto!important}
+#mobile-pool-preview.phone-landscape .setup-shell{width:min(100%,720px)!important;max-height:none!important;padding:12px 20px!important}
+#mobile-pool-preview.phone-landscape .setup-step h1{font-size:26px!important;margin:8px 0!important}
+#mobile-pool-preview.phone-landscape .setup-step>p{font-size:12px!important;margin:0 0 12px!important}
+#mobile-pool-preview.phone-landscape .setup-progress{margin-bottom:12px!important}
+#mobile-pool-preview.phone-landscape .setup-grid-three{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+#mobile-pool-preview.phone-landscape .setup-grid-two{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+#mobile-pool-preview.phone-landscape .setup-grid>button{display:block!important;min-height:96px!important;padding:10px!important}
+#mobile-pool-preview.phone-landscape .setup-grid>button b{font-size:15px!important;margin:8px 0 0!important}
+#mobile-pool-preview.phone-landscape .setup-grid>button small{font-size:11px!important;margin:4px 0 0!important}
+#mobile-pool-preview.phone-landscape #startOverlay{padding:0!important;overflow:hidden!important}
+#mobile-pool-preview.phone-landscape .welcome-copy{inset:0 auto 0 0!important;top:0!important;width:48%!important;left:0!important;padding:20px 0 28px 5%!important;align-items:flex-start!important;text-align:left!important}
+#mobile-pool-preview.phone-landscape #welcomeTitle{font-size:clamp(34px,calc(var(--landscape-width,100vw) * .056),58px)!important;line-height:1.06!important;letter-spacing:3px!important}
+#mobile-pool-preview.phone-landscape .welcome-eyebrow{font-size:8px!important;margin-bottom:10px!important}
+#mobile-pool-preview.phone-landscape .welcome-description{font-size:11px!important;margin:10px 0 12px!important}
+#mobile-pool-preview.phone-landscape .welcome-modes{font-size:9px!important;margin-top:8px!important}
+#mobile-pool-preview.phone-landscape .welcome-top{top:5%!important}
+#mobile-pool-preview.phone-landscape .welcome-bottom{font-size:8px!important;bottom:3%!important;padding-top:8px!important}
+#mobile-pool-preview.phone-landscape #resultOverlay{padding:12px!important;align-items:center!important}
+#mobile-pool-preview.phone-landscape .result-card{padding:12px 24px!important;max-width:600px!important}
+#mobile-pool-preview.phone-landscape .result-top{padding-bottom:8px!important}
+#mobile-pool-preview.phone-landscape .result-kicker{margin:10px 0 6px!important}
+#mobile-pool-preview.phone-landscape #resultTitle{font-size:24px!important}
+#mobile-pool-preview.phone-landscape .result-reason{margin:6px 0 10px!important}
+#mobile-pool-preview.phone-landscape .result-player>b{font-size:42px!important;margin:2px 0 4px!important}
+#mobile-pool-preview.phone-landscape .result-note{margin:10px 0!important}
+@media (max-height:340px){#mobile-pool-preview.phone-landscape .welcome-description,#mobile-pool-preview.phone-landscape .welcome-eyebrow{display:none!important}}
+
+#mobile-pool-preview.phone-landscape #startOverlay .welcome-enter{font-size:18px!important;min-width:218px!important;min-height:48px!important}
+#mobile-pool-preview.phone-landscape #welcomeTitle small{font-size:13px!important;margin-bottom:8px!important;letter-spacing:6px!important}
+#mobile-pool-preview.phone-landscape .welcome-orbit{width:88px;height:88px;top:54%}
+#mobile-pool-preview.phone-landscape .welcome-copy .welcome-description{font-size:11px!important;line-height:1.4!important;margin:10px 0 0!important}
+
+/* Critical launch scene renders before any external stylesheet arrives. */
+html,body{margin:0;background:#040b17;color:#e7f7ff;font-family:system-ui,"PingFang SC","Microsoft YaHei",sans-serif}
+.overlay.hidden,[hidden]{display:none!important}
+#mobile-pool-preview .boot{position:fixed;inset:0;z-index:300;display:flex!important;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box;width:100%;height:100%;overflow:hidden;padding:36px 8%;background:radial-gradient(ellipse at 60% 35%,#143749 0,#081622 43%,#030813 90%);transition:opacity .5s,visibility .5s;color:#dff6ff}
+#mobile-pool-preview .boot:before{content:"";position:absolute;inset:0;background-image:radial-gradient(circle,#c2f5ff8a 1px,transparent 1.5px),radial-gradient(circle,#cdf6ff44 1px,transparent 2px);background-size:109px 83px,167px 131px;background-position:22px 33px,73px 21px;opacity:.34;pointer-events:none;mask-image:linear-gradient(transparent,#000,transparent)}
+#mobile-pool-preview .boot:after{display:none}
+#mobile-pool-preview .boot.done{opacity:0;visibility:hidden;pointer-events:none}
+.flight-top{position:absolute;top:6%;left:6%;right:6%;display:flex;justify-content:space-between;font-size:10px;letter-spacing:3px;color:#87b8cc}
+.flight-copy{position:relative;text-align:center}.flight-copy p{font-size:14px;letter-spacing:5px;color:#a3d5da;margin:0 0 14px}.flight-copy h1{font-size:clamp(36px,5vw,64px);font-weight:700;letter-spacing:8px;margin:0 0 13px}.flight-copy>span{font-size:13px;color:#7eabbf}
+.flight-route{position:relative;width:min(760px,90%);height:180px;margin:16px 0 4px;isolation:isolate}
+.flight-grid{position:absolute;inset:10px 0;background:linear-gradient(transparent 49%,#8df4e414 50%,transparent 51%);border:1px solid #70bcc415;border-radius:50%;transform:perspective(300px) rotateX(65deg);opacity:.9}
+.flight-trajectory{position:absolute;top:91px;left:32px;right:32px;border-top:1px dashed #71acc455}.flight-trajectory span{position:absolute;top:-1px;left:0;height:2px;width:5%;background:linear-gradient(90deg,#20527a,#83f4dc);box-shadow:0 0 14px #9affec;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.flight-stop{position:absolute;left:32px;right:32px;top:115px;display:flex;justify-content:space-between;padding-left:23%;color:#5e859c;font-size:10px;letter-spacing:2px}
+.flight-stop span:before{content:'·';display:block;text-align:center;color:#90e4dc;margin-top:-18px;margin-bottom:9px}
+.flight-rocket{position:absolute;top:45px;left:calc(8px + (100% - 100px)*var(--flight,.05));width:100px;height:72px;transition:left .65s cubic-bezier(.2,.8,.2,1);filter:drop-shadow(0 7px 17px #66ebef33)}
+.flight-rocket svg{position:relative;z-index:2;width:100%;height:100%;animation:rocket-bob 1.7s ease-in-out infinite}
+.rocket-plume{position:absolute;right:75%;top:28px;width:68px;height:15px;border-radius:100% 0 0 100%;background:linear-gradient(90deg,transparent,#43c0fa88 32%,#8cffe9 72%,#fff8cf);filter:blur(1px);transform-origin:right center;animation:rocket-fire .2s ease-in-out infinite alternate}
+.flight-destination{position:absolute;right:-4px;top:57px;display:flex;align-items:center;flex-direction:column;color:#e6cf9e;opacity:.7}.flight-destination span{font-size:42px;line-height:1;text-shadow:0 0 22px #e8d5a955}.flight-destination small{font-size:8px;letter-spacing:2px;margin-top:9px}
+.flight-bottom{width:min(660px,80%);display:flex;align-items:center;justify-content:space-between;border-top:1px solid #789cb633;padding-top:17px;font-size:12px;letter-spacing:2px;color:#8badc1}.flight-bottom b{color:#c5fff0;font-size:28px;letter-spacing:-1px;margin-left:14px;font-variant-numeric:tabular-nums;font-weight:500}
+#mobile-pool-preview .boot button{color:#bbdce7;background:transparent;border:1px solid #8accd536;border-radius:30px;min-height:44px;padding:8px 19px;font-size:12px;margin:0;letter-spacing:1px}
+.flight-help{font-size:11px;color:#789aad;margin:15px 0 0;letter-spacing:1px;text-align:center}.boot.arrived .flight-destination{opacity:1}.boot.arrived .rocket-plume{background:linear-gradient(90deg,transparent,#8ffff188,#fff8cf);width:90px}
+@keyframes rocket-bob{0%,100%{transform:translateY(-2px)}50%{transform:translateY(2px)}}
+@keyframes rocket-fire{from{transform:scaleX(.78);opacity:.72}to{transform:scaleX(1.1);opacity:1}}
+#mobile-pool-preview.phone-landscape .boot{position:absolute;padding:20px 7%}
+#mobile-pool-preview.phone-landscape .flight-top{top:5%;font-size:8px;letter-spacing:2px}
+#mobile-pool-preview.phone-landscape .flight-copy h1{font-size:34px;letter-spacing:5px;margin-bottom:8px}
+#mobile-pool-preview.phone-landscape .flight-copy p{font-size:11px;margin-bottom:8px;letter-spacing:3px}
+#mobile-pool-preview.phone-landscape .flight-copy>span{font-size:10px}
+#mobile-pool-preview.phone-landscape .flight-route{height:119px;margin:0;width:84%}
+#mobile-pool-preview.phone-landscape .flight-rocket{top:22px;width:90px;height:65px}
+#mobile-pool-preview.phone-landscape .flight-trajectory{top:66px}
+#mobile-pool-preview.phone-landscape .flight-stop{top:90px}
+#mobile-pool-preview.phone-landscape .flight-destination{top:32px}
+#mobile-pool-preview.phone-landscape .flight-bottom{padding-top:9px;font-size:10px}
+#mobile-pool-preview.phone-landscape .flight-bottom b{font-size:23px}
+#mobile-pool-preview.phone-landscape .flight-help{margin:8px 0 0;font-size:9px}
+@media(prefers-reduced-motion:reduce){.flight-rocket,.flight-trajectory span,.flight-rocket svg,.rocket-plume{animation:none!important;transition:none!important}}
+</style>
+  <!-- CRITICAL_STYLE_END -->
+</head>
+<body id="mobile-pool-preview" data-screen="welcome">
+<audio id="entryMusic" src="./sounds/xiaotang-intro.mp3" autoplay loop preload="auto" playsinline hidden></audio>
+  <div class="mobile-game-surface">
+  <div class="boot" id="boot" aria-label="正在启动光域台球浮光竞技馆">
+    <div class="flight-top"><span>光域台球 / FUGUANG</span><span>FLIGHT TO THE ARENA</span></div>
+    <div class="flight-copy"><p>下一站 · 浮光竞技馆</p><h1>准备，启航。</h1><span id="bootStatus">正在连接赛场</span></div>
+    <div class="flight-route" role="progressbar" aria-label="赛场启动进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="bootTrack">
+      <div class="flight-grid" aria-hidden="true"></div><div class="flight-trajectory"><span id="bootProgress"></span></div>
+      <div class="flight-stop" aria-hidden="true"><span>25</span><span>50</span><span>75</span><span>100</span></div>
+      <div class="flight-rocket" id="bootRocket" aria-hidden="true"><span class="rocket-plume"></span><svg viewBox="0 0 100 72"><defs><linearGradient id="rocketBody" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ffffff"/><stop offset=".48" stop-color="#b4e8f0"/><stop offset="1" stop-color="#528594"/></linearGradient><linearGradient id="rocketFin"><stop stop-color="#88ecdf"/><stop offset="1" stop-color="#2285ba"/></linearGradient></defs><path d="M31 26L22 9Q48 5 58 22M31 46L22 63Q48 67 58 50" fill="url(#rocketFin)"/><path d="M18 25L29 29V43L18 47Z" fill="#7f9da9"/><path d="M25 26Q60 11 91 36Q60 61 25 46Z" fill="url(#rocketBody)"/><path d="M73 25Q84 29 91 36Q84 43 73 47Z" fill="#d9fbf3"/><circle cx="54" cy="36" r="10" fill="#163947" stroke="#e8fffd" stroke-width="3"/><circle cx="54" cy="36" r="6" fill="#71d7f1"/><path d="M30 29L63 25" stroke="#ffffff" stroke-opacity=".6" stroke-width="2"/></svg></div>
+      <div class="flight-destination" aria-hidden="true"><span>✦</span><small>ARENA</small></div>
+    </div>
+    <div class="flight-bottom"><span>启航进度 <b id="bootPercent">0%</b></span><button id="skipBoot" type="button">继续等待</button></div>
+    <p class="flight-help" id="bootHelp" role="status">音乐与背景加载不会阻止你进入赛场</p>
+
+  </div>
+  <div class="app">
+    <header class="topbar" id="previewTopbar">
+      <div class="brand"><span class="brand-mark">●</span><div><strong>光域台球</strong><small>FUGUANG ARENA</small></div></div>
+      <div class="top-actions"><button id="rulesBtn" class="quiet" type="button">规则</button><button id="backBtn" class="quiet" type="button" aria-label="返回上一个选择页面">← 返回</button><button id="fullBtn" class="quiet" type="button" aria-label="全屏预览游戏" aria-pressed="false">全屏 ⛶</button></div>
+    <span id="fullscreenFeedback" role="status" aria-live="polite" hidden></span>
+    </header>
+    <main class="layout">
+        <div class="cue-meter" id="cueMeter" role="slider" aria-label="拉动球杆控制击球力度" aria-valuemin="5" aria-valuemax="100" aria-valuenow="56" tabindex="0"><div class="cue-track"><div class="cue-power" id="cuePower"></div><div class="cue-stick-vertical" id="cueStick"><span class="cue-tip"></span><span class="cue-inlay"></span></div><span class="cue-bottom">弧影 01 · 小头杆<br>下拉蓄力</span></div></div>
+      <section class="arena" aria-label="台球桌">
+        <div class="scorebar"><div class="player active" id="player0"><span class="player-number">01</span><div><b>玩家 1</b><small id="group0">待分组</small></div><span id="score0" class="score">0</span></div><div class="game-label"><span id="modeLabel">八球</span><small id="turnLabel">准备开球</small></div><div class="player" id="player1"><span class="player-number">02</span><div><b id="player2Name">玩家 2</b><small id="group1">待分组</small></div><span id="score1" class="score">0</span></div></div>
+        <div class="table-wrap"><canvas id="game" width="1400" height="790" aria-label="台球游戏画面"></canvas></div>
+        <div class="status"><span class="status-dot"></span><span id="statusText">选择八球或九球开始</span></div>
+      </section>
+      <aside class="controls">
+<div class="stroke-controls">
+        <div class="control-head"><span>击球控制台</span><small>点按选方向 · 滑动调角度</small></div>
+        <div class="angle-panel"><div class="angle-head"><span>精密瞄准</span><b id="angleReadout">0.0000°</b></div><div id="angleRuler" class="angle-ruler" role="slider" aria-label="横向拖动刻度尺调整瞄准角" aria-valuemin="-180" aria-valuemax="180" aria-valuenow="0" tabindex="0"><span class="angle-ticks"></span><span class="angle-needle"></span></div><div class="angle-foot"><span>逆时针</span><span id="rulerScale">小格 0.02° · 拖动 0.002°/像素</span><span>顺时针</span></div></div>
+<div class="spin-group"><div><span>击球点</span><small id="strokeReadout" aria-live="polite">中杆</small></div><button class="spin-pad" id="spinPad" type="button" aria-label="放大白球选择杆法和加塞" aria-haspopup="dialog"><span class="spin-cross"></span><span id="spinDot" class="spin-dot"></span></button><button id="resetSpin" type="button" class="small-button">居中</button></div>
+        <div class="power-group"><div class="control-line"><span>出杆力度</span><b id="powerReadout">56%</b></div><input id="power" type="range" min="5" max="100" value="56" aria-label="击球力度"><div class="power-ends"><span>轻推</span><span>强力</span></div></div>
+        <button id="placeCueBtn" class="place-cue" type="button" hidden>确认白球位置</button>
+        <button id="shootBtn" class="shoot" type="button">击 球 <span>→</span></button>
+        <div class="practice-actions"><button id="practiceBtn" class="quiet" type="button">专项练球</button><button id="repeatPractice" class="quiet" type="button" hidden>重摆本球</button></div>
+        <div class="tip" id="tipText">点按选方向，拖动精调；拉动球杆松手击球，或调节力度后点击击球。</div>
+        <div class="spec"><span>球台参数</span><small>球径 63.01 mm · 六袋入口均约 110.5 mm</small></div>
+
+</div>
+</aside>
+    </main>
+    <footer>桌面：拖动瞄准 / 拖动刻度尺精调 / 拉杆击球 · ← → 每次 0.001° · 辅助线碰库即止 · 空格击球 · F 全屏　/　平板：拖动瞄准 / 刻度尺精调 / 拉杆击球</footer>
+  </div>
+  <section class="overlay start-overlay arena-welcome" id="startOverlay" aria-labelledby="welcomeTitle">
+    <img class="welcome-photo" src="./assets/fuguang-arena.jpg" alt="原创浮光竞技馆，冷色聚光灯下的空场" fetchpriority="high">
+    <div class="welcome-grid" aria-hidden="true"></div>
+    <div class="welcome-shade" aria-hidden="true"></div>
+    <div class="welcome-atmosphere" aria-hidden="true">
+      <i class="welcome-beam beam-left"></i><i class="welcome-beam beam-right"></i>
+      <div class="welcome-orbit orbit-left"><span class="orbit-ring"></span><span class="welcome-ball ball-eight">8</span><span class="orbit-caption">瞄准 · 专注</span></div>
+      <div class="welcome-orbit orbit-right"><span class="orbit-ring"></span><span class="welcome-ball ball-nine">9</span><span class="orbit-caption">击打 · 回响</span></div>
+      <div class="welcome-dust"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+    <div class="welcome-top"><span class="welcome-brand">光域台球 <small>XIAOTANG BILLIARDS</small></span><div class="welcome-tools"><span class="welcome-tag">ORBIT / 01 <i></i></span><button id="welcomeFullscreen" class="welcome-fullscreen" type="button" aria-label="欢迎页全屏" aria-pressed="false">⛶ 全屏体验</button></div></div>
+    <div class="welcome-copy"><p class="welcome-eyebrow">WELCOME TO THE FUGUANG ARENA</p>
+      <h1 id="welcomeTitle"><small>欢迎来到</small><span>浮光竞技馆</span></h1>
+      <p class="welcome-description">聚光灯为你亮起。<br>这一杆，让全场听见。</p>
+      <div class="welcome-divider" aria-hidden="true"><i></i><span>●</span><i></i></div>
+      <button id="startBtn" class="welcome-enter" type="button">进入赛场 <span>↗</span></button>
+      <p id="welcomeFullStatus" class="welcome-fullscreen-note" role="status" hidden></p>
+      <p id="introStatus" class="intro-status" role="status" hidden></p>
+      <div class="welcome-modes">八球 / 九球 <span>·</span> 人机对战 <span>·</span> 双人同屏 <span>·</span> 专项训练</div>
+    </div>
+    <div class="welcome-bottom"><span>FUGUANG ARENA</span><span>瞄准这一刻，打出你的下一局。</span></div>
+  </section>
+  <div class="overlay hidden" id="menuOverlay"><div class="menu-card setup-shell">
+    <div class="setup-progress" aria-label="开始流程"><span class="active" data-progress="mode">01 对战</span><span data-progress="rules">02 玩法</span><span data-progress="difficulty">03 难度</span></div>
+    <section class="setup-step" id="setupMode"><button class="setup-back" type="button" data-setup-back="welcome">返回</button><div class="eyebrow">CHOOSE MATCH</div><h1>请选择<br><em>对战模式</em></h1><p>选择这一局的进入方式，下一步再选择八球或九球。</p><div class="setup-grid setup-grid-three"><button type="button" data-flow-mode="ai"><span class="setup-icon">AI</span><b>人机对战</b><small>挑战三档智能对手</small></button><button type="button" data-flow-mode="practice"><span class="setup-icon">练</span><b>专项训练</b><small>反复练习同一条球路</small></button><button type="button" data-flow-mode="local"><span class="setup-icon">2P</span><b>双人同屏</b><small>两位玩家轮流出杆</small></button></div></section>
+    <section class="setup-step hidden" id="setupRules"><button class="setup-back" type="button" data-setup-back="mode">返回</button><div class="eyebrow">CHOOSE RULESET</div><h1>选择玩法</h1><p id="setupRulesHint">选择八球或九球。</p><div class="setup-grid setup-grid-two"><button type="button" data-flow-rules="eight"><span class="mode-ball black">8</span><b>八球</b><small>先清空己方球，再打进黑八</small></button><button type="button" data-flow-rules="nine"><span class="mode-ball yellow">9</span><b>九球</b><small>依次先碰当前最小号球</small></button></div></section>
+    <section class="setup-step hidden" id="setupDifficulty"><button class="setup-back" type="button" data-setup-back="rules">返回</button><div class="eyebrow">CHOOSE DIFFICULTY</div><h1>选择难度</h1><p>难度只用于人机对战。</p><div class="setup-grid setup-grid-three difficulty-cards"><button type="button" data-flow-difficulty="easy"><span class="difficulty-number">40%</span><b>普通</b><small>适合熟悉操作</small></button><button type="button" data-flow-difficulty="normal"><span class="difficulty-number">60%</span><b>进阶</b><small>更稳定的进攻选择</small></button><button type="button" data-flow-difficulty="hard"><span class="difficulty-number">PRO</span><b>大师</b><small>规划杆法与下一球</small></button></div></section>
+  </div></div>
+  <div class="overlay hidden" id="practiceOverlay"><div class="menu-card practice-card"><button id="closePractice" class="close" type="button" aria-label="关闭练球菜单">×</button><button id="backPractice" class="setup-back" type="button">返回</button><div class="eyebrow">PRACTICE TABLE</div><h2>选择专项训练</h2><p><span id="practiceRulesetLabel">九球规则</span> · 同一球位反复出杆，调整力度和击球点，观察真实落点。</p><div class="practice-grid"><button class="quiet" type="button" data-practice="pocket"><b>慢球进袋</b><small>18% 轻推 · 检查中袋</small></button><button class="quiet" type="button" data-practice="draw"><b>低杆拉回</b><small>70% 力度 · 白球回退</small></button><button class="quiet" type="button" data-practice="follow"><b>高杆跟进</b><small>相同球位 · 对比低杆</small></button><button class="quiet" type="button" data-practice="english"><b>加塞碰库</b><small>左右塞 · 对比反弹方向</small></button></div></div></div>
+  <section class="overlay hidden" id="spinOverlay" role="dialog" aria-modal="true" aria-labelledby="spinEditorTitle">
+    <div class="spin-editor-card">
+      <button id="closeSpinEditor" class="spin-editor-close" type="button" aria-label="取消杆法选择">×</button>
+      <h2 id="spinEditorTitle">选择击球点</h2><p class="spin-editor-hint">点选或拖动白球，微调杆法与加塞</p>
+      <div class="spin-editor-field"><span class="spin-label spin-high">高杆</span><span class="spin-label spin-low">低杆</span><span class="spin-label spin-left">左塞</span><span class="spin-label spin-right">右塞</span>
+        <div id="spinEditorBall" class="spin-editor-ball" role="slider" aria-label="放大的白球击球点" tabindex="0"><span class="spin-safe-zone"></span><span class="spin-cross"></span><span id="spinEditorDot" class="spin-dot"></span></div>
+      </div>
+      <div class="spin-editor-readout"><b id="spinEditorReadout" aria-live="polite">中杆</b><small id="spinEditorStrength">左右塞 0% · 高低杆 0%</small></div>
+      <div class="spin-editor-actions"><button id="spinEditorCenter" type="button">居中</button><button id="confirmSpin" type="button"><span>✓</span> 确认</button></div>
+    </div>
+  </section>
+  <div class="overlay hidden" id="rulesOverlay"><div class="menu-card rules-card"><button id="closeRules" class="close" type="button" aria-label="关闭">×</button><div class="eyebrow">HOW TO PLAY</div><h2>玩法与操作</h2><p><b>瞄准：</b>点按球台选择大方向，再横向或纵向滑动调角度，在右侧横向拖动刻度尺作精细调整；方向键每次调整 0.001°，按住 Shift 为 0.0001°。辅助线显示当前力度与杆法的短程实际球路，碰到库边立即结束，不显示反弹后的路线。红线表示首碰球不合法。<b>力度：</b>向下拉左侧小头杆，松手击球，旁边刻度条同步显示力度；5%～25% 为细化的轻推区间。<b>旋转：</b>点右侧白球放大，点选或拖动击球点，再点白球下方的“✓ 确认”应用杆法与加塞；每次出杆后自动回到中杆。也可按空格或点击“击球”。</p><p><b>专项练球：</b>提供慢球进袋、低杆、高杆与加塞碰库；点“重摆本球”恢复相同球位与预设力度。本杆结束后显示白球落点，无胜负和换人；点顶部“返回”回到训练项目选择。</p><p><b>袋口：</b>球进入袋洞后承接入袋瞬间的速度与旋转，在袋洞内继续运动并受重力下坠，碰到袋衬后衰减；落到袋底时发出带袋衬闷响与轻微摩擦尾音的落袋声；袋沿始终覆盖球体，避免穿过胶边。六袋绘制、落袋判定与遮罩使用同一套袋口几何。</p><p><b>大师：</b>会比较高低杆、左右轻重塞与混合塞，并对候选杆法的力度作微调，规划下一球；困难球继续优先尝试直接进攻、翻袋或碰库勾球；没有合理进攻路线时才解球或防守。出杆前显示击球点和力度，选择与执行仍可能失误。</p><p><b>自由球：</b>点按或拖动台面摆放白球，点击“确认白球位置”；击球前可以点击“重新摆放白球”再次调整。</p><p><b>八球：</b>开球后先分配全色与花色；先打自己的球，清空后合法打进 8 号球即可获胜，无需指定袋口。犯规后对手自由摆放白球。</p><p><b>九球：</b>每杆先碰当前最小号球；合法打进 9 号球获胜。</p><p>第一次点按会解锁击球、球碰球、碰库和落袋四类本地音效；背景音乐不会抢占音效通道。欢迎页播放已提供的入场音乐，对局使用已提供的新音频循环播放，返回选择页面时自动切换。网页包含首球、无碰库、白球落袋及胜负判定。开球流程为适合网页对战的简化规则。</p></div></div>
+  <section class="overlay hidden result-overlay" id="resultOverlay" role="dialog" aria-modal="true" aria-labelledby="resultTitle" aria-describedby="resultReason">
+    <div class="result-card">
+      <div class="result-top"><span>光域台球 / FUGUANG</span><span id="resultRack">本局结束</span></div>
+      <p class="result-kicker" id="resultMode">八球 · 人机对战</p>
+      <h1 id="resultTitle">玩家 1 获胜</h1><p id="resultReason" class="result-reason"></p>
+      <div class="result-score-label">局数比分</div>
+      <div class="result-scoreboard">
+        <div class="result-player" id="resultPlayer0"><span id="resultName0">玩家 1</span><b id="resultWins0">1</b><small>本局合法进球 <strong id="resultPots0">0</strong></small></div>
+        <span class="result-divider">:</span>
+        <div class="result-player" id="resultPlayer1"><span id="resultName1">电脑</span><b id="resultWins1">0</b><small>本局合法进球 <strong id="resultPots1">0</strong></small></div>
+      </div>
+      <p class="result-note">再来一局继续累计比分，返回主页开始新的对战。</p>
+      <div class="result-actions"><button id="resultHome" class="result-secondary" type="button">返回主页</button><button id="resultReplay" class="result-primary" type="button">再来一局 <span>↗</span></button></div>
+    </div>
+  </section>
+  </div>
+  <!-- STARTUP_SCRIPT_START -->
+  <script>(() => {
+  const root = document.getElementById('mobile-pool-preview');
+  const surface = root?.querySelector('.mobile-game-surface');
+  if (!root || !surface) return;
+  const coarse = window.matchMedia?.('(pointer: coarse)');
+  const orientation = window.screen?.orientation;
+  const isPhone = () => !!coarse?.matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '') || navigator.maxTouchPoints > 0;
+  function sync() {
+    const phone = isPhone();
+    const viewport = window.visualViewport;
+    const width = Math.max(1, Math.min(root.clientWidth || Infinity, viewport?.width || window.innerWidth || 360));
+    const height = Math.max(1, viewport?.height || window.innerHeight || 390);
+    // Fit a landscape surface even when an in-app browser keeps a portrait viewport.
+    // Orientation APIs never decide whether the game is visible or playable.
+    const sideways = phone && width < height;
+    if (sideways !== root.classList.contains('is-landscape')) {
+      for (const id of ['game', 'cueMeter', 'angleRuler', 'spinEditorBall']) document.getElementById(id)?.dispatchEvent(new Event('pointercancel'));
+    }
+    root.classList.remove('orientation-blocked');
+    root.classList.toggle('phone-landscape', phone);
+    root.classList.toggle('is-landscape', sideways);
+    root.classList.toggle('is-compact', phone);
+    surface.inert = false;
+    surface.removeAttribute('aria-hidden');
+    root.style.setProperty('--visible-height', `${height}px`);
+    root.style.setProperty('--phone-height', `${height}px`);
+    root.style.setProperty('--landscape-width', `${sideways ? height : width}px`);
+    root.style.setProperty('--landscape-height', `${sideways ? width : height}px`);
+    const chrome = (root.querySelector('.topbar')?.offsetHeight || 48) + (root.querySelector('.scorebar')?.offsetHeight || 28) + (root.querySelector('.status')?.offsetHeight || 22);
+    root.style.setProperty('--landscape-table-width', `${Math.max(1, (sideways ? width : height) - chrome) * 1400 / 790}px`);
+    root.style.setProperty('--preview-header-height', `${document.getElementById('previewTopbar')?.offsetHeight || 48}px`);
+  }
+  for (const name of ['resize', 'orientationchange']) window.addEventListener(name, sync);
+  orientation?.addEventListener?.('change', sync);
+  coarse?.addEventListener?.('change', sync);
+  window.visualViewport?.addEventListener('resize', sync);
+  if (typeof ResizeObserver !== 'undefined') {
+    let previousWidth = -1;
+    new ResizeObserver(() => { if (root.clientWidth !== previousWidth) { previousWidth = root.clientWidth; sync(); } }).observe(root);
+  }
+  sync();
+})();
+
+(() => {
+  'use strict';
+  const $=id=>document.getElementById(id),boot=$('boot'),bar=$('bootProgress'),percent=$('bootPercent'),track=$('bootTrack'),rocket=$('bootRocket'),skip=$('skipBoot'),status=$('bootStatus'),help=$('bootHelp');
+  const tasks=new Set();let dismissed=false,engineFailed=false,stylesFailed=false,engineRetry=0;
+  const preview=(!location.hostname||['localhost','127.0.0.1','[::1]'].includes(location.hostname))&&new URLSearchParams(location.search).get('test')==='loading';
+  const essentialReady=()=>tasks.has('game')&&tasks.has('styles');
+  const finish=()=>{if(dismissed||!essentialReady())return;dismissed=true;boot.classList.add('done');setTimeout(()=>boot.remove(),600);};
+  const progress=()=>{
+    const value=essentialReady()?100:5+(tasks.has('styles')?20:0)+(tasks.has('game')?65:0)+(tasks.has('photo')?5:0)+(tasks.has('audio')?5:0);
+    bar.style.width=`${value}%`;rocket.style.setProperty('--flight',String(value/100));percent.textContent=`${value}%`;track.setAttribute('aria-valuenow',String(value));
+    if(essentialReady()){
+      engineFailed=false;stylesFailed=false;boot.classList.add('arrived');status.textContent=preview?'加载界面预览 · 已准备就绪':'赛场已就绪，准备入场';skip.textContent='进入赛场';help.textContent='欢迎来到浮光竞技馆';
+      if(!preview)setTimeout(finish,700);
+    }else if(!engineFailed&&!stylesFailed)status.textContent=tasks.has('game')?'正在整理赛场画面':'正在加载比赛引擎';
+  };
+  const ready=task=>{tasks.add(task);if(task==='styles'&&window.dispatchEvent&&typeof Event==='function')window.dispatchEvent(new Event('resize'));progress();};
+  const failEngine=()=>{if(tasks.has('game'))return;engineFailed=true;status.textContent='比赛引擎连接失败';help.textContent='点击重试，只重新加载游戏，不会刷新整个页面';skip.textContent='重试加载';};
+  const styleFailed=()=>{stylesFailed=true;status.textContent='赛场画面加载失败';skip.textContent='重试加载';help.textContent='点击重试加载赛场画面';};
+  const retryEngine=()=>{
+    if(!engineFailed||tasks.has('game'))return;
+    engineFailed=false;status.textContent='正在重新连接比赛引擎';skip.textContent='继续等待';
+    const old=$('gameEngine'),script=document.createElement('script');script.id='gameEngine';script.async=true;script.src='./game.js?v=20261010-cue-controls-v3&retry='+String(++engineRetry);script.onerror=failEngine;old?.remove();document.body.appendChild(script);
+  };
+  window.PoolStartup={ready,engineFailed:failEngine,styleFailed};
+  const stylesheet=$('siteStyle');if(stylesheet?.sheet)ready('styles');else if(stylesheet?.dataset?.failed==='true')styleFailed();
+  const photo=document.querySelector('.welcome-photo');if(!photo||photo.complete)ready('photo');else{photo.addEventListener('load',()=>ready('photo'),{once:true});photo.addEventListener('error',()=>ready('photo'),{once:true});}
+  skip.addEventListener('click',()=>{
+    if(essentialReady()){finish();return;}
+    if(engineFailed)retryEngine();
+    if(stylesFailed){stylesFailed=false;stylesheet.href='./site.css?v=20261010-cue-controls-v3&retry='+String(Date.now());status.textContent='正在重新加载赛场画面';skip.textContent='继续等待';}
+    if(!engineFailed&&!stylesFailed)help.textContent='仍在等待网络响应，请保持此页打开，无需反复刷新';
+  });
+  setTimeout(()=>{if(dismissed||essentialReady())return;if(!engineFailed&&!stylesFailed){status.textContent='网络连接较慢，仍在等待';help.textContent='请保持此页打开；资源完成后会自动进入';}},12000);
+  window.addEventListener('offline',()=>{if(!dismissed)help.textContent='网络已断开，恢复连接后可重试加载';});
+  window.addEventListener('online',()=>{if(engineFailed)retryEngine();});
+  window.addEventListener('pageshow',()=>{if(essentialReady()&&dismissed)boot.classList.add('done');});
+  progress();
+})();
+</script>
+  <!-- STARTUP_SCRIPT_END -->
+  <script id="gameEngine" async src="./game.js?v=20261010-cue-controls-v3" onerror="window.PoolStartup.engineFailed()"></script>
+  <script async src="./audio.js?v=20261010-cue-controls-v3"></script>
+  <script async src="./mobile.js?v=20261010-cue-controls-v3"></script>
+</body>
+</html>
