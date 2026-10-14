@@ -27,9 +27,9 @@ for(const rotated of [false,true]){
     assert.equal(JSON.parse(w.render_game_to_text()).phase,'aim','cloth aiming accidentally fired a shot');
   }
   t.setGuideBalls([{n:0,x:30,y:25},{n:1,x:80,y:40}],0);
-  const micro=event(300,250);
-  g.canvas.handlers.pointerdown(micro);g.canvas.handlers.pointermove(event(302,250));g.canvas.handlers.pointerup(event(302,250));
-  assert(Math.abs(aim()-.006)<.0002,'one-pixel fine drag was treated as an absolute aim tap');
+  const micro=event(60+60*12.8,75+35*12.8);
+  g.canvas.handlers.pointerdown(micro);g.canvas.handlers.pointermove(event(60+60*12.8+2,75+35*12.8));g.canvas.handlers.pointerup(event(60+60*12.8+2,75+35*12.8));
+  assert(Math.abs(aim()-18.4349)<.0002,'landing jitter suppressed the intended direction tap');
   t.setGuideBalls([{n:0,x:30,y:25},{n:1,x:80,y:40}],0);
   const tap=event(60+60*12.8,75+35*12.8);
   g.canvas.handlers.pointerdown(tap);g.canvas.handlers.pointerup(tap);assert(Math.abs(aim()-18.4349)<.0002,'tap no longer selects a large direction');

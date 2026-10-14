@@ -1528,6 +1528,27 @@
     const affected=POCKET_GEOMETRY.filter(p=>live().some(b=>Math.hypot(b.x-p.mx,b.y-p.my)<p.radius+R+1.1)||state.pocketAnimations.some(a=>a.pocket===p.index));
     if(!affected.length)return;
     ctx.save();ctx.beginPath();
+    // The entire rubber bevel is in front of the ball, not just its two
+    // mouth facings. A sinking sphere's exposed cap can overlap the adjacent
+    // long cushion at a grazing corner or side-pocket entry.
+    const l=OX,t=OY,r=OX+W*SCALE,b=OY+H*SCALE;
+    for(const [a,z] of [[CUT,SIDE_L],[SIDE_R,W-CUT]])for(const [y,sign] of [[t,1],[b,-1]]){
+      const x1=l+a*SCALE,x2=l+z*SCALE,outer=y-sign*27;
+      ctx.moveTo(x1,y);
+      if(sign===1){ctx.lineTo(x1-17,outer);ctx.lineTo(x2+17,outer);ctx.lineTo(x2,y);}
+      else{ctx.lineTo(x2,y);ctx.lineTo(x2+17,outer);ctx.lineTo(x1-17,outer);}ctx.closePath();
+    }
+    for(const x of [l,r]){
+      const sign=x===l?-1:1,upper=t+CUT*SCALE,lower=b-CUT*SCALE;
+      ctx.moveTo(x,upper);
+      if(sign===1){ctx.lineTo(x+sign*27,upper-17);ctx.lineTo(x+sign*27,lower+17);ctx.lineTo(x,lower);}
+      else{ctx.lineTo(x,lower);ctx.lineTo(x+sign*27,lower+17);ctx.lineTo(x+sign*27,upper-17);}ctx.closePath();
+    }
+    const restore=()=>{for(const p of affected){const q=worldToScreen(p.mx,p.my),extent=(p.radius+R+2)*SCALE;blitTable({x:q.x-extent,y:q.y-extent,w:extent*2,h:extent*2});}};
+    ctx.clip();restore();ctx.restore();
+    // Paint the mouth facings as a separate foreground pass. Opposite
+    // contours at the junction must not cancel the long-cushion mask.
+    ctx.save();ctx.beginPath();
     for(const p of affected)for(const face of p.faces){
       const a=worldToScreen(face.ax,face.ay),b=worldToScreen(face.bx,face.by);
       const horizontalFace=Math.abs(face.ay)<1e-6||Math.abs(face.ay-H)<1e-6;
@@ -1536,7 +1557,7 @@
       ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.quadraticCurveTo(b.x-p.nx*5,b.y-p.ny*5,b.x-p.nx*10,b.y-p.ny*10);ctx.lineTo(a.x+offsetX,a.y+offsetY);ctx.closePath();
     }
     ctx.clip();
-    for(const p of affected){const q=worldToScreen(p.mx,p.my),extent=(p.radius+R+2)*SCALE;blitTable({x:q.x-extent,y:q.y-extent,w:extent*2,h:extent*2});}
+    restore();
     ctx.restore();
   }
   function drawBall(b,scale=1,worldX=b.x,worldY=b.y,alpha=1,shadow=true){
@@ -1841,7 +1862,7 @@
     if(state.breaking&&state.repositionAllowed&&Math.hypot(dx,dy)<=R*1.6){state.drag='place-break';return;}
     // The cloth is exclusively an aiming surface. Pulling the left cue lane
     // fires; a precision drag behind the cue must never accidentally fire.
-    state.drag={kind:'aim',id:e.pointerId,start:p,startScreen:aimScreenPoint(e),startAim:state.aim,axis:null,moved:false};
+    state.drag={kind:'aim',id:e.pointerId,start:p,startScreen:aimScreenPoint(e),startAim:state.aim,axis:null,moved:false,tapSlop:e.pointerType==='mouse'?1:3};
   });
   function updateAimPointer(e){
     if(state.drag?.kind==='aim'&&state.drag.id!==e.pointerId)return;
@@ -1849,8 +1870,10 @@
     if(state.drag==='place'||state.drag==='place-break')placeCue(p.x,p.y,false);
     else if(state.drag.kind==='aim'){
       const drag=state.drag,point=aimScreenPoint(e),dx=point.x-drag.startScreen.x,dy=point.y-drag.startScreen.y;
-      if(Math.hypot(dx,dy)>.2)drag.moved=true;
-      if(!drag.axis&&Math.hypot(dx,dy)>.5){
+      // A finger's landing jitter must neither suppress a direction tap nor
+      // lock precision movement to the wrong axis for the rest of the swipe.
+      if(Math.hypot(dx,dy)>drag.tapSlop)drag.moved=true;
+      if(!drag.axis&&drag.moved){
         const length=Math.hypot(dx,dy),sign=Math.sign(Math.abs(dx)>=Math.abs(dy)?dx:dy);
         drag.axis={x:dx/length*sign,y:dy/length*sign};
       }
@@ -1864,13 +1887,13 @@
     updateAimPointer(e);
     if(state.drag?.kind==='aim'&&state.phase==='aim'){
       if(state.drag.moved){updateUI();render();}
-      else{const p=pointerWorld(e);aimAt(p.x,p.y);}
+      else{aimAt(state.drag.start.x,state.drag.start.y);}
     }else if((state.drag==='place'||state.drag==='place-break')&&state.phase==='aim'){
       const p=pointerWorld(e);if(placeCue(p.x,p.y,false))say('白球位置已预览，可继续调整或确认摆放。');
     }
     state.drag=null;
   };
-  canvas.addEventListener('pointerup',pointerUp);canvas.addEventListener('pointercancel',()=>{if(state.drag?.kind==='aim')state.aim=state.drag.startAim;state.drag=null;requestAimFrame();});
+  canvas.addEventListener('pointerup',pointerUp);canvas.addEventListener('pointercancel',e=>{if(state.drag?.kind==='aim'&&e?.pointerId!==undefined&&state.drag.id!==e.pointerId)return;if(state.drag?.kind==='aim')state.aim=state.drag.startAim;state.drag=null;requestAimFrame();});
   const spinPad=$('spinPad');
   function moveSpinDot(){const dot=$('spinDot');dot.style.left=`${50+state.spinX*36}%`;dot.style.top=`${50-state.spinY*36}%`;if($('strokeReadout'))$('strokeReadout').textContent=strokeName(state);}
   const spinOverlay=$('spinOverlay'),editorBall=$('spinEditorBall');let spinDraft=null,editorPointer=null;
