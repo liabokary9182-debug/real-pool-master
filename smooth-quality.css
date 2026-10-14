@@ -1,0 +1,58 @@
+/* Match surfaces stay quiet: no ornamental animation behind a moving rack. */
+#mobile-pool-preview[data-screen="match"] .welcome-fx,
+#mobile-pool-preview[data-screen="match"] .welcome-enter:before{animation-play-state:paused!important}
+#mobile-pool-preview .table-wrap{contain:layout paint}
+#mobile-pool-preview .table-wrap canvas{touch-action:none;image-rendering:auto;filter:none}
+#mobile-pool-preview .angle-ruler,#mobile-pool-preview .cue-meter{touch-action:none}
+
+/* A real venue, a few pool details, and a small departure line. */
+#mobile-pool-preview .boot{align-items:flex-start;justify-content:flex-end;padding:6% 7%;background:#071018;isolation:isolate}
+#mobile-pool-preview .boot:before{display:none}
+.boot-arena{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:60% 50%;z-index:-4}
+.boot-shade{position:absolute;inset:0;background:linear-gradient(90deg,#040b13f5 0%,#040b13c2 35%,#040b1310 75%),linear-gradient(0deg,#040b13ef,transparent 55%);z-index:-3}
+.boot-light{position:absolute;inset:0;background:linear-gradient(115deg,transparent 44%,#dfc28c0e 55%,transparent 68%);z-index:-2;animation:pool-lamp 5s ease-in-out infinite alternate;pointer-events:none}
+.boot-session{position:absolute;top:23%;left:7%;width:40%}.boot-kicker{color:#c6af83;font-size:12px;letter-spacing:4px}
+.boot-session h2{font-size:clamp(30px,4.2vw,60px);font-weight:600;letter-spacing:1px;line-height:1.3;margin:18px 0;color:#f4f1e8}
+.boot-session p{color:#9ca8ac;font-size:14px;line-height:1.6}
+#mobile-pool-preview .boot .flight-top{top:7%;left:7%;right:7%;color:#afb5b5;letter-spacing:2px}
+#mobile-pool-preview .boot .flight-top span:last-child{font-size:0}
+#mobile-pool-preview .boot .flight-top span:last-child:after{content:"浮光竞技馆";font-size:11px;letter-spacing:3px}
+#mobile-pool-preview .boot .flight-copy{width:42%;text-align:left;margin:0 0 10px}
+#mobile-pool-preview .boot .flight-copy p,#mobile-pool-preview .boot .flight-copy h1{display:none}
+#mobile-pool-preview .boot .flight-copy>span{color:#cbd2d1;font-size:12px}
+#mobile-pool-preview .boot .flight-route{width:42%;height:34px;margin:0 0 15px}
+#mobile-pool-preview .boot .flight-grid,#mobile-pool-preview .boot .flight-stop,#mobile-pool-preview .boot .flight-destination{display:none}
+#mobile-pool-preview .boot .flight-trajectory{top:19px;left:0;right:0;border-top:1px solid #b4b4a538}
+#mobile-pool-preview .boot .flight-trajectory span{background:linear-gradient(90deg,#ad8d50,#e1c995);box-shadow:none;transition:width .4s ease}
+#mobile-pool-preview .boot .flight-rocket{top:1px;width:38px;height:27px;left:calc((100% - 38px)*var(--flight,.05));filter:none;transition:left .4s ease}
+#mobile-pool-preview .boot .flight-rocket svg{animation:none}
+#mobile-pool-preview .boot .rocket-plume{width:18px;height:3px;top:13px;background:linear-gradient(90deg,transparent,#e1c995);filter:none;animation:none}
+#mobile-pool-preview .boot .flight-bottom{width:42%;border:0;padding:0;color:#899699;letter-spacing:0}
+#mobile-pool-preview .boot .flight-bottom b{color:#e0c795;font-size:24px}
+#mobile-pool-preview .boot button{border-radius:5px;letter-spacing:0;color:#e3ddcf;border-color:#bba47855;padding:7px 14px;background:#0b141b55}
+#mobile-pool-preview .boot .flight-help{width:42%;text-align:left;letter-spacing:0;color:#7c8b93;font-size:10px;margin-top:16px}
+.boot-stages{position:absolute;bottom:7%;left:57%;right:7%;display:flex;gap:20px;font-size:11px;color:#7b8b90;white-space:nowrap}
+.boot-stages .complete{color:#c7ae7b}.boot-stages .current{color:#f0e6d1}
+.boot-stages span{border-top:1px solid #9caaad33;padding-top:13px;flex:1}.boot-stages .complete{border-color:#c7ae7b77}
+.boot-ball-detail{position:absolute;right:12%;bottom:24%;width:220px;height:80px;opacity:.88}
+.boot-ball{position:absolute;bottom:0;display:grid;place-items:center;width:54px;height:54px;border-radius:50%;font:bold 21px Georgia,serif;color:white;box-shadow:inset -12px -14px 20px #000b,0 12px 13px #0008;animation:pool-settle 1.4s ease-out both}
+.boot-ball:after{content:"";position:absolute;left:11px;top:8px;width:19px;height:4px;border-radius:2px;background:#ffffffa6;transform:rotate(-24deg)}
+.boot-ball.b1{left:10px;background:radial-gradient(circle at 30% 25%,#ffdf75,#ba7b13);animation-delay:.05s}
+.boot-ball.b9{left:66px;bottom:18px;background:linear-gradient(#f2eee2 0 26%,#d2a12e 27% 73%,#e7e1d6 74%);color:#222;animation-delay:.2s}
+.boot-ball.b8{left:124px;background:radial-gradient(circle at 30% 25%,#4b5058,#070b10);animation-delay:.35s}
+.boot-cue{position:absolute;left:-8px;bottom:-18px;width:240px;height:5px;background:linear-gradient(90deg,#487f89 0 2%,#e8e0c9 2% 5%,#d7b782 5% 68%,#22272e 68%);transform:rotate(-8deg);border-radius:2px;box-shadow:0 7px 10px #0008}
+@keyframes pool-settle{from{transform:translateX(50px) rotate(90deg);opacity:0}to{transform:translateX(0) rotate(0);opacity:1}}
+@keyframes pool-lamp{from{opacity:.4}to{opacity:1}}
+#mobile-pool-preview.phone-landscape .boot{padding:5% 7%}
+#mobile-pool-preview.phone-landscape .boot-session{top:18%}
+#mobile-pool-preview.phone-landscape .boot-session h2{font-size:30px;margin:10px 0}
+#mobile-pool-preview.phone-landscape .boot-session p{font-size:10px;margin:6px 0}
+#mobile-pool-preview.phone-landscape .boot .flight-copy>span{font-size:10px}
+#mobile-pool-preview.phone-landscape .boot .flight-route{height:25px;margin-bottom:4px}
+#mobile-pool-preview.phone-landscape .boot .flight-bottom b{font-size:20px}
+#mobile-pool-preview.phone-landscape .boot .flight-help{font-size:8px;margin-top:8px}
+#mobile-pool-preview.phone-landscape .boot-ball-detail{transform:scale(.7);transform-origin:right bottom;bottom:28%;right:10%}
+#mobile-pool-preview.phone-landscape .boot-stages{gap:8px;font-size:8px;bottom:8%}
+#mobile-pool-preview.phone-landscape .boot-stages span{padding-top:7px}
+@media(max-width:600px) and (orientation:portrait){.boot-session{top:18%;width:80%}.boot-session h2{font-size:38px}.boot-ball-detail{bottom:38%}.boot-stages{bottom:30%;left:7%}#mobile-pool-preview .boot .flight-copy,#mobile-pool-preview .boot .flight-route,#mobile-pool-preview .boot .flight-bottom,#mobile-pool-preview .boot .flight-help{width:100%}}
+@media(prefers-reduced-motion:reduce){.boot-light,.boot-ball{animation:none!important}}

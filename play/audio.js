@@ -15,6 +15,9 @@
   let gameMusicTicket=0;
   const effectStats={cue:0,ball:0,rail:0,pocket:0},lastEffect={cue:-1,ball:-1,rail:-1,pocket:-1};
   const lastWeight={cue:0,ball:0,rail:0,pocket:0};
+  // Suppress repeated numerical contacts, rather than all collisions of the
+  // same kind. Two different balls hitting in a break both remain audible.
+  const contactSounds=new Map();
   const effectSources={
     cue:['./sounds/cue-soft.wav'],
     ball:['./sounds/ball-soft-1.wav','./sounds/ball-soft-2.wav','./sounds/ball-soft-3.wav'],
@@ -118,7 +121,7 @@
     return new Promise((resolve,reject)=>setTimeout(()=>run().then(resolve,reject),delay));
   }
 
-  function bufferedEffect(kind,weight,delay=0,tail=false){
+  function bufferedEffect(kind,weight,delay=0,tail=false,position=null){
     const pool=decodedPools[kind];
     if(!context||context.state!=='running'||!pool?.length)return false;
     const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
@@ -135,8 +138,11 @@
       gain.gain.setValueAtTime(Math.max(.0002,volume),at+Math.max(.002,length-.018));
       gain.gain.linearRampToValueAtTime(.0001,at+length);
     }else gain.gain.exponentialRampToValueAtTime(.0001,at+Math.min(.14,source.buffer.duration/source.playbackRate.value));
-    source.connect(filter);filter.connect(gain);gain.connect(effects);
-    source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect();};source.start(at);
+    const panner=position!==null&&typeof context.createStereoPanner==='function'?context.createStereoPanner():null;
+    if(panner)panner.pan.value=Math.max(-.65,Math.min(.65,(position/100-.5)*1.3));
+    source.connect(filter);filter.connect(gain);
+    if(panner){gain.connect(panner);panner.connect(effects);}else gain.connect(effects);
+    source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect();panner?.disconnect();};source.start(at);
     return true;
   }
 
@@ -207,7 +213,7 @@
   function duckMusic(pocket=false){
     if(gameMusicMaster&&gameMusicWanted&&context){const now=context.currentTime;gameMusicMaster.gain.cancelScheduledValues(now);gameMusicMaster.gain.setTargetAtTime(pocket?.055:.10,now,.012);gameMusicMaster.gain.setTargetAtTime(.20,now+(pocket?.32:.22),.055);}
   }
-  function play(kind,impact=20){
+  function play(kind,impact=20,contact=null){
     if(!(kind in effectStats))return;
     effectStats[kind]++;
     const hasContext=ensureContext();
@@ -216,9 +222,15 @@
     const audibleWeight=kind==='ball'?.15+.85*weight:weight;
     const at=hasContext?context.currentTime:performance.now()/1000,gap=kind==='ball'?.009:kind==='rail'?.025:kind==='pocket'?0:.02;
     // A soft contact must not suppress a much harder rack collision.
-    if(at-lastEffect[kind]<gap&&weight<=lastWeight[kind]*1.4)return;
+    const key=contact?.key;
+    if(key){
+      const previous=contactSounds.get(kind+':'+key);
+      if(previous&&at-previous.at<gap&&weight<=previous.weight*1.4)return;
+      contactSounds.set(kind+':'+key,{at,weight});
+      if(contactSounds.size>128)for(const [k,v] of contactSounds)if(at-v.at>1)contactSounds.delete(k);
+    }else if(at-lastEffect[kind]<gap&&weight<=lastWeight[kind]*1.4)return;
     lastEffect[kind]=at;lastWeight[kind]=weight;
-    const native=bufferedEffect(kind,audibleWeight)?Promise.resolve():nativeEffect(kind,audibleWeight);
+    const native=bufferedEffect(kind,audibleWeight,0,false,contact?.x??null)?Promise.resolve():nativeEffect(kind,audibleWeight);
     if(kind==='cue'){
       native.catch(()=>fallbackImpact(kind,at,weight));duckMusic();
     }else if(kind==='ball'){

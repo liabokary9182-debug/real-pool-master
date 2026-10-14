@@ -8,7 +8,9 @@
   // collision solver still runs at 180 Hz, so rendering gains do not alter play.
   const MOBILE_RENDER=window.matchMedia?.('(pointer:coarse)').matches??false;
   const deviceScale=window.devicePixelRatio||1;
-  let PIXEL_RATIO=Math.min(MOBILE_RENDER?2:2.25,Math.max(MOBILE_RENDER?1.5:1.75,deviceScale*.65));
+  // Use the measured display size at startup; hidden/early layouts use a
+  // modest buffer until ResizeObserver supplies real dimensions.
+  let PIXEL_RATIO=Math.min(2.5,Math.max(1,deviceScale*.65));
   canvas.width=Math.round(VIEW_W*PIXEL_RATIO);canvas.height=Math.round(VIEW_H*PIXEL_RATIO);
   ctx.setTransform(PIXEL_RATIO,0,0,PIXEL_RATIO,0,0);
   const W = 100, H = 50, HEAD_LINE = W/4, R = 1.125*1.05*1.05, DISPLAY_R = R;
@@ -331,7 +333,7 @@
       // The cushion removes most forward roll. The brief skid afterward
       // dissipates more speed without bending a no-English bank's path.
       b.rollVx=b.vx*.25;b.rollVy=b.vy*.25;
-      if(!physicsContext&&state.phase==='moving')window.PoolAudio?.play('rail',approach);
+      if(!physicsContext&&state.phase==='moving')window.PoolAudio?.play('rail',approach,{key:`${b.n}:${nx.toFixed(2)}:${ny.toFixed(2)}`,x:b.x});
       b.hitRail=true;
       const events=physicsContext||state.shot;
       if(events){
@@ -383,7 +385,7 @@
     if(events && events.firstHit===null && (a.n===0||b.n===0)){
       events.firstHit=a.n===0?b.n:a.n;
     }
-    if(!physicsContext&&state.phase==='moving')window.PoolAudio?.play('ball',-rel);
+    if(!physicsContext&&state.phase==='moving')window.PoolAudio?.play('ball',-rel,{key:`${Math.min(a.n,b.n)}:${Math.max(a.n,b.n)}`,x:(a.x+b.x)/2});
     return true;
   }
   function clothStep(b,dt) {
@@ -429,7 +431,7 @@
       advancePocketFall(a,dt);
       advanceBallOrientation(a.visual,dt);
       if(!a.sounded&&.5*GRAVITY*a.age*a.age>=POCKET_BOTTOM){
-        a.sounded=true;window.PoolAudio?.play('pocket',Math.hypot(a.impact,GRAVITY*a.age));
+        a.sounded=true;window.PoolAudio?.play('pocket',Math.hypot(a.impact,GRAVITY*a.age),{key:`${a.visual.n}:${a.pocket}`,x:a.effectX});
       }
       return a.age<a.duration;
     });
@@ -1122,11 +1124,21 @@
     render();return true;
   }
   function physicsStep(balls,dt,animate=false){
-    const topSpeed=Math.max(0,...balls.filter(b=>!b.pocketed).map(b=>Math.hypot(b.vx,b.vy)));
-    const subdivisions=clamp(Math.ceil(topSpeed*dt/(R*.45)),1,8),subdt=dt/subdivisions;
+    let topSpeed=0,secondSpeed=0,movingCount=0;
+    for(const b of balls)if(!b.pocketed){const speed=Math.hypot(b.vx,b.vy);if(speed>.01)movingCount++;
+      if(speed>topSpeed){secondSpeed=topSpeed;topSpeed=speed;}else if(speed>secondSpeed)secondSpeed=speed;
+    }
+    // Maximum relative travel matters for two fast opposing balls; a single
+    // rolling ball needs no extra subdivision just because its speed is high.
+    const subdivisions=clamp(Math.ceil((topSpeed+secondSpeed)*dt/(R*.45)),1,16),subdt=dt/subdivisions;
+    const contactPasses=movingCount>3?2:1;
+    let rackAwake=movingCount>1;
     for(let sub=0;sub<subdivisions;sub++){
       const moving=balls.filter(b=>!b.pocketed);
       for(const b of moving){
+        // Stationary rack balls do not need cloth/rail/pocket work. Contacts
+        // below can wake them during this same substep.
+        if(b.vx===0&&b.vy===0&&b.rollVx===0&&b.rollVy===0&&b.spin===0)continue;
         clothStep(b,subdt);
         if(animate){advanceBallOrientation(b,subdt);const speed=Math.hypot(b.rollVx,b.rollVy);if(speed>.01){b.roll+=speed*subdt/R;b.rollHeading=Math.atan2(b.rollVy,b.rollVx);}}
         const from={x:b.x,y:b.y};b.x+=b.vx*subdt;b.y+=b.vy*subdt;
@@ -1135,7 +1147,24 @@
         const fall=pocketCheck(b,b.x===endX&&b.y===endY?from:null,subdt);
         if(fall){const remaining=fall.entryRemainder+(subdivisions-sub-1)*subdt;advancePocketFall(fall,remaining);advanceBallOrientation(fall.visual,remaining);}
       }
-      for(let i=0;i<moving.length;i++)for(let j=i+1;j<moving.length;j++)if(!moving[i].pocketed&&!moving[j].pocketed)ballsCollide(moving[i],moving[j]);
+      // Two contact passes settle dense racks. The second only resolves
+      // remaining overlap; a separating pair receives no extra impulse.
+      const singleLeader=!rackAwake&&movingCount===1&&moving[0]&&(moving[0].vx!==0||moving[0].vy!==0);
+      let contacted=false;
+      for(let pass=0;pass<contactPasses;pass++)for(let i=0;i<moving.length;i++){
+        // Until the lone cue has made contact there cannot be a collision
+        // between the untouched stationary rack balls. Once it hits, resume
+        // the ordinary ordered solver in the very same substep.
+        if(singleLeader&&!contacted&&i>0)continue;
+        for(let j=i+1;j<moving.length;j++){
+        const a=moving[i],b=moving[j];
+        if(a.pocketed||b.pocketed)continue;
+        if(a.vx===0&&a.vy===0&&b.vx===0&&b.vy===0)continue;
+        const dx=a.x-b.x,dy=a.y-b.y;
+        if(dx>=2*R||dx<=-2*R||dy>=2*R||dy<=-2*R)continue;
+        if(ballsCollide(a,b)){contacted=true;rackAwake=true;}
+        }
+      }
     }
   }
   function ballsSettled(balls){return balls.every(b=>b.pocketed||Math.hypot(b.vx,b.vy)<.12&&Math.hypot(b.rollVx,b.rollVy)<.12&&Math.abs(b.spin)<.12);}
@@ -1274,7 +1303,11 @@
   function drawTable(){
     if(!tableBackdrop){
       const layer=document.createElement('canvas');layer.width=canvas.width;layer.height=canvas.height;
-      const screenContext=ctx;ctx=layer.getContext('2d');ctx.setTransform(PIXEL_RATIO,0,0,PIXEL_RATIO,0,0);
+      const screenContext=ctx;ctx=layer.getContext('2d');
+      // Rounded backing dimensions can leave a fractional last row. Make
+      // the cached layer opaque before applying logical coordinates.
+      ctx.fillStyle='#090e17';ctx.fillRect(0,0,layer.width,layer.height);
+      ctx.setTransform(PIXEL_RATIO,0,0,PIXEL_RATIO,0,0);
       try{paintTable();tableBackdrop=layer;}finally{ctx=screenContext;}
     }
     ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(tableBackdrop,0,0);ctx.restore();
@@ -1410,7 +1443,7 @@
   }
   // Sphere lighting is fixed in camera space; only pigment and markings roll.
   // Precompute reflections once instead of evaluating them each moving frame.
-  const BALL_SPRITE_SIZE=MOBILE_RENDER?96:128,BALL_SPRITE_MID=BALL_SPRITE_SIZE/2,BALL_SPRITE_RADIUS=BALL_SPRITE_SIZE*.476;
+  const BALL_SPRITE_SIZE=MOBILE_RENDER?112:144,BALL_SPRITE_MID=BALL_SPRITE_SIZE/2,BALL_SPRITE_RADIUS=BALL_SPRITE_SIZE*.476;
   const ballPixelMap=(()=>{
     const cells=[];
     for(let py=0;py<BALL_SPRITE_SIZE;py++)for(let px=0;px<BALL_SPRITE_SIZE;px++){
@@ -1475,11 +1508,12 @@
         const tx=Math.round(48+bx*65),ty=Math.round(48+by*65);
         if(tx>=0&&tx<96&&ty>=0&&ty<96){badgeAt=(ty*96+tx)*4;badgeAlpha=badge[badgeAt+3]/255;}
       }
-      for(let c=0;c<3;c++){
-        const component=cueMark?(c===0?184:c===1?56:50):base[c];
-        const pigment=badgeAlpha?component*(1-badgeAlpha)+badge[badgeAt+c]*badgeAlpha:component;
-        data[at+c]=Math.min(255,pigment*shade+specular+bounce*(c===0?.55:c===1?.83:1));
-      }
+      // Three scalar stores avoid the per-channel branch in every texel.
+      const pigmentGain=1-badgeAlpha;
+      const red=cueMark?184:base[0],green=cueMark?56:base[1],blue=cueMark?50:base[2];
+      data[at]=Math.min(255,(badgeAlpha?red*pigmentGain+badge[badgeAt]*badgeAlpha:red)*shade+specular+bounce*.55);
+      data[at+1]=Math.min(255,(badgeAlpha?green*pigmentGain+badge[badgeAt+1]*badgeAlpha:green)*shade+specular+bounce*.83);
+      data[at+2]=Math.min(255,(badgeAlpha?blue*pigmentGain+badge[badgeAt+2]*badgeAlpha:blue)*shade+specular+bounce);
       data[at+3]=alpha;
     }
     sc.putImageData(pixels,0,0);
@@ -1664,7 +1698,13 @@
     ctx.save();const mouth=drawPocketFallMask(pocket);
     // At entry the entire upper hemisphere is still above the lip. Clipping
     // the whole sprite to the aperture instantly chopped it in half.
-    if(pose.drop<R){const cap=rr*Math.sqrt(Math.max(0,1-(pose.drop/R)**2));ctx.moveTo(center.x+cap,center.y);ctx.arc(center.x,center.y,cap,0,Math.PI*2);}
+    if(pose.drop<R){
+      // Keep the exposed cap anchored at its lip crossing. Following the
+      // downward camera parallax used to sweep this cap back onto the cloth.
+      const entry=worldToScreen(a.entryX,a.entryY);
+      const cap=DISPLAY_R*SCALE*Math.sqrt(Math.max(0,1-(pose.drop/R)**2));
+      ctx.moveTo(entry.x+cap,entry.y);ctx.arc(entry.x,entry.y,cap,0,Math.PI*2);
+    }
     ctx.clip();
     ctx.globalAlpha=.28*(1-pose.sink);ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(center.x,center.y,rr*1.08,rr*.5,0,0,Math.PI*2);ctx.fill();
     drawBall(a.visual,pose.scale,pose.x,pose.y+pose.depth,pose.alpha,false);
@@ -1679,7 +1719,7 @@
   let textureCursor=0,textureBudget=MOBILE_RENDER?2:6;
   function refreshBallTextures(){
     const falling=state.pocketAnimations.map(a=>a.visual),models=live();
-    const deadline=performance.now()+(MOBILE_RENDER?3:5);
+    const deadline=performance.now()+(MOBILE_RENDER?1.8:3);
     // The short, prominent fall must never wait behind a full moving rack.
     for(const b of falling)if(!b.sprite||b.spriteDirty)renderBallSprite(b);
     let budget=state.phase==='moving'?textureBudget:models.length;
@@ -1693,10 +1733,12 @@
     const rect=canvas.getBoundingClientRect();
     const cssWidth=sideways()?rect.height:rect.width,cssHeight=sideways()?rect.width:rect.height;
     if(!cssWidth||!cssHeight)return;
-    const ratio=clamp(Math.max(cssWidth/VIEW_W,cssHeight/VIEW_H)*deviceScale,MOBILE_RENDER?1.5:1.75,MOBILE_RENDER?2:2.25);
+    // A 700 CSS-pixel phone table needs ~2100 actual pixels at DPR 3,
+    // not a mandatory 2800-pixel buffer. Large displays may use up to 2.5x.
+    const ratio=clamp(Math.max(cssWidth/VIEW_W,cssHeight/VIEW_H)*deviceScale,1,2.5);
     if(Math.abs(ratio-PIXEL_RATIO)<.04)return;
     PIXEL_RATIO=ratio;canvas.width=Math.round(VIEW_W*ratio);canvas.height=Math.round(VIEW_H*ratio);
-    ctx.setTransform(ratio,0,0,ratio,0,0);tableSurface=null;tableBackdrop=null;render();
+    ctx.setTransform(ratio,0,0,ratio,0,0);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";tableSurface=null;tableBackdrop=null;previousPaint=null;render();
   }
   function blitTable(region=null){
     // Copy the cached backing buffer at integer device pixels. Mapping it
@@ -1705,19 +1747,68 @@
     if(region){const x=Math.max(0,Math.floor(region.x*PIXEL_RATIO)),y=Math.max(0,Math.floor(region.y*PIXEL_RATIO)),w=Math.min(canvas.width-x,Math.ceil(region.w*PIXEL_RATIO)+2),h=Math.min(canvas.height-y,Math.ceil(region.h*PIXEL_RATIO)+2);if(w>0&&h>0)ctx.drawImage(tableSurface,x,y,w,h,x,y,w,h);}
     else ctx.drawImage(tableSurface,0,0);ctx.restore();
   }
-  function render() {
+  let previousPaint=null,paintPhase=null,renderFraction=1;
+  const previousPhysics=new Map();
+  function rememberPhysics(){
+    previousPhysics.clear();
+    for(const b of state.balls)if(!b.pocketed)previousPhysics.set(b.n,{x:b.x,y:b.y});
+    for(const a of state.pocketAnimations)a.previousFall={x:a.fallX,y:a.fallY,age:a.age};
+  }
+  function renderPosition(b){
+    const previous=previousPhysics.get(b.n);
+    return previous&&renderFraction<1?{x:previous.x+(b.x-previous.x)*renderFraction,y:previous.y+(b.y-previous.y)*renderFraction}:b;
+  }
+  function renderFall(a){
+    if(renderFraction===1)return a;
+    const previous=a.previousFall;
+    // A newly pocketed ball starts at the exact crossing; do not extrapolate
+    // through a jaw or draw its old on-cloth model over the new falling one.
+    return {...a,fallX:previous?previous.x+(a.fallX-previous.x)*renderFraction:a.fallX,
+      fallY:previous?previous.y+(a.fallY-previous.y)*renderFraction:a.fallY,
+      age:previous?previous.age+(a.age-previous.age)*renderFraction:a.age*renderFraction};
+  }
+  function paintRegions(){
+    const regions=[];
+    for(const b of live()){const p=renderPosition(b),q=worldToScreen(p.x,p.y);regions.push({x:q.x-29,y:q.y-29,w:58,h:64});}
+    for(const a of state.pocketAnimations){const p=POCKET_GEOMETRY[a.pocket],q=worldToScreen(p.mx,p.my),radius=(p.radius+R+3)*SCALE;regions.push({x:q.x-radius,y:q.y-radius,w:radius*2,h:radius*2});}
+    return regions;
+  }
+  function restoreRegions(regions){
+    const merged=[];
+    for(const rect of regions){
+      let r={...rect};
+      for(let i=merged.length-1;i>=0;i--){const q=merged[i];
+        if(r.x<=q.x+q.w&&r.x+r.w>=q.x&&r.y<=q.y+q.h&&r.y+r.h>=q.y){
+          const x=Math.min(r.x,q.x),y=Math.min(r.y,q.y);r={x,y,w:Math.max(r.x+r.w,q.x+q.w)-x,h:Math.max(r.y+r.h,q.y+q.h)-y};merged.splice(i,1);i=merged.length;
+        }
+      }merged.push(r);
+    }
+    const area=merged.reduce((sum,r)=>sum+r.w*r.h,0);
+    if(area>VIEW_W*VIEW_H*.5){blitTable();return;}
+    // One cached-layer draw through integer rectangles. Multiple cropped
+    // drawImage calls can force extra resampling/copies in Canvas backends.
+    ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.beginPath();
+    for(const r of merged){const x=Math.floor(r.x*PIXEL_RATIO),y=Math.floor(r.y*PIXEL_RATIO);ctx.rect(x,y,Math.ceil(r.w*PIXEL_RATIO)+2,Math.ceil(r.h*PIXEL_RATIO)+2);}
+    ctx.clip();ctx.drawImage(tableSurface,0,0);ctx.restore();
+  }
+  function render(fraction=1) {
+    renderFraction=fraction;
     refreshBallTextures();
+    const regions=paintRegions();
     if(!tableSurface){
       drawTable();
       // The static layer already has the correct device-pixel resolution.
       // Reuse it for restoration instead of keeping a second full-size copy.
       tableSurface=tableBackdrop;
+    }else if(state.phase==='moving'&&paintPhase==='moving'&&!state.stroke&&previousPaint){
+      restoreRegions([...previousPaint,...regions]);
     }else blitTable();
-    drawAim();for(const b of live())drawBall(b);drawStroke();
+    drawAim();for(const b of live()){const p=renderPosition(b);drawBall(b,1,p.x,p.y);}drawStroke();
     for(const a of state.pocketAnimations){
-      drawPocketEffect(a);
+      drawPocketEffect(renderFall(a));
     }
     drawPocketForeground();
+    previousPaint=state.stroke?null:regions;paintPhase=state.phase;
     if(state.ballInHand){const c=cue(),p=worldToScreen(c.x,c.y);ctx.strokeStyle='#fff4a3';ctx.lineWidth=2;ctx.setLineDash([5,5]);ctx.beginPath();ctx.arc(p.x,p.y,24,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);}
     if(state.aiThinking&&state.phase==='aim'&&!state.aiPlan){
       ctx.save();ctx.fillStyle='rgba(5,20,30,.85)';ctx.strokeStyle='rgba(130,234,255,.62)';ctx.lineWidth=1.5;
@@ -1733,7 +1824,7 @@
     aimFramePending=true;
     requestAnimationFrame(()=>{aimFramePending=false;if(state.phase==='aim'){updateUI();render();}});
   }
-  const aimGain=.008,rulerGain=.002;
+  const aimGain=.006,rulerGain=.002;
   const sideways=()=>document.getElementById('mobile-pool-preview')?.classList.contains('is-landscape')||false;
   const aimScreenPoint=e=>sideways()?{x:e.clientY,y:-e.clientX}:{x:e.clientX,y:e.clientY};
   function pointerWorld(e){
@@ -1759,8 +1850,11 @@
     else if(state.drag.kind==='aim'){
       const drag=state.drag,point=aimScreenPoint(e),dx=point.x-drag.startScreen.x,dy=point.y-drag.startScreen.y;
       if(Math.hypot(dx,dy)>.2)drag.moved=true;
-      if(!drag.axis&&Math.hypot(dx,dy)>.5)drag.axis=Math.abs(dx)>=Math.abs(dy)?'x':'y';
-      if(drag.axis){const distance=drag.axis==='x'?dx:dy;
+      if(!drag.axis&&Math.hypot(dx,dy)>.5){
+        const length=Math.hypot(dx,dy),sign=Math.sign(Math.abs(dx)>=Math.abs(dy)?dx:dy);
+        drag.axis={x:dx/length*sign,y:dy/length*sign};
+      }
+      if(drag.axis){const distance=dx*drag.axis.x+dy*drag.axis.y;
         state.aim=drag.startAim+distance*aimGain*Math.PI/180;requestAimFrame();}
     }
   }
@@ -1776,7 +1870,7 @@
     }
     state.drag=null;
   };
-  canvas.addEventListener('pointerup',pointerUp);canvas.addEventListener('pointercancel',()=>{state.drag=null;});
+  canvas.addEventListener('pointerup',pointerUp);canvas.addEventListener('pointercancel',()=>{if(state.drag?.kind==='aim')state.aim=state.drag.startAim;state.drag=null;requestAimFrame();});
   const spinPad=$('spinPad');
   function moveSpinDot(){const dot=$('spinDot');dot.style.left=`${50+state.spinX*36}%`;dot.style.top=`${50-state.spinY*36}%`;if($('strokeReadout'))$('strokeReadout').textContent=strokeName(state);}
   const spinOverlay=$('spinOverlay'),editorBall=$('spinEditorBall');let spinDraft=null,editorPointer=null;
@@ -1977,16 +2071,17 @@
   });
   let last=performance.now(),acc=0,manualTime=false;
   function frame(now){
-    const elapsed=Math.min(.05,(now-last)/1000);last=now;
+    const elapsed=Math.max(0,Math.min(.05,(now-last)/1000));last=now;
     const active=state.phase==='moving'||state.pocketAnimations.length>0||!!state.stroke;
-    if(!manualTime&&active){acc+=elapsed;while(acc>=STEP){update(STEP);acc-=STEP;}}else acc=0;
+    if(!manualTime&&active){acc+=elapsed;while(acc>=STEP){rememberPhysics();update(STEP);acc-=STEP;}}else acc=0;
     // Match the display's native refresh; a fixed 120-Hz gate skips alternate
     // frames on 144-Hz displays. Idle pages need neither physics nor paint.
-    if(active){const started=performance.now();render();const paintTime=performance.now()-started;
+    if(active){const started=performance.now();render(manualTime?1:acc/STEP);const paintTime=performance.now()-started;
       if(paintTime>10)textureBudget=Math.max(1,textureBudget-1);
       else if(paintTime<4)textureBudget=Math.min(MOBILE_RENDER?4:8,textureBudget+1);
     }requestAnimationFrame(frame);
   }
+  document.addEventListener('visibilitychange',()=>{last=performance.now();acc=0;previousPhysics.clear();previousPaint=null;});
   window.addEventListener?.('resize',()=>requestAnimationFrame(resizeRenderBuffer));
   if(window.ResizeObserver)new window.ResizeObserver(()=>requestAnimationFrame(resizeRenderBuffer)).observe(canvas);
   requestAnimationFrame(resizeRenderBuffer);
@@ -1994,7 +2089,7 @@
   window.render_game_to_text=()=>JSON.stringify({coordinates:`world inches, origin at top-left cushion nose; +x right, +y down; table 100x50; ball diameter ${(2*R).toFixed(4)}; corner mouth ${CORNER_MOUTH}; side mouth ${SIDE_MOUTH}`,mode:state.mode,opponent:state.opponent,aiDifficulty:state.aiDifficulty,aiThinking:state.aiThinking,aiPlan:state.aiPlan?{target:state.aiPlan.target,pocket:state.aiPlan.pocket,type:state.aiPlan.type,spinX:state.aiPlan.spinX||0,spinY:state.aiPlan.spinY||0,snookerPlanned:!!state.aiPlan.snookerPlanned,power:+state.aiPlan.power.toFixed(1),description:state.aiPlan.description}:null,phase:state.phase,turn:state.turn+1,groups:state.groups,scores:state.scores,matchScores:state.matchScores,returnPage:state.returnPage,breaking:state.breaking,rackSeed:state.rackSeed,ballInHand:state.ballInHand,repositionAllowed:state.repositionAllowed,aimDegrees:+(state.aim*180/Math.PI).toFixed(2),power:state.power,spin:[+state.spinX.toFixed(2),+state.spinY.toFixed(2)],balls:state.balls.map(b=>({n:b.n,x:+b.x.toFixed(2),y:+b.y.toFixed(2),vx:+b.vx.toFixed(2),vy:+b.vy.toFixed(2),rollVx:+b.rollVx.toFixed(2),rollVy:+b.rollVy.toFixed(2),sideSpin:+b.spin.toFixed(2),roll:+b.roll.toFixed(2),pocketed:b.pocketed})),status:state.status,winner:state.winner});
   if((!location.hostname||['localhost','127.0.0.1','[::1]'].includes(location.hostname))&&new URLSearchParams(location.search).has('test')){
     $('startOverlay').classList.add('hidden');$('menuOverlay').classList.remove('hidden');
-    window.__poolTest={getBallStates(){return state.balls.map(b=>({...b,q:[...b.q]}));},sampleFall(index,x,y,vx,vy,age){const a=makePocketFall(Object.assign(ball(1,x,y),{vx,vy,rollVx:vx,rollVy:vy}),index);advancePocketFall(a,age);advanceBallOrientation(a.visual,age);return {...pocketAnimationPose(a),vx:a.fallVx,vy:a.fallVy,q:[...a.visual.q]};},launchBall(power,aim,side=0){const b=ball(0,50,25);applyCueImpulse(b,power,aim,side,0,false);return b;},railTest(b,nx,ny){const copy={...b};railHit(copy,nx,ny);return copy;},assessAttack:attackRisk,simulateShot:simulateAIShot,masterStrokeCost,getRenderInfo(){return {ratio:PIXEL_RATIO,textureSize:BALL_SPRITE_SIZE,width:canvas.width,height:canvas.height};},getPocketGeometry(){return POCKET_GEOMETRY.map(p=>({...p,well:{...p.well}}));},getShotSummary(){return {firstHit:state.shot?.firstHit??null,pocketed:state.shot?.pocketed||[]};},getFallAnimations(){return state.pocketAnimations.map(a=>({n:a.visual.n,pocket:a.pocket,age:a.age,duration:a.duration,entryX:a.entryX,entryY:a.entryY,vx:a.vx,vy:a.vy,...pocketAnimationPose(a),q:[...a.visual.q]}));},pocketRollingTest(index=1,angleDegrees=0,speed=6,offMouth=false){
+    window.__poolTest={getBallStates(){return state.balls.map(b=>({...b,q:[...b.q]}));},sampleFall(index,x,y,vx,vy,age){const a=makePocketFall(Object.assign(ball(1,x,y),{vx,vy,rollVx:vx,rollVy:vy}),index);advancePocketFall(a,age);advanceBallOrientation(a.visual,age);return {...pocketAnimationPose(a),vx:a.fallVx,vy:a.fallVy,q:[...a.visual.q]};},launchBall(power,aim,side=0){const b=ball(0,50,25);applyCueImpulse(b,power,aim,side,0,false);return b;},railTest(b,nx,ny){const copy={...b};railHit(copy,nx,ny);return copy;},assessAttack:attackRisk,simulateShot:simulateAIShot,masterStrokeCost,getRenderInfo(){return {ratio:PIXEL_RATIO,textureSize:BALL_SPRITE_SIZE,width:canvas.width,height:canvas.height,physicsHz:1/STEP,displayRefresh:"native",partialRestore:true};},getPocketGeometry(){return POCKET_GEOMETRY.map(p=>({...p,well:{...p.well}}));},getShotSummary(){return {firstHit:state.shot?.firstHit??null,pocketed:state.shot?.pocketed||[]};},getFallAnimations(){return state.pocketAnimations.map(a=>({n:a.visual.n,pocket:a.pocket,age:a.age,duration:a.duration,entryX:a.entryX,entryY:a.entryY,vx:a.vx,vy:a.vy,...pocketAnimationPose(a),q:[...a.visual.q]}));},pocketRollingTest(index=1,angleDegrees=0,speed=6,offMouth=false){
       const p=POCKET_GEOMETRY[index],angle=angleDegrees*Math.PI/180;
       const dx=p.nx*Math.cos(angle)+p.tx*Math.sin(angle),dy=p.ny*Math.cos(angle)+p.ty*Math.sin(angle);
       const distance=Math.min(8,speed*speed/(2*ROLL_DECEL)*.7),offset=offMouth?p.radius+1.4:0;

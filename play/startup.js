@@ -8,6 +8,9 @@
   const progress=()=>{
     const value=essentialReady()?100:5+(tasks.has('styles')?20:0)+(tasks.has('game')?65:0)+(tasks.has('photo')?5:0)+(tasks.has('audio')?5:0);
     bar.style.width=`${value}%`;rocket.style.setProperty('--flight',String(value/100));percent.textContent=`${value}%`;track.setAttribute('aria-valuenow',String(value));
+    for(const [id,done,current] of [['bootStageEngine',tasks.has('game'),!tasks.has('game')],['bootStageStyles',tasks.has('styles'),tasks.has('game')&&!tasks.has('styles')],['bootStageReady',essentialReady(),essentialReady()]]){
+      const stage=$(id);if(stage?.classList?.toggle){stage.classList.toggle('complete',done);stage.classList.toggle('current',current);}
+    }
     if(essentialReady()){
       engineFailed=false;stylesFailed=false;boot.classList.add('arrived');status.textContent=preview?'加载界面预览 · 已准备就绪':'赛场已就绪，准备入场';skip.textContent='进入赛场';help.textContent='欢迎来到浮光竞技馆';
       if(!preview)setTimeout(finish,700);
@@ -19,7 +22,7 @@
   const retryEngine=()=>{
     if(!engineFailed||tasks.has('game'))return;
     engineFailed=false;status.textContent='正在重新连接比赛引擎';skip.textContent='继续等待';
-    const old=$('gameEngine'),script=document.createElement('script');script.id='gameEngine';script.async=true;script.src='./game.js?v=20261010-cue-controls-v3&retry='+String(++engineRetry);script.onerror=failEngine;old?.remove();document.body.appendChild(script);
+    const old=$('gameEngine'),script=document.createElement('script');script.id='gameEngine';script.async=true;script.src='./game.js?v=20261014-smooth-preview&retry='+String(++engineRetry);script.onerror=failEngine;old?.remove();document.body.appendChild(script);
   };
   window.PoolStartup={ready,engineFailed:failEngine,styleFailed};
   const stylesheet=$('siteStyle');if(stylesheet?.sheet)ready('styles');else if(stylesheet?.dataset?.failed==='true')styleFailed();
@@ -27,7 +30,7 @@
   skip.addEventListener('click',()=>{
     if(essentialReady()){finish();return;}
     if(engineFailed)retryEngine();
-    if(stylesFailed){stylesFailed=false;stylesheet.href='./site.css?v=20261010-cue-controls-v3&retry='+String(Date.now());status.textContent='正在重新加载赛场画面';skip.textContent='继续等待';}
+    if(stylesFailed){stylesFailed=false;stylesheet.href='./site.css?v=20261014-smooth-preview&retry='+String(Date.now());status.textContent='正在重新加载赛场画面';skip.textContent='继续等待';}
     if(!engineFailed&&!stylesFailed)help.textContent='仍在等待网络响应，请保持此页打开，无需反复刷新';
   });
   setTimeout(()=>{if(dismissed||essentialReady())return;if(!engineFailed&&!stylesFailed){status.textContent='网络连接较慢，仍在等待';help.textContent='请保持此页打开；资源完成后会自动进入';}},12000);

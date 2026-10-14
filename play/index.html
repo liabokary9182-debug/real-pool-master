@@ -10,8 +10,8 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23121a20'/%3E%3Ccircle cx='16' cy='16' r='7' fill='white'/%3E%3Ctext x='16' y='20' text-anchor='middle' font-size='12'%3E8%3C/text%3E%3C/svg%3E">
   <link rel="preload" href="./assets/fuguang-arena.jpg" as="image">
   <title>光域台球 · 浮光竞技馆</title>
-  <link rel="preload" href="./site.css?v=20261010-cue-controls-v3" as="style">
-<link id="siteStyle" rel="stylesheet" href="./site.css?v=20261010-cue-controls-v3" media="print" onload="this.media='all';window.PoolStartup?.ready('styles')" onerror="this.dataset.failed='true';window.PoolStartup?.styleFailed()">
+  <link rel="preload" href="./site.css?v=20261014-smooth-preview" as="style">
+<link id="siteStyle" rel="stylesheet" href="./site.css?v=20261014-smooth-preview" media="print" onload="this.media='all';window.PoolStartup?.ready('styles')" onerror="this.dataset.failed='true';window.PoolStartup?.styleFailed()">
   <!-- CRITICAL_STYLE_START -->
   <style>/* Always show a landscape game; no orientation gate or blocked controls. */
 #mobile-pool-preview.phone-landscape{position:relative!important;width:100%!important;height:var(--phone-height)!important;min-height:0!important;overflow:hidden!important;padding:0!important}
@@ -110,6 +110,65 @@ html,body{margin:0;background:#040b17;color:#e7f7ff;font-family:system-ui,"PingF
 #mobile-pool-preview.phone-landscape .flight-bottom b{font-size:23px}
 #mobile-pool-preview.phone-landscape .flight-help{margin:8px 0 0;font-size:9px}
 @media(prefers-reduced-motion:reduce){.flight-rocket,.flight-trajectory span,.flight-rocket svg,.rocket-plume{animation:none!important;transition:none!important}}
+
+/* Match surfaces stay quiet: no ornamental animation behind a moving rack. */
+#mobile-pool-preview[data-screen="match"] .welcome-fx,
+#mobile-pool-preview[data-screen="match"] .welcome-enter:before{animation-play-state:paused!important}
+#mobile-pool-preview .table-wrap{contain:layout paint}
+#mobile-pool-preview .table-wrap canvas{touch-action:none;image-rendering:auto;filter:none}
+#mobile-pool-preview .angle-ruler,#mobile-pool-preview .cue-meter{touch-action:none}
+
+/* A real venue, a few pool details, and a small departure line. */
+#mobile-pool-preview .boot{align-items:flex-start;justify-content:flex-end;padding:6% 7%;background:#071018;isolation:isolate}
+#mobile-pool-preview .boot:before{display:none}
+.boot-arena{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:60% 50%;z-index:-4}
+.boot-shade{position:absolute;inset:0;background:linear-gradient(90deg,#040b13f5 0%,#040b13c2 35%,#040b1310 75%),linear-gradient(0deg,#040b13ef,transparent 55%);z-index:-3}
+.boot-light{position:absolute;inset:0;background:linear-gradient(115deg,transparent 44%,#dfc28c0e 55%,transparent 68%);z-index:-2;animation:pool-lamp 5s ease-in-out infinite alternate;pointer-events:none}
+.boot-session{position:absolute;top:23%;left:7%;width:40%}.boot-kicker{color:#c6af83;font-size:12px;letter-spacing:4px}
+.boot-session h2{font-size:clamp(30px,4.2vw,60px);font-weight:600;letter-spacing:1px;line-height:1.3;margin:18px 0;color:#f4f1e8}
+.boot-session p{color:#9ca8ac;font-size:14px;line-height:1.6}
+#mobile-pool-preview .boot .flight-top{top:7%;left:7%;right:7%;color:#afb5b5;letter-spacing:2px}
+#mobile-pool-preview .boot .flight-top span:last-child{font-size:0}
+#mobile-pool-preview .boot .flight-top span:last-child:after{content:"浮光竞技馆";font-size:11px;letter-spacing:3px}
+#mobile-pool-preview .boot .flight-copy{width:42%;text-align:left;margin:0 0 10px}
+#mobile-pool-preview .boot .flight-copy p,#mobile-pool-preview .boot .flight-copy h1{display:none}
+#mobile-pool-preview .boot .flight-copy>span{color:#cbd2d1;font-size:12px}
+#mobile-pool-preview .boot .flight-route{width:42%;height:34px;margin:0 0 15px}
+#mobile-pool-preview .boot .flight-grid,#mobile-pool-preview .boot .flight-stop,#mobile-pool-preview .boot .flight-destination{display:none}
+#mobile-pool-preview .boot .flight-trajectory{top:19px;left:0;right:0;border-top:1px solid #b4b4a538}
+#mobile-pool-preview .boot .flight-trajectory span{background:linear-gradient(90deg,#ad8d50,#e1c995);box-shadow:none;transition:width .4s ease}
+#mobile-pool-preview .boot .flight-rocket{top:1px;width:38px;height:27px;left:calc((100% - 38px)*var(--flight,.05));filter:none;transition:left .4s ease}
+#mobile-pool-preview .boot .flight-rocket svg{animation:none}
+#mobile-pool-preview .boot .rocket-plume{width:18px;height:3px;top:13px;background:linear-gradient(90deg,transparent,#e1c995);filter:none;animation:none}
+#mobile-pool-preview .boot .flight-bottom{width:42%;border:0;padding:0;color:#899699;letter-spacing:0}
+#mobile-pool-preview .boot .flight-bottom b{color:#e0c795;font-size:24px}
+#mobile-pool-preview .boot button{border-radius:5px;letter-spacing:0;color:#e3ddcf;border-color:#bba47855;padding:7px 14px;background:#0b141b55}
+#mobile-pool-preview .boot .flight-help{width:42%;text-align:left;letter-spacing:0;color:#7c8b93;font-size:10px;margin-top:16px}
+.boot-stages{position:absolute;bottom:7%;left:57%;right:7%;display:flex;gap:20px;font-size:11px;color:#7b8b90;white-space:nowrap}
+.boot-stages .complete{color:#c7ae7b}.boot-stages .current{color:#f0e6d1}
+.boot-stages span{border-top:1px solid #9caaad33;padding-top:13px;flex:1}.boot-stages .complete{border-color:#c7ae7b77}
+.boot-ball-detail{position:absolute;right:12%;bottom:24%;width:220px;height:80px;opacity:.88}
+.boot-ball{position:absolute;bottom:0;display:grid;place-items:center;width:54px;height:54px;border-radius:50%;font:bold 21px Georgia,serif;color:white;box-shadow:inset -12px -14px 20px #000b,0 12px 13px #0008;animation:pool-settle 1.4s ease-out both}
+.boot-ball:after{content:"";position:absolute;left:11px;top:8px;width:19px;height:4px;border-radius:2px;background:#ffffffa6;transform:rotate(-24deg)}
+.boot-ball.b1{left:10px;background:radial-gradient(circle at 30% 25%,#ffdf75,#ba7b13);animation-delay:.05s}
+.boot-ball.b9{left:66px;bottom:18px;background:linear-gradient(#f2eee2 0 26%,#d2a12e 27% 73%,#e7e1d6 74%);color:#222;animation-delay:.2s}
+.boot-ball.b8{left:124px;background:radial-gradient(circle at 30% 25%,#4b5058,#070b10);animation-delay:.35s}
+.boot-cue{position:absolute;left:-8px;bottom:-18px;width:240px;height:5px;background:linear-gradient(90deg,#487f89 0 2%,#e8e0c9 2% 5%,#d7b782 5% 68%,#22272e 68%);transform:rotate(-8deg);border-radius:2px;box-shadow:0 7px 10px #0008}
+@keyframes pool-settle{from{transform:translateX(50px) rotate(90deg);opacity:0}to{transform:translateX(0) rotate(0);opacity:1}}
+@keyframes pool-lamp{from{opacity:.4}to{opacity:1}}
+#mobile-pool-preview.phone-landscape .boot{padding:5% 7%}
+#mobile-pool-preview.phone-landscape .boot-session{top:18%}
+#mobile-pool-preview.phone-landscape .boot-session h2{font-size:30px;margin:10px 0}
+#mobile-pool-preview.phone-landscape .boot-session p{font-size:10px;margin:6px 0}
+#mobile-pool-preview.phone-landscape .boot .flight-copy>span{font-size:10px}
+#mobile-pool-preview.phone-landscape .boot .flight-route{height:25px;margin-bottom:4px}
+#mobile-pool-preview.phone-landscape .boot .flight-bottom b{font-size:20px}
+#mobile-pool-preview.phone-landscape .boot .flight-help{font-size:8px;margin-top:8px}
+#mobile-pool-preview.phone-landscape .boot-ball-detail{transform:scale(.7);transform-origin:right bottom;bottom:28%;right:10%}
+#mobile-pool-preview.phone-landscape .boot-stages{gap:8px;font-size:8px;bottom:8%}
+#mobile-pool-preview.phone-landscape .boot-stages span{padding-top:7px}
+@media(max-width:600px) and (orientation:portrait){.boot-session{top:18%;width:80%}.boot-session h2{font-size:38px}.boot-ball-detail{bottom:38%}.boot-stages{bottom:30%;left:7%}#mobile-pool-preview .boot .flight-copy,#mobile-pool-preview .boot .flight-route,#mobile-pool-preview .boot .flight-bottom,#mobile-pool-preview .boot .flight-help{width:100%}}
+@media(prefers-reduced-motion:reduce){.boot-light,.boot-ball{animation:none!important}}
 </style>
   <!-- CRITICAL_STYLE_END -->
 </head>
@@ -117,8 +176,14 @@ html,body{margin:0;background:#040b17;color:#e7f7ff;font-family:system-ui,"PingF
 <audio id="entryMusic" src="./sounds/xiaotang-intro.mp3" autoplay loop preload="auto" playsinline hidden></audio>
   <div class="mobile-game-surface">
   <div class="boot" id="boot" aria-label="正在启动光域台球浮光竞技馆">
+    <img class="boot-arena" src="./assets/fuguang-arena.jpg" alt="" aria-hidden="true">
+    <div class="boot-shade" aria-hidden="true"></div>
+    <div class="boot-light" aria-hidden="true"></div>
+    <div class="boot-session"><span class="boot-kicker">球台准备中</span><h2>灯亮了。<br>下一杆，你来。</h2><p>摆好球，留一个安静的开局。</p></div>
+    <div class="boot-ball-detail" aria-hidden="true"><i class="boot-ball b1">1</i><i class="boot-ball b9">9</i><i class="boot-ball b8">8</i><span class="boot-cue"></span></div>
+    <div class="boot-stages" aria-label="准备步骤"><span id="bootStageEngine">01 摆好球</span><span id="bootStageStyles">02 灯光就位</span><span id="bootStageReady">03 准备开局</span></div>
     <div class="flight-top"><span>光域台球 / FUGUANG</span><span>FLIGHT TO THE ARENA</span></div>
-    <div class="flight-copy"><p>下一站 · 浮光竞技馆</p><h1>准备，启航。</h1><span id="bootStatus">正在连接赛场</span></div>
+    <div class="flight-copy"><p>浮光竞技馆</p><h1>准备开局。</h1><span id="bootStatus">正在连接赛场</span></div>
     <div class="flight-route" role="progressbar" aria-label="赛场启动进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="bootTrack">
       <div class="flight-grid" aria-hidden="true"></div><div class="flight-trajectory"><span id="bootProgress"></span></div>
       <div class="flight-stop" aria-hidden="true"><span>25</span><span>50</span><span>75</span><span>100</span></div>
@@ -270,6 +335,9 @@ html,body{margin:0;background:#040b17;color:#e7f7ff;font-family:system-ui,"PingF
   const progress=()=>{
     const value=essentialReady()?100:5+(tasks.has('styles')?20:0)+(tasks.has('game')?65:0)+(tasks.has('photo')?5:0)+(tasks.has('audio')?5:0);
     bar.style.width=`${value}%`;rocket.style.setProperty('--flight',String(value/100));percent.textContent=`${value}%`;track.setAttribute('aria-valuenow',String(value));
+    for(const [id,done,current] of [['bootStageEngine',tasks.has('game'),!tasks.has('game')],['bootStageStyles',tasks.has('styles'),tasks.has('game')&&!tasks.has('styles')],['bootStageReady',essentialReady(),essentialReady()]]){
+      const stage=$(id);if(stage?.classList?.toggle){stage.classList.toggle('complete',done);stage.classList.toggle('current',current);}
+    }
     if(essentialReady()){
       engineFailed=false;stylesFailed=false;boot.classList.add('arrived');status.textContent=preview?'加载界面预览 · 已准备就绪':'赛场已就绪，准备入场';skip.textContent='进入赛场';help.textContent='欢迎来到浮光竞技馆';
       if(!preview)setTimeout(finish,700);
@@ -281,7 +349,7 @@ html,body{margin:0;background:#040b17;color:#e7f7ff;font-family:system-ui,"PingF
   const retryEngine=()=>{
     if(!engineFailed||tasks.has('game'))return;
     engineFailed=false;status.textContent='正在重新连接比赛引擎';skip.textContent='继续等待';
-    const old=$('gameEngine'),script=document.createElement('script');script.id='gameEngine';script.async=true;script.src='./game.js?v=20261010-cue-controls-v3&retry='+String(++engineRetry);script.onerror=failEngine;old?.remove();document.body.appendChild(script);
+    const old=$('gameEngine'),script=document.createElement('script');script.id='gameEngine';script.async=true;script.src='./game.js?v=20261014-smooth-preview&retry='+String(++engineRetry);script.onerror=failEngine;old?.remove();document.body.appendChild(script);
   };
   window.PoolStartup={ready,engineFailed:failEngine,styleFailed};
   const stylesheet=$('siteStyle');if(stylesheet?.sheet)ready('styles');else if(stylesheet?.dataset?.failed==='true')styleFailed();
@@ -289,7 +357,7 @@ html,body{margin:0;background:#040b17;color:#e7f7ff;font-family:system-ui,"PingF
   skip.addEventListener('click',()=>{
     if(essentialReady()){finish();return;}
     if(engineFailed)retryEngine();
-    if(stylesFailed){stylesFailed=false;stylesheet.href='./site.css?v=20261010-cue-controls-v3&retry='+String(Date.now());status.textContent='正在重新加载赛场画面';skip.textContent='继续等待';}
+    if(stylesFailed){stylesFailed=false;stylesheet.href='./site.css?v=20261014-smooth-preview&retry='+String(Date.now());status.textContent='正在重新加载赛场画面';skip.textContent='继续等待';}
     if(!engineFailed&&!stylesFailed)help.textContent='仍在等待网络响应，请保持此页打开，无需反复刷新';
   });
   setTimeout(()=>{if(dismissed||essentialReady())return;if(!engineFailed&&!stylesFailed){status.textContent='网络连接较慢，仍在等待';help.textContent='请保持此页打开；资源完成后会自动进入';}},12000);
@@ -300,8 +368,8 @@ html,body{margin:0;background:#040b17;color:#e7f7ff;font-family:system-ui,"PingF
 })();
 </script>
   <!-- STARTUP_SCRIPT_END -->
-  <script id="gameEngine" async src="./game.js?v=20261010-cue-controls-v3" onerror="window.PoolStartup.engineFailed()"></script>
-  <script async src="./audio.js?v=20261010-cue-controls-v3"></script>
-  <script async src="./mobile.js?v=20261010-cue-controls-v3"></script>
+  <script id="gameEngine" async src="./game.js?v=20261014-smooth-preview" onerror="window.PoolStartup.engineFailed()"></script>
+  <script async src="./audio.js?v=20261014-smooth-preview"></script>
+  <script async src="./mobile.js?v=20261014-smooth-preview"></script>
 </body>
 </html>
